@@ -1,4 +1,5 @@
 import { DashboardCanvas } from '@/features/dashboard/DashboardCanvas'
+import { AdminPage } from '@/features/admin/AdminPage'
 
 const dateFmt = new Intl.DateTimeFormat('tr-TR', {
   day: 'numeric',
@@ -7,6 +8,8 @@ const dateFmt = new Intl.DateTimeFormat('tr-TR', {
 })
 
 export default function App() {
+  if (window.location.pathname === '/admin') return <AdminPage />
+
   const today = dateFmt.format(new Date())
 
   return (
