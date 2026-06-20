@@ -9,9 +9,15 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, 'client'),
   plugins: [react(), tailwindcss()],
   resolve: {
+    // Force a single React instance — react-grid-layout (CJS) otherwise gets
+    // its own copy during pre-bundling, triggering "Invalid hook call".
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': path.resolve(import.meta.dirname, 'client/src'),
     },
+  },
+  optimizeDeps: {
+    include: ['react-grid-layout', 'react-draggable', 'react-resizable'],
   },
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),

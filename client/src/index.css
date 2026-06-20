@@ -107,3 +107,26 @@
     font-feature-settings: 'tnum' 1;
   }
 }
+
+/*
+  react-grid-layout theming. Kept unlayered (and after the package's own
+  stylesheet, imported first in main.tsx) so these win the cascade.
+*/
+.react-grid-item.react-grid-placeholder {
+  background: var(--blue);
+  opacity: 0.1;
+  border-radius: var(--radius);
+}
+
+.react-grid-item.react-draggable-dragging {
+  cursor: grabbing;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  right: 5px;
+  bottom: 5px;
+  width: 7px;
+  height: 7px;
+  border-right-color: var(--mid);
+  border-bottom-color: var(--mid);
+}
