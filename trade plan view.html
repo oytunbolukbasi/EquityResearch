@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MA — Trade Planı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #f7f6f3;
+  --white:    #ffffff;
+  --ink:      #1a1a18;
+  --mid:      #6b6b67;
+  --faint:    #d8d7d2;
+  --faint2:   #eeede9;
+  --green:    #1a7a5e;
+  --red:      #c0392b;
+  --blue:     #2563a8;
+  --amber:    #9a6200;
+  --sans: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 32px 20px;
+}
+
+.wrap { max-width: 760px; margin: 0 auto; }
+
+.header { margin-bottom: 20px; }
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mid);
+  margin-bottom: 6px;
+}
+.title { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
+.title span { font-weight: 300; color: var(--mid); }
+.sub { font-family: var(--mono); font-size: 13px; color: var(--mid); margin-top: 4px; }
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--faint);
+  border-radius: 14px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+svg { width: 100%; height: auto; display: block; }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tag-entry { background: #eef3fb; color: var(--blue); }
+.tag-tp1   { background: #edf5f2; color: #2e8a65; }
+.tag-tp2   { background: #e6f1ea; color: #237a55; }
+.tag-tp3   { background: #ddecdf; color: var(--green); }
+.tag-sl    { background: #fdf0ee; color: var(--red); }
+
+.levels {
+  margin-top: 20px;
+  border-top: 1px solid var(--faint);
+  padding-top: 18px;
+}
+.level-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--faint2);
+  font-family: var(--mono);
+  font-size: 14px;
+}
+.level-row:last-child { border-bottom: none; }
+.level-name { color: var(--mid); display: flex; align-items: center; gap: 8px; }
+.level-price { font-weight: 500; color: var(--ink); }
+.level-pct { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
+.pct-up { background: #edf5f2; color: var(--green); }
+.pct-down { background: #fdf0ee; color: var(--red); }
+.pct-now { background: #eef3fb; color: var(--blue); }
+
+.note {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--mid);
+  line-height: 1.6;
+  border-top: 1px solid var(--faint);
+  padding-top: 16px;
+}
+.note b { color: var(--ink); font-weight: 500; }
+
+.footer {
+  margin-top: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mid);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="eyebrow">Trade Planı · NYSE</div>
+    <div class="title">MA <span>· Mastercard Inc.</span></div>
+    <div class="sub">Mevcut Fiyat: $492,99 · 18 Haziran 2026</div>
+  </div>
+
+  <div class="card">
+    <svg viewBox="0 0 720 460" xmlns="http://www.w3.org/2000/svg">
+      <!-- price scale lines -->
+      <g font-family="DM Mono" font-size="11" fill="#9a9a94">
+        <text x="690" y="38">625</text>
+        <text x="690" y="98">580</text>
+        <text x="690" y="158">540</text>
+        <text x="690" y="248">493</text>
+        <text x="690" y="298">455</text>
+      </g>
+
+      <!-- horizontal grid -->
+      <g stroke="#eeede9" stroke-width="1">
+        <line x1="20" y1="35" x2="675" y2="35"/>
+        <line x1="20" y1="95" x2="675" y2="95"/>
+        <line x1="20" y1="155" x2="675" y2="155"/>
+        <line x1="20" y1="245" x2="675" y2="245"/>
+        <line x1="20" y1="295" x2="675" y2="295"/>
+      </g>
+
+      <!-- TP / SL horizontal level lines -->
+      <line x1="20" y1="35" x2="675" y2="35" stroke="#1a7a5e" stroke-width="1.6" stroke-dasharray="6,4"/>
+      <line x1="20" y1="95" x2="675" y2="95" stroke="#2e8a65" stroke-width="1.6" stroke-dasharray="6,4"/>
+      <line x1="20" y1="155" x2="675" y2="155" stroke="#52b08a" stroke-width="1.6" stroke-dasharray="6,4"/>
+      <line x1="20" y1="295" x2="675" y2="295" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="6,4"/>
+
+      <!-- entry zone band -->
+      <rect x="20" y="225" width="655" height="35" fill="#2563a8" opacity="0.07"/>
+      <line x1="20" y1="225" x2="675" y2="225" stroke="#2563a8" stroke-width="1.4" stroke-dasharray="3,3"/>
+      <line x1="20" y1="260" x2="675" y2="260" stroke="#2563a8" stroke-width="1.4" stroke-dasharray="3,3"/>
+
+      <!-- level labels (right side) -->
+      <g font-family="DM Mono" font-size="12" font-weight="500">
+        <text x="478" y="31" fill="#1a7a5e">TP3 — $625</text>
+        <text x="478" y="91" fill="#2e8a65">TP2 — $580</text>
+        <text x="478" y="151" fill="#52b08a">TP1 — $540</text>
+        <text x="478" y="219" fill="#2563a8">Giriş — $485–500</text>
+        <text x="510" y="291" fill="#c0392b">Hard SL — $455</text>
+      </g>
+
+      <!-- synthetic candlesticks representing recent price action (Feb-Jun 2026) -->
+      <g stroke-width="1.4">
+        <!-- wick + body helper pattern -->
+        <line x1="50" y1="120" x2="50" y2="180" stroke="#c0392b"/>
+        <rect x="46" y="135" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="70" y1="110" x2="70" y2="170" stroke="#1a7a5e"/>
+        <rect x="66" y="120" width="8" height="25" fill="#1a7a5e"/>
+
+        <line x1="90" y1="130" x2="90" y2="200" stroke="#c0392b"/>
+        <rect x="86" y="150" width="8" height="35" fill="#c0392b"/>
+
+        <line x1="110" y1="160" x2="110" y2="230" stroke="#c0392b"/>
+        <rect x="106" y="175" width="8" height="40" fill="#c0392b"/>
+
+        <line x1="130" y1="150" x2="130" y2="210" stroke="#1a7a5e"/>
+        <rect x="126" y="165" width="8" height="30" fill="#1a7a5e"/>
+
+        <line x1="150" y1="170" x2="150" y2="225" stroke="#c0392b"/>
+        <rect x="146" y="180" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="170" y1="140" x2="170" y2="200" stroke="#1a7a5e"/>
+        <rect x="166" y="150" width="8" height="35" fill="#1a7a5e"/>
+
+        <line x1="190" y1="120" x2="190" y2="175" stroke="#1a7a5e"/>
+        <rect x="186" y="130" width="8" height="30" fill="#1a7a5e"/>
+
+        <line x1="210" y1="140" x2="210" y2="195" stroke="#c0392b"/>
+        <rect x="206" y="150" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="230" y1="110" x2="230" y2="165" stroke="#1a7a5e"/>
+        <rect x="226" y="120" width="8" height="30" fill="#1a7a5e"/>
+
+        <line x1="250" y1="90" x2="250" y2="145" stroke="#1a7a5e"/>
+        <rect x="246" y="100" width="8" height="30" fill="#1a7a5e"/>
+
+        <line x1="270" y1="100" x2="270" y2="155" stroke="#c0392b"/>
+        <rect x="266" y="110" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="290" y1="130" x2="290" y2="190" stroke="#c0392b"/>
+        <rect x="286" y="145" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="310" y1="150" x2="310" y2="210" stroke="#c0392b"/>
+        <rect x="306" y="165" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="330" y1="120" x2="330" y2="185" stroke="#1a7a5e"/>
+        <rect x="326" y="135" width="8" height="35" fill="#1a7a5e"/>
+
+        <line x1="350" y1="170" x2="350" y2="225" stroke="#c0392b"/>
+        <rect x="346" y="180" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="370" y1="190" x2="370" y2="245" stroke="#c0392b"/>
+        <rect x="366" y="200" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="390" y1="160" x2="390" y2="215" stroke="#1a7a5e"/>
+        <rect x="386" y="175" width="8" height="30" fill="#1a7a5e"/>
+
+        <line x1="410" y1="180" x2="410" y2="235" stroke="#c0392b"/>
+        <rect x="406" y="190" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="430" y1="200" x2="430" y2="255" stroke="#c0392b"/>
+        <rect x="426" y="210" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="450" y1="220" x2="450" y2="280" stroke="#c0392b"/>
+        <rect x="446" y="235" width="8" height="30" fill="#c0392b"/>
+
+        <line x1="470" y1="260" x2="470" y2="340" stroke="#c0392b"/>
+        <rect x="466" y="275" width="8" height="40" fill="#c0392b"/>
+
+        <line x1="490" y1="290" x2="490" y2="370" stroke="#c0392b"/>
+        <rect x="486" y="305" width="8" height="45" fill="#c0392b"/>
+
+        <line x1="510" y1="270" x2="510" y2="330" stroke="#1a7a5e"/>
+        <rect x="506" y="285" width="8" height="30" fill="#1a7a5e"/>
+
+        <line x1="530" y1="250" x2="530" y2="305" stroke="#1a7a5e"/>
+        <rect x="526" y="260" width="8" height="30" fill="#1a7a5e"/>
+
+        <line x1="550" y1="230" x2="550" y2="280" stroke="#1a7a5e"/>
+        <rect x="546" y="240" width="8" height="25" fill="#1a7a5e"/>
+
+        <!-- last candle = current price ~493 -->
+        <line x1="570" y1="225" x2="570" y2="260" stroke="#c0392b"/>
+        <rect x="566" y="235" width="8" height="20" fill="#c0392b"/>
+      </g>
+
+      <!-- current price marker -->
+      <circle cx="574" cy="245" r="4" fill="#1a1a18"/>
+      <text x="582" y="249" font-family="DM Mono" font-size="12" font-weight="500" fill="#1a1a18">$492,99</text>
+
+      <!-- x-axis labels -->
+      <g font-family="DM Mono" font-size="11" fill="#9a9a94">
+        <text x="60" y="445">Şub</text>
+        <text x="190" y="445">Mar</text>
+        <text x="320" y="445">Nis</text>
+        <text x="440" y="445">May</text>
+        <text x="560" y="445">Haz</text>
+      </g>
+    </svg>
+
+    <div class="legend">
+      <span class="tag tag-entry"><span class="dot" style="background:#2563a8"></span>Giriş Bandı</span>
+      <span class="tag tag-tp1"><span class="dot" style="background:#52b08a"></span>TP1</span>
+      <span class="tag tag-tp2"><span class="dot" style="background:#2e8a65"></span>TP2</span>
+      <span class="tag tag-tp3"><span class="dot" style="background:#1a7a5e"></span>TP3</span>
+      <span class="tag tag-sl"><span class="dot" style="background:#c0392b"></span>Hard SL</span>
+    </div>
+
+    <div class="levels">
+      <div class="level-row">
+        <span class="level-name"><span class="dot" style="background:#2563a8"></span>Giriş Bandı</span>
+        <span><span class="level-price">$485 – 500</span> <span class="level-pct pct-now">Mevcut</span></span>
+      </div>
+      <div class="level-row">
+        <span class="level-name"><span class="dot" style="background:#52b08a"></span>TP1</span>
+        <span><span class="level-price">$540</span> <span class="level-pct pct-up">+%10</span></span>
+      </div>
+      <div class="level-row">
+        <span class="level-name"><span class="dot" style="background:#2e8a65"></span>TP2</span>
+        <span><span class="level-price">$580</span> <span class="level-pct pct-up">+%18</span></span>
+      </div>
+      <div class="level-row">
+        <span class="level-name"><span class="dot" style="background:#1a7a5e"></span>TP3</span>
+        <span><span class="level-price">$625</span> <span class="level-pct pct-up">+%27</span></span>
+      </div>
+      <div class="level-row">
+        <span class="level-name"><span class="dot" style="background:#c0392b"></span>Hard SL</span>
+        <span><span class="level-price">$455</span> <span class="level-pct pct-down">−%8</span></span>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>Tez:</b> 20+ çeyrek ardışık beat, NTM F/K 24,2x tarihsel ortalamanın altında. FOMC hawkish şoku fiyatı giriş bandına çekti — kademeli ekleme için uygun seviye. Analist konsensüs Strong Buy, 12 aylık ortalama hedef $644,89.<br><br>
+      <b>Tezi bozan:</b> Hawkish FOMC sonrası USD güçlenirse cross-border harcama baskı görür. $455 altı kapanış tezi geçersiz kılar.
+    </div>
+  </div>
+
+  <div class="footer">MA · NYSE · 18 Haziran 2026 · Bu doküman yatırım tavsiyesi değildir.</div>
+
+</div>
+</body>
+</html>

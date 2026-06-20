@@ -1,0 +1,109 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Design tokens carried over from the PDF bulletins and trade-plan HTML.
+  Only the fonts change: Open Sans (sans) + JetBrains Mono (mono).
+*/
+:root {
+  /* brand palette (brief) */
+  --bg: #f7f6f3;
+  --white: #ffffff;
+  --ink: #1a1a18;
+  --mid: #6b6b67;
+  --faint: #d8d7d2;
+  --faint2: #eeede9;
+  --green: #1a7a5e;
+  --red: #c0392b;
+  --blue: #2563a8;
+  --amber: #9a6200;
+
+  /* rounded cards ~14px */
+  --radius: 0.875rem;
+
+  /* shadcn semantic tokens mapped onto the palette */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--white);
+  --card-foreground: var(--ink);
+  --popover: var(--white);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--white);
+  --secondary: var(--faint2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--faint2);
+  --muted-foreground: var(--mid);
+  --accent: var(--faint2);
+  --accent-foreground: var(--ink);
+  --destructive: var(--red);
+  --border: var(--faint);
+  --input: var(--faint);
+  --ring: var(--blue);
+}
+
+@theme inline {
+  /* shadcn semantic colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* domain colors (directly addressable in JSX) */
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-mid: var(--mid);
+  --color-faint: var(--faint);
+  --color-faint2: var(--faint2);
+  --color-up: var(--green);
+  --color-down: var(--red);
+  --color-info: var(--blue);
+  --color-warn: var(--amber);
+
+  /* typography */
+  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* radii */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/40;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* numeric values are always mono, per the design language */
+  .num {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum' 1;
+  }
+}
