@@ -24,6 +24,23 @@ export default function App() {
       <main className="mx-auto max-w-[1400px] px-5 py-6 sm:px-8">
         <DashboardCanvas />
       </main>
+
+      <footer className="border-t border-faint">
+        <div className="mx-auto max-w-[1400px] px-5 py-3 sm:px-8">
+          <p className="num text-[10px] text-mid">
+            Charts powered by{' '}
+            <a
+              href="https://tradingview.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-2 hover:underline"
+            >
+              TradingView
+            </a>
+            {' '}Lightweight Charts (Apache 2.0)
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }
