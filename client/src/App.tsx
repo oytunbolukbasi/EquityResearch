@@ -13,14 +13,7 @@ export default function App() {
     <div className="min-h-screen">
       <header className="bg-card/70 sticky top-0 z-20 border-b backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-3 sm:px-8">
-          <div>
-            <div className="num text-mid text-[11px] tracking-[0.14em] uppercase">
-              Yatırım Dashboard
-            </div>
-            <h1 className="text-lg font-semibold tracking-tight">
-              Panel <span className="text-mid font-light">· v1</span>
-            </h1>
-          </div>
+          <h1 className="text-lg font-semibold tracking-tight">EQR Dashboard</h1>
           <div className="num text-mid text-sm">{today}</div>
         </div>
       </header>
