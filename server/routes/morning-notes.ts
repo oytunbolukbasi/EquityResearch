@@ -32,11 +32,13 @@ morningNotesRouter.get('/history', async (_req, res) => {
   res.json(rows)
 })
 
+// Accepts camelCase keys — matches what the admin page EXAMPLES show and what
+// Claude Chat naturally generates.
 const morningNoteInput = z.object({
   date: z.string(),
-  top_call: z.string().nullish(),
-  macro_bullets: z.array(z.any()).nullish(),
-  sector_deep_dive: z.any().nullish(),
+  topCall: z.string().nullish(),
+  macroBullets: z.array(z.any()).nullish(),
+  sectorDeepDive: z.any().nullish(),
 })
 
 // POST /api/morning-notes (admin)
@@ -51,9 +53,9 @@ morningNotesRouter.post('/', requireAdmin, async (req, res) => {
     .values(
       parsed.data.map((d) => ({
         date: d.date,
-        topCall: d.top_call ?? null,
-        macroBullets: d.macro_bullets ?? null,
-        sectorDeepDive: d.sector_deep_dive ?? null,
+        topCall: d.topCall ?? null,
+        macroBullets: d.macroBullets ?? null,
+        sectorDeepDive: d.sectorDeepDive ?? null,
       })),
     )
     .returning()

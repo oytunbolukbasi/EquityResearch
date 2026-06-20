@@ -34,11 +34,20 @@ heatmapsRouter.get('/', async (req, res) => {
   res.json(rows)
 })
 
-const sector = z.object({
-  name: z.string(),
-  change_pct: z.coerce.number(),
-  note: z.string().nullish(),
-})
+// Accepts both change_pct (canonical) and changePct (what Claude Chat generates).
+// Stored as change_pct to match the HeatmapSector type used by widgets.
+const sector = z
+  .object({
+    name: z.string(),
+    change_pct: z.coerce.number().optional(),
+    changePct: z.coerce.number().optional(),
+    note: z.string().nullish(),
+  })
+  .transform(({ name, change_pct, changePct, note }) => ({
+    name,
+    change_pct: change_pct ?? changePct ?? 0,
+    ...(note != null ? { note } : {}),
+  }))
 
 const heatmapInput = z.object({
   date: z.string(),

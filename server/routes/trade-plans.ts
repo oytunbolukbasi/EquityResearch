@@ -34,19 +34,20 @@ const ohlc = z.object({
   c: z.coerce.number(),
 })
 
+// Accepts camelCase keys — matches what Claude Chat generates and the admin EXAMPLES.
 const tradePlanInput = z.object({
   ticker: z.string(),
   exchange: z.string().nullish(),
-  current_price: z.coerce.number().nullish(),
-  entry_low: z.coerce.number().nullish(),
-  entry_high: z.coerce.number().nullish(),
+  currentPrice: z.coerce.number().nullish(),
+  entryLow: z.coerce.number().nullish(),
+  entryHigh: z.coerce.number().nullish(),
   tp1: z.coerce.number().nullish(),
   tp2: z.coerce.number().nullish(),
   tp3: z.coerce.number().nullish(),
-  hard_sl: z.coerce.number().nullish(),
+  hardSl: z.coerce.number().nullish(),
   thesis: z.string().nullish(),
   invalidation: z.string().nullish(),
-  price_history: z.array(ohlc).nullish(),
+  priceHistory: z.array(ohlc).nullish(),
 })
 
 // POST /api/trade-plans (admin) — single plan or array
@@ -62,16 +63,16 @@ tradePlansRouter.post('/', requireAdmin, async (req, res) => {
       parsed.data.map((d) => ({
         ticker: d.ticker.toUpperCase(),
         exchange: d.exchange ?? null,
-        currentPrice: d.current_price ?? null,
-        entryLow: d.entry_low ?? null,
-        entryHigh: d.entry_high ?? null,
+        currentPrice: d.currentPrice ?? null,
+        entryLow: d.entryLow ?? null,
+        entryHigh: d.entryHigh ?? null,
         tp1: d.tp1 ?? null,
         tp2: d.tp2 ?? null,
         tp3: d.tp3 ?? null,
-        hardSl: d.hard_sl ?? null,
+        hardSl: d.hardSl ?? null,
         thesis: d.thesis ?? null,
         invalidation: d.invalidation ?? null,
-        priceHistory: d.price_history ?? null,
+        priceHistory: d.priceHistory ?? null,
       })),
     )
     .returning()

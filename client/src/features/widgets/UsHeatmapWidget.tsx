@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react'
 
 import type { Heatmap, HeatmapSector } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
 
 function heatStyle(pct: number): { background: string; color: string } {
   const abs = Math.min(Math.abs(pct) / 4, 1)
@@ -36,6 +37,8 @@ function Tile({ s }: { s: HeatmapSector }) {
 export function UsHeatmapWidget() {
   const { data, loading, error } = useApi<Heatmap | null>('/api/heatmaps?market=US')
 
+  useWidgetSubtitle(data?.date ? fmtDataDate(data.date) : undefined)
+
   if (loading) {
     return (
       <div className="flex h-24 items-center justify-center">
@@ -59,15 +62,8 @@ export function UsHeatmapWidget() {
   }
 
   return (
-    <div>
-      <p className="num mb-2 text-[10px] uppercase tracking-[0.12em] text-mid">
-        {new Date(data.date + 'T12:00:00').toLocaleDateString('tr-TR', {
-          day: 'numeric', month: 'short',
-        })}
-      </p>
-      <div className="grid grid-cols-3 gap-1.5">
-        {data.sectors.map((s, i) => <Tile key={i} s={s} />)}
-      </div>
+    <div className="grid grid-cols-3 gap-1.5">
+      {data.sectors.map((s, i) => <Tile key={i} s={s} />)}
     </div>
   )
 }

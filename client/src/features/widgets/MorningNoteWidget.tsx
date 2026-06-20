@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react'
 
 import type { MacroBullet, MorningNote } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
 
 function Loading() {
   return (
@@ -31,6 +32,8 @@ function Bullet({ b }: { b: MacroBullet }) {
 
 export function MorningNoteWidget() {
   const { data: note, loading, error } = useApi<MorningNote | null>('/api/morning-notes')
+
+  useWidgetSubtitle(note?.date ? fmtDataDate(note.date) : undefined)
 
   if (loading) return <Loading />
   if (error) return <Empty>Veri alınamadı.</Empty>

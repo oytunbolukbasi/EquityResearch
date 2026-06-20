@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 
 import type { OhlcPoint, TradePlan } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
 
 // ─── layout constants ────────────────────────────────────────────────────────
 const VBW = 760
@@ -228,6 +229,10 @@ export function TradePlanWidget() {
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
   const { data: plans, loading, error } = useApi<TradePlan[]>('/api/trade-plans')
 
+  // Compute before early returns so the hook runs unconditionally (rules of hooks).
+  const activePlan = plans?.find(p => p.ticker === selectedTicker) ?? plans?.[0]
+  useWidgetSubtitle(activePlan?.updatedAt ? fmtDataDate(activePlan.updatedAt) : undefined)
+
   if (loading) {
     return (
       <div className="flex h-32 items-center justify-center">
@@ -250,7 +255,7 @@ export function TradePlanWidget() {
     )
   }
 
-  const plan = plans.find(p => p.ticker === selectedTicker) ?? plans[0]
+  const plan = activePlan!
   const cur = plan.currentPrice
 
   const levels: Array<{

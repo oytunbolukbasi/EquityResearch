@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react'
 
 import type { Idea } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
 
 function Loading() {
   return (
@@ -63,6 +64,8 @@ function StatusBadge({ status }: { status: string }) {
 
 export function IdeasTableWidget() {
   const { data: ideas, loading, error } = useApi<Idea[]>('/api/ideas')
+
+  useWidgetSubtitle(ideas?.length ? fmtDataDate(ideas[0].date) : undefined)
 
   if (loading) return <Loading />
   if (error) return <Empty>Veri alınamadı.</Empty>
