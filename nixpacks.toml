@@ -1,0 +1,9 @@
+# Nixpacks phase overrides.
+# npm ci fails cross-platform because macOS lock file omits Linux-specific
+# optional packages (@emnapi/core, @emnapi/runtime from @tailwindcss/oxide).
+# npm install resolves them correctly on the build host.
+# --include=dev ensures devDependencies (vite, tsc, etc.) are installed
+# even when NODE_ENV=production is set by the builder.
+
+[phases.install]
+cmds = ["npm install --include=dev"]
