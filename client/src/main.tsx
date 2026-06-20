@@ -1,3 +1,6 @@
+// Must run before react-grid-layout (react-draggable reads process.env).
+import './lib/process-shim'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
