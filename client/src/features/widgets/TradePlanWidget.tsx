@@ -125,7 +125,7 @@ export function TradePlanWidget() {
             <select
               value={selectedTicker ?? plan.ticker}
               onChange={e => setSelectedTicker(e.target.value)}
-              className="num rounded border border-faint bg-card px-1.5 py-0.5 text-[11px]"
+              className="num rounded border border-faint bg-card px-2 py-1 text-xs"
             >
               {plans.map(p => (
                 <option key={p.ticker} value={p.ticker}>{p.ticker}</option>
