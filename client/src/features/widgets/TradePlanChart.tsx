@@ -123,8 +123,10 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
     const addLine = (
       price: number | null | undefined,
       color: string,
-      title: string,
+      label: string,
     ) => {
+      // Builds the title from `price` internally so a null price short-circuits
+      // before any formatting runs (N2(null) would throw and crash the chart).
       if (price == null) return
       candleSeries.createPriceLine({
         price,
@@ -132,20 +134,20 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
-        title,
+        title: `${label} — ${N2(price)}`,
       })
     }
 
-    addLine(plan.tp3,    '#1a7a5e', `TP3 — ${N2(plan.tp3!)}`)
-    addLine(plan.tp2,    '#2e8a65', `TP2 — ${N2(plan.tp2!)}`)
-    addLine(plan.tp1,    '#52b08a', `TP1 — ${N2(plan.tp1!)}`)
-    addLine(plan.hardSl, RED,       `Hard SL — ${N2(plan.hardSl!)}`)
+    addLine(plan.tp3,    '#1a7a5e', 'TP3')
+    addLine(plan.tp2,    '#2e8a65', 'TP2')
+    addLine(plan.tp1,    '#52b08a', 'TP1')
+    addLine(plan.hardSl, RED,       'Hard SL')
 
     if (plan.entryHigh != null && plan.entryLow != null && plan.entryHigh !== plan.entryLow) {
-      addLine(plan.entryHigh, BLUE, `Giriş — ${N2(plan.entryHigh)}`)
-      addLine(plan.entryLow,  BLUE, `Giriş — ${N2(plan.entryLow)}`)
+      addLine(plan.entryHigh, BLUE, 'Giriş')
+      addLine(plan.entryLow,  BLUE, 'Giriş')
     } else if (plan.entryLow != null) {
-      addLine(plan.entryLow, BLUE, `Giriş — ${N2(plan.entryLow)}`)
+      addLine(plan.entryLow, BLUE, 'Giriş')
     }
 
     return () => {
