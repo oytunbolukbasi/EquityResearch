@@ -25,7 +25,7 @@ export function WidgetFrame({ eyebrow, onRemove, children }: WidgetFrameProps) {
         <header className="widget-drag-handle flex cursor-move items-center gap-2 border-b px-4 py-2.5 select-none">
           <GripVertical className="text-faint size-4 shrink-0" />
           <div className="min-w-0 flex-1 overflow-hidden">
-            <span className="num text-mid text-[11px] tracking-[0.12em] uppercase">
+            <span className="text-ink text-[12px] font-bold tracking-[0.04em] uppercase">
               {eyebrow}
             </span>
             {subtitle && (

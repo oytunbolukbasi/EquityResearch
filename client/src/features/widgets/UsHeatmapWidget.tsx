@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import type { Heatmap, HeatmapSector } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
+import { useDateFilter, withDate } from '@/features/dashboard/date-filter'
 
 function heatStyle(pct: number): { background: string; color: string } {
   const abs = Math.min(Math.abs(pct) / 4, 1)
@@ -35,7 +36,13 @@ function Tile({ s }: { s: HeatmapSector }) {
 }
 
 export function UsHeatmapWidget() {
-  const { data, loading, error } = useApi<Heatmap | null>('/api/heatmaps?market=US')
+  const { date } = useDateFilter()
+  // The /api/heatmaps route returns a single object when called with only
+  // `market`, but an array once `date` is also passed — normalize both shapes.
+  const { data: raw, loading, error } = useApi<Heatmap | Heatmap[] | null>(
+    withDate('/api/heatmaps?market=US', date),
+  )
+  const data = Array.isArray(raw) ? raw[0] ?? null : raw
 
   useWidgetSubtitle(data?.date ? fmtDataDate(data.date) : undefined)
 
@@ -56,7 +63,9 @@ export function UsHeatmapWidget() {
   if (!data?.sectors?.length) {
     return (
       <div className="flex h-24 items-center justify-center">
-        <p className="text-sm text-mid">Henüz ABD heatmap verisi eklenmedi.</p>
+        <p className="text-sm text-mid">
+          {date ? 'Bu tarihte veri yok.' : 'Henüz ABD heatmap verisi eklenmedi.'}
+        </p>
       </div>
     )
   }

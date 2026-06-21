@@ -13,8 +13,8 @@ import { WIDGET_TYPES, type WidgetDef, type WidgetType } from './types'
 export const widgetRegistry: Record<WidgetType, WidgetDef> = {
   'morning-note': {
     type: 'morning-note',
-    eyebrow: 'Morning Note',
-    title: 'Günlük Morning Note',
+    eyebrow: 'Piyasa Nabzı',
+    title: 'Piyasa Nabzı',
     icon: Newspaper,
     defaultSize: { w: 7, h: 9, minW: 4, minH: 6 },
     Component: MorningNoteWidget,

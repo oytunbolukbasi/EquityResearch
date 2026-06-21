@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import type { MacroBullet, MorningNote } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
+import { useDateFilter, withDate } from '@/features/dashboard/date-filter'
 
 function Loading() {
   return (
@@ -31,13 +32,16 @@ function Bullet({ b }: { b: MacroBullet }) {
 }
 
 export function MorningNoteWidget() {
-  const { data: note, loading, error } = useApi<MorningNote | null>('/api/morning-notes')
+  const { date } = useDateFilter()
+  const { data: note, loading, error } = useApi<MorningNote | null>(
+    withDate('/api/morning-notes', date),
+  )
 
   useWidgetSubtitle(note?.date ? fmtDataDate(note.date) : undefined)
 
   if (loading) return <Loading />
   if (error) return <Empty>Veri alınamadı.</Empty>
-  if (!note) return <Empty>Henüz morning note eklenmedi.</Empty>
+  if (!note) return <Empty>{date ? 'Bu tarihte veri yok.' : 'Henüz morning note eklenmedi.'}</Empty>
 
   const dateStr = new Date(note.date + 'T12:00:00').toLocaleDateString('tr-TR', {
     day: 'numeric',
