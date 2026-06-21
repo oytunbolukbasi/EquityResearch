@@ -1,13 +1,11 @@
 import { useState } from 'react'
-import { RotateCcw } from 'lucide-react'
 
 import { DashboardCanvas } from '@/features/dashboard/DashboardCanvas'
 import { AdminPage } from '@/features/admin/AdminPage'
 import { DateFilterCtx } from '@/features/dashboard/date-filter'
 import { useDashboardLayout } from '@/features/dashboard/useDashboardLayout'
-import { AddWidgetMenu } from '@/features/dashboard/AddWidgetMenu'
+import { DashboardWidgetControls } from '@/features/dashboard/DashboardWidgetControls'
 import { DateMenuButton } from '@/features/dashboard/HeaderControls'
-import { Button } from '@/components/ui/button'
 
 export default function App() {
   if (window.location.pathname === '/admin') return <AdminPage />
@@ -24,17 +22,7 @@ export default function App() {
             <h1 className="text-lg font-semibold tracking-tight">EQR</h1>
             <div className="flex items-center gap-2">
               <DateMenuButton date={date} onSelect={setDate} onClear={() => setDate(null)} />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={resetLayout}
-                title="Düzeni Sıfırla"
-                aria-label="Düzeni Sıfırla"
-                className="text-mid size-9"
-              >
-                <RotateCcw className="size-4" />
-              </Button>
-              <AddWidgetMenu onAdd={addWidget} />
+              <DashboardWidgetControls onAdd={addWidget} onReset={resetLayout} />
             </div>
           </div>
         </header>
