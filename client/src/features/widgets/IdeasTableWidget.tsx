@@ -80,9 +80,9 @@ export function IdeasTableWidget() {
           <tr className="sticky top-0 z-10 border-b border-faint bg-card">
             <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Hisse</th>
             <th className="num px-3 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Yön</th>
-            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium">Giriş</th>
-            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium">SL</th>
-            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium">TP1</th>
+            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Giriş</th>
+            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">SL</th>
+            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">TP1</th>
             <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Durum</th>
           </tr>
         </thead>
@@ -98,15 +98,15 @@ export function IdeasTableWidget() {
               <td className="px-3 py-2.5">
                 <DirectionBadge direction={idea.direction} />
               </td>
-              <td className="num px-3 py-2.5 text-right text-xs">
+              <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">
                 {idea.entryLow != null && idea.entryHigh != null
                   ? `${fmtN(idea.entryLow, 0)}–${fmtN(idea.entryHigh, 0)}`
                   : fmtN(idea.entryLow, 0)}
               </td>
-              <td className="num px-3 py-2.5 text-right text-xs" style={{ color: '#c0392b' }}>
+              <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#c0392b' }}>
                 {fmtN(idea.stopLoss, 0)}
               </td>
-              <td className="num px-3 py-2.5 text-right text-xs" style={{ color: '#1a7a5e' }}>
+              <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#1a7a5e' }}>
                 {fmtN(idea.target1, 0)}
               </td>
               <td className="px-4 py-2.5">

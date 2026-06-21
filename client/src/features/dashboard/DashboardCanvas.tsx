@@ -1,18 +1,23 @@
-import { bottom, GridLayout, useContainerWidth, type LayoutItem } from 'react-grid-layout'
-import { RotateCcw } from 'lucide-react'
+import { bottom, GridLayout, useContainerWidth, type Layout, type LayoutItem } from 'react-grid-layout'
 
-import { Button } from '@/components/ui/button'
 import { AddWidgetMenu } from './AddWidgetMenu'
-import { useDashboardLayout } from './useDashboardLayout'
 import { widgetRegistry } from './widget-registry'
 import { WidgetFrame } from './WidgetFrame'
-import type { WidgetType } from './types'
+import type { WidgetInstance, WidgetType } from './types'
 
 const GRID_CONFIG = { cols: 12, rowHeight: 40, margin: [16, 16], containerPadding: [0, 0] } as const
 
-export function DashboardCanvas() {
-  const { items, layout, addWidget, removeWidget, onLayoutChange, resetLayout } =
-    useDashboardLayout()
+interface DashboardCanvasProps {
+  items: WidgetInstance[]
+  layout: LayoutItem[]
+  onLayoutChange: (layout: Layout) => void
+  addWidget: (type: WidgetType) => void
+  removeWidget: (id: string) => void
+}
+
+export function DashboardCanvas({
+  items, layout, onLayoutChange, addWidget, removeWidget,
+}: DashboardCanvasProps) {
   const { width, containerRef, mounted } = useContainerWidth()
 
   // Reconcile: guarantee a layout entry for every item, even if localStorage
@@ -28,57 +33,34 @@ export function DashboardCanvas() {
     return li
   })
 
-  const handleAdd = (type: WidgetType) => addWidget(type)
-
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-mid text-sm">
-          Widget'ları başlığından sürükle, sağ-alt köşeden boyutlandır. Düzen otomatik kaydedilir.
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={resetLayout}
-            className="text-mid gap-1.5"
-            title="Varsayılan düzene dön"
+    <div ref={containerRef}>
+      {items.length === 0 ? (
+        <EmptyState onAdd={addWidget} />
+      ) : (
+        mounted && (
+          <GridLayout
+            width={width}
+            layout={gridLayout}
+            onLayoutChange={onLayoutChange}
+            gridConfig={GRID_CONFIG}
+            dragConfig={{ handle: '.widget-drag-handle', cancel: 'button' }}
+            resizeConfig={{ handles: ['se'] }}
           >
-            <RotateCcw className="size-4" />
-            Düzeni Sıfırla
-          </Button>
-          <AddWidgetMenu onAdd={handleAdd} />
-        </div>
-      </div>
-
-      <div ref={containerRef}>
-        {items.length === 0 ? (
-          <EmptyState onAdd={handleAdd} />
-        ) : (
-          mounted && (
-            <GridLayout
-              width={width}
-              layout={gridLayout}
-              onLayoutChange={onLayoutChange}
-              gridConfig={GRID_CONFIG}
-              dragConfig={{ handle: '.widget-drag-handle', cancel: 'button' }}
-              resizeConfig={{ handles: ['se'] }}
-            >
-              {items.map((item) => {
-                const def = widgetRegistry[item.type]
-                const Widget = def.Component
-                return (
-                  <div key={item.i}>
-                    <WidgetFrame eyebrow={def.eyebrow} onRemove={() => removeWidget(item.i)}>
-                      <Widget />
-                    </WidgetFrame>
-                  </div>
-                )
-              })}
-            </GridLayout>
-          )
-        )}
-      </div>
+            {items.map((item) => {
+              const def = widgetRegistry[item.type]
+              const Widget = def.Component
+              return (
+                <div key={item.i}>
+                  <WidgetFrame eyebrow={def.eyebrow} onRemove={() => removeWidget(item.i)}>
+                    <Widget />
+                  </WidgetFrame>
+                </div>
+              )
+            })}
+          </GridLayout>
+        )
+      )}
     </div>
   )
 }

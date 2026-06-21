@@ -5,7 +5,10 @@ interface DateFilterValue {
   setDate: (d: string | null) => void
 }
 
-export const DateFilterCtx = createContext<DateFilterValue>({ date: null, setDate: () => {} })
+export const DateFilterCtx = createContext<DateFilterValue>({
+  date: null,
+  setDate: () => {},
+})
 
 export function useDateFilter(): DateFilterValue {
   return useContext(DateFilterCtx)
