@@ -49,7 +49,7 @@ const sector = z
     ...(note != null ? { note } : {}),
   }))
 
-const heatmapInput = z.object({
+export const heatmapInput = z.object({
   date: z.string(),
   market: z.string(),
   sectors: z.array(sector).nullish(),

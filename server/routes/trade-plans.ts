@@ -35,7 +35,7 @@ const ohlc = z.object({
 })
 
 // Accepts camelCase keys — matches what Claude Chat generates and the admin EXAMPLES.
-const tradePlanInput = z.object({
+export const tradePlanInput = z.object({
   ticker: z.string(),
   exchange: z.string().nullish(),
   currentPrice: z.coerce.number().nullish(),

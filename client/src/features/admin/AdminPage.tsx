@@ -60,6 +60,17 @@ const EXAMPLES: Record<TableTarget, unknown> = {
   },
 }
 
+// ─── bulk import ──────────────────────────────────────────────────────────────
+const BULK_PLACEHOLDER = `{
+  "morning_note": { "date": "2026-06-22", "topCall": "..." },
+  "ideas": [{ "date": "2026-06-22", "ticker": "ENKAI", ... }],
+  "heatmaps": [{ "date": "2026-06-22", "market": "BIST", "sectors": [] }],
+  "trade_plans": [{ "ticker": "ENKAI", "currentPrice": 92.35 }]
+}`
+
+type BulkTableResult = number | { error: string }
+type BulkResponse = { success: boolean; results: Record<string, BulkTableResult> }
+
 // ─── main component ───────────────────────────────────────────────────────────
 export function AdminPage() {
   const [adminKey, setAdminKey]       = useState(() => localStorage.getItem('eqr:admin-key') ?? '')
@@ -74,6 +85,64 @@ export function AdminPage() {
     { ok: false; message: string } |
     null
   >(null)
+
+  // Bulk import
+  const [bulkJson, setBulkJson]             = useState('')
+  const [bulkLoading, setBulkLoading]       = useState(false)
+  const [bulkParseError, setBulkParseError] = useState<string | null>(null)
+  const [bulkResult, setBulkResult]         = useState<
+    { kind: 'response'; data: BulkResponse } |
+    { kind: 'http-error'; message: string } |
+    null
+  >(null)
+
+  async function submitBulk() {
+    setBulkParseError(null)
+    setBulkResult(null)
+
+    let body: unknown
+    try {
+      body = JSON.parse(bulkJson)
+    } catch (e) {
+      setBulkParseError(`Geçersiz JSON: ${e instanceof Error ? e.message : String(e)}`)
+      return
+    }
+
+    setBulkLoading(true)
+    try {
+      const res = await fetch('/api/admin/bulk-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        body: JSON.stringify(body),
+      })
+
+      if (res.status === 401) {
+        setBulkResult({ kind: 'http-error', message: 'Yetkisiz: admin anahtarı hatalı.' })
+        return
+      }
+
+      const data = (await res.json().catch(() => null)) as unknown
+      if (!res.ok) {
+        const msg = data && typeof data === 'object' && 'error' in data
+          ? String((data as Record<string, unknown>).error)
+          : `HTTP ${res.status}`
+        setBulkResult({ kind: 'http-error', message: msg })
+        return
+      }
+
+      setBulkResult({ kind: 'response', data: data as BulkResponse })
+    } catch (e) {
+      setBulkResult({ kind: 'http-error', message: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  function clearBulk() {
+    setBulkJson('')
+    setBulkParseError(null)
+    setBulkResult(null)
+  }
 
   function saveKey() {
     const trimmed = keyDraft.trim()
@@ -211,6 +280,57 @@ export function AdminPage() {
           )}
         </section>
 
+        {/* Bulk import */}
+        <section className="rounded-lg border bg-card p-5">
+          <p className="mb-3 text-sm font-semibold text-ink">Toplu İçerik Girişi</p>
+
+          <textarea
+            value={bulkJson}
+            onChange={e => { setBulkJson(e.target.value); setBulkParseError(null); setBulkResult(null) }}
+            spellCheck={false}
+            placeholder={BULK_PLACEHOLDER}
+            style={{ minHeight: 320, fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 13 }}
+            className={[
+              'w-full resize-y rounded border bg-bg px-3 py-2.5 leading-relaxed outline-none transition-colors',
+              bulkParseError
+                ? 'border-down/50 focus:border-down focus:ring-1 focus:ring-down/30'
+                : 'border-faint focus:border-info focus:ring-1 focus:ring-info/30',
+            ].join(' ')}
+          />
+
+          {bulkParseError && (
+            <p className="mt-1.5 text-xs text-down">{bulkParseError}</p>
+          )}
+
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={clearBulk}
+              disabled={bulkLoading}
+            >
+              Temizle
+            </Button>
+            <Button
+              size="sm"
+              onClick={submitBulk}
+              disabled={!adminKey || !bulkJson.trim() || bulkLoading}
+              className="gap-2 bg-info text-white hover:bg-info/90"
+            >
+              {bulkLoading && <Loader2 className="size-4 animate-spin" />}
+              {bulkLoading ? 'Gönderiliyor...' : 'İçeriği Gönder'}
+            </Button>
+          </div>
+
+          {!adminKey && (
+            <p className="mt-2 text-right text-xs text-mid">Önce admin anahtarı girilmeli.</p>
+          )}
+
+          {bulkResult && (
+            <BulkResultBox result={bulkResult} />
+          )}
+        </section>
+
         {/* Table selector */}
         <section className="rounded-lg border bg-card p-5">
           <p className="num mb-3 text-[10px] uppercase tracking-[0.12em] text-mid">Hedef Tablo</p>
@@ -333,6 +453,51 @@ export function AdminPage() {
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+// ─── bulk import result box ────────────────────────────────────────────────────
+function BulkResultBox({
+  result,
+}: {
+  result: { kind: 'response'; data: BulkResponse } | { kind: 'http-error'; message: string }
+}) {
+  if (result.kind === 'http-error') {
+    return (
+      <div className="mt-3 flex items-start gap-3 rounded-lg border border-down/30 bg-down/5 p-4 text-sm text-down">
+        <XCircle className="mt-0.5 size-5 shrink-0" />
+        <p>{result.message}</p>
+      </div>
+    )
+  }
+
+  const entries = Object.entries(result.data.results)
+  const hasError = entries.some(([, v]) => typeof v === 'object')
+  const hasSuccess = entries.some(([, v]) => typeof v === 'number')
+  const kind = !entries.length || (hasError && !hasSuccess) ? 'error' : hasError ? 'partial' : 'success'
+
+  const boxClass = {
+    success: 'border-up/30 bg-up/5 text-up',
+    partial: 'border-warn/30 bg-warn/5 text-warn',
+    error: 'border-down/30 bg-down/5 text-down',
+  }[kind]
+
+  return (
+    <div className={`mt-3 flex items-start gap-3 rounded-lg border p-4 text-sm ${boxClass}`}>
+      {kind === 'error' ? (
+        <XCircle className="mt-0.5 size-5 shrink-0" />
+      ) : (
+        <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
+      )}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {entries.length === 0 && <p>Hiçbir tablo gönderilmedi.</p>}
+        {entries.map(([tableName, v]) => (
+          <span key={tableName} className="num text-xs">
+            {typeof v === 'number' ? `✓ ${tableName}: ${v} kayıt` : `✗ ${tableName}: ${v.error}`}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

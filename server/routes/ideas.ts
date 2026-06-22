@@ -41,7 +41,7 @@ ideasRouter.get('/history', async (_req, res) => {
 
 // Accepts camelCase keys. status aliases: "watching"→"watch", "target_hit"→"hit_target".
 // target3 is accepted but not stored (ideas table has target1+target2 only).
-const ideaInput = z.object({
+export const ideaInput = z.object({
   date: z.string(),
   ticker: z.string(),
   exchange: z.string().nullish(),

@@ -34,7 +34,7 @@ morningNotesRouter.get('/history', async (_req, res) => {
 
 // Accepts camelCase keys — matches what the admin page EXAMPLES show and what
 // Claude Chat naturally generates.
-const morningNoteInput = z.object({
+export const morningNoteInput = z.object({
   date: z.string(),
   topCall: z.string().nullish(),
   macroBullets: z.array(z.any()).nullish(),
