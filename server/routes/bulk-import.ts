@@ -131,9 +131,10 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
 
       if (existing.length) {
         // entryLow/entryHigh/tp1-3/hardSl/thesis/invalidation are admin/chat-only
-        // fields — never written here, even if present in the payload. Only
-        // currentPrice and (optionally) priceHistory move through this endpoint,
-        // and only when the caller actually included that key.
+        // fields on an EXISTING plan — never written here, even if present in
+        // the payload. Only currentPrice and (optionally) priceHistory move
+        // through this endpoint on update, and only when the caller actually
+        // included that key.
         const patch: { currentPrice?: number | null; priceHistory?: typeof d.priceHistory; updatedAt: Date } = {
           updatedAt: new Date(),
         }
@@ -145,9 +146,21 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         }
         await db.update(tradePlans).set(patch).where(eq(tradePlans.id, existing[0].id))
       } else {
+        // No existing row for this ticker — this is a brand-new plan, so the
+        // full payload (entry/targets/thesis included) gets written, not just
+        // the update-only subset above.
         await db.insert(tradePlans).values({
           ticker,
+          exchange: d.exchange ?? null,
           currentPrice: d.currentPrice ?? null,
+          entryLow: d.entryLow ?? null,
+          entryHigh: d.entryHigh ?? null,
+          tp1: d.tp1 ?? null,
+          tp2: d.tp2 ?? null,
+          tp3: d.tp3 ?? null,
+          hardSl: d.hardSl ?? null,
+          thesis: d.thesis ?? null,
+          invalidation: d.invalidation ?? null,
           priceHistory: d.priceHistory ?? null,
         })
       }
