@@ -9,23 +9,35 @@ import { parseRecords } from '../lib/validation'
 
 export const ideasRouter = Router()
 
-// GET /api/ideas?date=YYYY-MM-DD → ideas for that date, else the latest date's
+// GET /api/ideas?date=YYYY-MM-DD → ideas for that date.
+// Without a date: one row per ticker (each ticker's own latest record by
+// date, then id as a tiebreaker) — NOT "every idea on the single latest
+// date", since unchanged positions stay parked on their original date and
+// would otherwise vanish from the "current" view the moment a newer ticker
+// is added on a different day.
 ideasRouter.get('/', async (req, res) => {
   const date = typeof req.query.date === 'string' ? req.query.date : undefined
-  let targetDate = date
-  if (!targetDate) {
-    const latest = await db.select({ date: ideas.date }).from(ideas).orderBy(desc(ideas.date)).limit(1)
-    if (!latest.length) {
-      res.json([])
-      return
-    }
-    targetDate = latest[0].date
+
+  if (date) {
+    const rows = await db
+      .select()
+      .from(ideas)
+      .where(eq(ideas.date, date))
+      .orderBy(desc(ideas.createdAt))
+    res.json(rows)
+    return
   }
+
+  const latestPerTicker = db
+    .selectDistinctOn([ideas.ticker])
+    .from(ideas)
+    .orderBy(ideas.ticker, desc(ideas.date), desc(ideas.id))
+    .as('latest_per_ticker')
+
   const rows = await db
     .select()
-    .from(ideas)
-    .where(eq(ideas.date, targetDate))
-    .orderBy(desc(ideas.createdAt))
+    .from(latestPerTicker)
+    .orderBy(desc(latestPerTicker.date))
   res.json(rows)
 })
 

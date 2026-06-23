@@ -70,12 +70,13 @@ function StatusBadge({ status }: { status: string }) {
 export function IdeasTableWidget() {
   const [tab, setTab] = useState<StatusTab>('active')
 
-  // The global date filter doesn't apply here: "Aktif" always shows the most
-  // recent date's non-stopped ideas, "Geçmiş" always shows every stopped idea
-  // across all dates — both independent of the header's selected date.
-  const { data: ideas, loading, error } = useApi<Idea[]>(
-    tab === 'active' ? '/api/ideas' : '/api/ideas/history',
-  )
+  // /api/ideas (no date) returns one row per ticker — each ticker's own
+  // latest record, not "everything dated on the single latest day". Without
+  // that, a ticker whose status hasn't changed in a week stays parked on its
+  // original date and disappears the moment any other ticker gets a newer
+  // entry. Both tabs read the same per-ticker-latest set; the date filter in
+  // the header never applies here.
+  const { data: ideas, loading, error } = useApi<Idea[]>('/api/ideas')
 
   // "Aktif" = active/tp1_hit/tp2_hit/tp3_hit/review — i.e. everything except
   // stopped, which is exactly what's left out of that list.
