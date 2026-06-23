@@ -109,3 +109,20 @@ GÖREV 8 — Header sadeleştirme, admin bulk-import, Aktif/Geçmiş sekmeleri
 - Widget header'larındaki dinamik "· 22 Haz 2026 kapanışı" alt-başlığı kaldırıldı (artık
   tarih bağlamı sadece header'daki datepicker'dan okunuyor); WidgetSubtitleCtx/
   useWidgetSubtitle/fmtDataDate mekanizması tamamen kaldırıldı (widget-subtitle.ts silindi).
+
+GÖREV 9 — Aktif/Geçmiş sekme bugfix: ticker bazında en son kayıt
+GÖREV 8'deki Aktif sekmesi "en son tarihteki kayıtlar" mantığıyla çalışıyordu — bu yanlıştı,
+çünkü durumu değişmeyen pozisyonlar hep orijinal tarihinde kalıyor ve başka bir ticker'a
+daha yeni bir tarihte kayıt girilince (örn. MU/ISRG 22 Haziran'a düşünce) eski ticker'lar
+(FIG/DRAM/ENKAI/THYAO, 19 Haziran) "güncel" görünümden tamamen kayboluyordu. Fix:
+GET /api/ideas (date parametresi yokken) artık selectDistinctOn(ticker) ile her ticker'ın
+KENDİ en son kaydını (ticker, date DESC, id DESC sıralamasıyla) tek satır olarak dönüyor,
+sonra date DESC'e göre tekrar sıralanıyor. IdeasTableWidget'ın Aktif ve Geçmiş sekmeleri
+artık bu aynı "ticker bazında en son" veri setini status'e göre filtreliyor (ayrı bir
+/api/ideas/history çağrısı yapmıyor). Sonuç doğrulandı: Aktif → FIG, DRAM, ENKAI, THYAO,
+MA, MU (6); Geçmiş → ISRG (1, "SL" rozetiyle).
+
+NOT: Bu fix git'e push edildi (commit 3359e5f) ama henüz bilinçli olarak prod'a alınmadı —
+"sonraki versiyonda deploy ederiz" kararı verildi. Railway GitHub push'unda otomatik deploy
+tetiklediği için, bu commit aslında zaten production'a gitmiş olabilir; istenirse bir
+sonraki sürüme kadar geri alınması (revert) gerekebilir.
