@@ -1,9 +1,9 @@
+import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import type { Idea } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
-import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
-import { useDateFilter, withDate } from '@/features/dashboard/date-filter'
+import { StatusTabs, type StatusTab } from './StatusTabs'
 
 function Loading() {
   return (
@@ -51,6 +51,10 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
     active:     { label: 'Aktif',  bg: '#eef3fb', color: '#2563a8' },
     hit_target: { label: 'Hedef', bg: '#edf5f2', color: '#1a7a5e' },
+    tp1_hit:    { label: 'TP1',   bg: '#edf5f2', color: '#1a7a5e' },
+    tp2_hit:    { label: 'TP2',   bg: '#edf5f2', color: '#1a7a5e' },
+    tp3_hit:    { label: 'TP3',   bg: '#edf5f2', color: '#1a7a5e' },
+    review:     { label: 'İncele', bg: '#fef8e9', color: '#9a6200' },
     stopped:    { label: 'SL',    bg: '#fdf0ee', color: '#c0392b' },
     watch:      { label: 'İzle',  bg: '#fef8e9', color: '#9a6200' },
   }
@@ -64,58 +68,73 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function IdeasTableWidget() {
-  const { date } = useDateFilter()
-  const { data: ideas, loading, error } = useApi<Idea[]>(withDate('/api/ideas', date))
+  const [tab, setTab] = useState<StatusTab>('active')
 
-  useWidgetSubtitle(ideas?.length ? fmtDataDate(ideas[0].date) : undefined)
+  // The global date filter doesn't apply here: "Aktif" always shows the most
+  // recent date's non-stopped ideas, "Geçmiş" always shows every stopped idea
+  // across all dates — both independent of the header's selected date.
+  const { data: ideas, loading, error } = useApi<Idea[]>(
+    tab === 'active' ? '/api/ideas' : '/api/ideas/history',
+  )
+
+  // "Aktif" = active/tp1_hit/tp2_hit/tp3_hit/review — i.e. everything except
+  // stopped, which is exactly what's left out of that list.
+  const visible = ideas?.filter(i => tab === 'active' ? i.status !== 'stopped' : i.status === 'stopped')
 
   if (loading) return <Loading />
   if (error) return <Empty>Veri alınamadı.</Empty>
-  if (!ideas?.length) return <Empty>{date ? 'Bu tarihte veri yok.' : 'Henüz fikir eklenmedi.'}</Empty>
 
   return (
-    <div className="-m-4 h-full overflow-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="sticky top-0 z-10 border-b border-faint bg-card">
-            <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Hisse</th>
-            <th className="num px-3 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Yön</th>
-            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Giriş</th>
-            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">SL</th>
-            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">TP1</th>
-            <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Durum</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ideas.map(idea => (
-            <tr key={idea.id} className="border-b border-faint2 hover:bg-bg">
-              <td className="px-4 py-2.5">
-                <div className="font-mono font-semibold text-sm">{idea.ticker}</div>
-                {idea.exchange && (
-                  <div className="num text-[10px] text-mid">{idea.exchange}</div>
-                )}
-              </td>
-              <td className="px-3 py-2.5">
-                <DirectionBadge direction={idea.direction} />
-              </td>
-              <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">
-                {idea.entryLow != null && idea.entryHigh != null
-                  ? `${fmtN(idea.entryLow, 0)}–${fmtN(idea.entryHigh, 0)}`
-                  : fmtN(idea.entryLow, 0)}
-              </td>
-              <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#c0392b' }}>
-                {fmtN(idea.stopLoss, 0)}
-              </td>
-              <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#1a7a5e' }}>
-                {fmtN(idea.target1, 0)}
-              </td>
-              <td className="px-4 py-2.5">
-                <StatusBadge status={idea.status} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="flex h-full flex-col">
+      <StatusTabs tab={tab} onChange={setTab} />
+
+      {!visible?.length ? (
+        <Empty>{tab === 'active' ? 'Aktif fikir yok.' : 'Geçmiş kayıt yok.'}</Empty>
+      ) : (
+        <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="sticky top-0 z-10 border-b border-faint bg-card">
+                <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Hisse</th>
+                <th className="num px-3 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Yön</th>
+                <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Giriş</th>
+                <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">SL</th>
+                <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">TP1</th>
+                <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map(idea => (
+                <tr key={idea.id} className="border-b border-faint2 hover:bg-bg">
+                  <td className="px-4 py-2.5">
+                    <div className="font-mono font-semibold text-sm">{idea.ticker}</div>
+                    {idea.exchange && (
+                      <div className="num text-[10px] text-mid">{idea.exchange}</div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <DirectionBadge direction={idea.direction} />
+                  </td>
+                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">
+                    {idea.entryLow != null && idea.entryHigh != null
+                      ? `${fmtN(idea.entryLow, 0)}–${fmtN(idea.entryHigh, 0)}`
+                      : fmtN(idea.entryLow, 0)}
+                  </td>
+                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#c0392b' }}>
+                    {fmtN(idea.stopLoss, 0)}
+                  </td>
+                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#1a7a5e' }}>
+                    {fmtN(idea.target1, 0)}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <StatusBadge status={idea.status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

@@ -86,3 +86,26 @@ history.ts).
 GÖREV 7 — Seviye çizgi kalınlığı
 createPriceLine() çağrılarına lineWidth: 2 eklendi (Giriş Bandı, TP1-3, Hard SL) — ince
 varsayılan çizgi yerine net görünür hale getirildi.
+
+GÖREV 8 — Header sadeleştirme, admin bulk-import, Aktif/Geçmiş sekmeleri
+- Dashboard header'ı sadeleştirildi: açıklama satırı kaldırıldı, "Düzeni Sıfırla" küçük
+  ikona indirildi, tarih kontrolü dropdown butona çevrildi (📅 + tarih + ⌄, panel içinde
+  native date input + "Tümünü Gör"). Header'a eklenen "Yenile" butonu sonradan kaldırıldı
+  (işlevsel bir karşılığı olmadığı için).
+- POST /api/admin/bulk-import endpoint'i eklendi: morning_note/ideas/heatmaps/trade_plans'ın
+  herhangi bir alt kümesini tek istekte upsert ediyor, mevcut requireAdmin (x-admin-key)
+  middleware'ini kullanıyor, tablo bazlı hata izolasyonu var. trade_plans için: ticker DB'de
+  yoksa tüm alanlar (entryLow/tp1-3/hardSl/thesis/invalidation dahil) insert edilir; ticker
+  VARSA sadece currentPrice + (varsa) priceHistory + (varsa) status güncellenir, diğer
+  alanlara dokunulmaz. Admin sayfasına "Toplu İçerik Girişi" bölümü (JetBrains Mono textarea,
+  Gönder/Temizle, sonuç kutusu) eklendi.
+- trade_plans tablosuna status kolonu eklendi (text, default 'active'; migration:
+  drizzle/0001_add_trade_plans_status.sql). ISRG hardSL kırılınca 'stopped' olarak
+  güncellendi.
+- Alım-Satım Önerileri ve Trade Planı widget'larına "Aktif | Geçmiş" sekme filtresi eklendi
+  (paylaşılan StatusTabs component'i). Aktif: en son tarihteki/durumdaki aktif kayıtlar,
+  tarih filtresinden bağımsız. Geçmiş: tüm stopped kayıtlar, tarihe göre tersten sıralı.
+  Geçmiş sekmesinde durdurulan pozisyonların yanında kırmızı "SL" rozeti gösteriliyor.
+- Widget header'larındaki dinamik "· 22 Haz 2026 kapanışı" alt-başlığı kaldırıldı (artık
+  tarih bağlamı sadece header'daki datepicker'dan okunuyor); WidgetSubtitleCtx/
+  useWidgetSubtitle/fmtDataDate mekanizması tamamen kaldırıldı (widget-subtitle.ts silindi).

@@ -47,6 +47,7 @@ export interface TradePlan {
   thesis: string | null
   invalidation: string | null
   priceHistory: OhlcPoint[] | null
+  status: string
   createdAt: string
   updatedAt: string
 }

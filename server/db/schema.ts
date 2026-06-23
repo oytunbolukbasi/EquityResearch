@@ -65,6 +65,7 @@ export const tradePlans = pgTable('trade_plans', {
   invalidation: text('invalidation'),
   // OHLC array for the sparkline/candles drawn at publish time.
   priceHistory: jsonb('price_history').$type<OhlcPoint[]>(),
+  status: text('status').default('active').notNull(), // active | stopped
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })

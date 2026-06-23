@@ -3,8 +3,8 @@ import { Loader2 } from 'lucide-react'
 
 import type { TradePlan } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
-import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
 import { TradePlanChart } from './TradePlanChart'
+import { StatusTabs, type StatusTab } from './StatusTabs'
 
 function N2(n: number): string {
   return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
@@ -59,11 +59,17 @@ function LevelRow({
 
 // ─── main widget ─────────────────────────────────────────────────────────────
 export function TradePlanWidget() {
+  const [tab, setTab] = useState<StatusTab>('active')
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
   const { data: plans, loading, error } = useApi<TradePlan[]>('/api/trade-plans')
 
-  const activePlan = plans?.find(p => p.ticker === selectedTicker) ?? plans?.[0]
-  useWidgetSubtitle(activePlan?.updatedAt ? fmtDataDate(activePlan.updatedAt) : undefined)
+  function changeTab(t: StatusTab) {
+    setTab(t)
+    setSelectedTicker(null)
+  }
+
+  const visible = plans?.filter(p => tab === 'active' ? p.status === 'active' : p.status === 'stopped')
+  const activePlan = visible?.find(p => p.ticker === selectedTicker) ?? visible?.[0]
 
   if (loading) {
     return (
@@ -87,8 +93,28 @@ export function TradePlanWidget() {
     )
   }
 
-  const plan = activePlan!
-  const cur  = plan.currentPrice
+  return (
+    <div>
+      <StatusTabs tab={tab} onChange={changeTab} />
+      {!visible?.length ? (
+        <div className="flex h-32 items-center justify-center">
+          <p className="text-sm text-mid">{tab === 'active' ? 'Aktif plan yok.' : 'Geçmiş plan yok.'}</p>
+        </div>
+      ) : (
+        <TradePlanBody plan={activePlan!} plans={visible} onSelect={setSelectedTicker} />
+      )}
+    </div>
+  )
+}
+
+function TradePlanBody({
+  plan, plans, onSelect,
+}: {
+  plan: TradePlan
+  plans: TradePlan[]
+  onSelect: (ticker: string) => void
+}) {
+  const cur = plan.currentPrice
 
   const levels = [
     {
@@ -111,10 +137,18 @@ export function TradePlanWidget() {
     <div className="flex flex-col gap-3">
       {/* Ticker header */}
       <div className="flex items-baseline justify-between">
-        <div>
+        <div className="flex items-center gap-1.5">
           <span className="font-mono font-semibold">{plan.ticker}</span>
           {plan.exchange && (
-            <span className="num ml-1.5 text-xs text-mid">· {plan.exchange}</span>
+            <span className="num text-xs text-mid">· {plan.exchange}</span>
+          )}
+          {plan.status === 'stopped' && (
+            <span
+              className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
+              style={{ background: '#fdf0ee', color: '#c0392b' }}
+            >
+              SL
+            </span>
           )}
         </div>
         <div className="flex items-center gap-3">
@@ -123,8 +157,8 @@ export function TradePlanWidget() {
           )}
           {plans.length > 1 && (
             <select
-              value={selectedTicker ?? plan.ticker}
-              onChange={e => setSelectedTicker(e.target.value)}
+              value={plan.ticker}
+              onChange={e => onSelect(e.target.value)}
               className="num rounded border border-faint bg-card px-2 py-1 text-xs"
             >
               {plans.map(p => (

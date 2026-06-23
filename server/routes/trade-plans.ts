@@ -48,6 +48,7 @@ export const tradePlanInput = z.object({
   thesis: z.string().nullish(),
   invalidation: z.string().nullish(),
   priceHistory: z.array(ohlc).nullish(),
+  status: z.string().nullish(), // active | stopped
 })
 
 // POST /api/trade-plans (admin) — single plan or array
@@ -73,6 +74,7 @@ tradePlansRouter.post('/', requireAdmin, async (req, res) => {
         thesis: d.thesis ?? null,
         invalidation: d.invalidation ?? null,
         priceHistory: d.priceHistory ?? null,
+        ...(d.status ? { status: d.status } : {}),
       })),
     )
     .returning()

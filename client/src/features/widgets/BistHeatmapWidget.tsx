@@ -2,7 +2,6 @@ import { Loader2 } from 'lucide-react'
 
 import type { Heatmap } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
-import { fmtDataDate, useWidgetSubtitle } from '@/features/dashboard/widget-subtitle'
 import { useDateFilter, withDate } from '@/features/dashboard/date-filter'
 import { HeatmapTile } from './heatmap-tile'
 
@@ -14,8 +13,6 @@ export function BistHeatmapWidget() {
     withDate('/api/heatmaps?market=BIST', date),
   )
   const data = Array.isArray(raw) ? raw[0] ?? null : raw
-
-  useWidgetSubtitle(data?.date ? fmtDataDate(data.date) : undefined)
 
   if (loading) {
     return (

@@ -132,17 +132,23 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
       if (existing.length) {
         // entryLow/entryHigh/tp1-3/hardSl/thesis/invalidation are admin/chat-only
         // fields on an EXISTING plan — never written here, even if present in
-        // the payload. Only currentPrice and (optionally) priceHistory move
-        // through this endpoint on update, and only when the caller actually
-        // included that key.
-        const patch: { currentPrice?: number | null; priceHistory?: typeof d.priceHistory; updatedAt: Date } = {
-          updatedAt: new Date(),
-        }
+        // the payload. Only currentPrice, status, and (optionally) priceHistory
+        // move through this endpoint on update, and only when the caller
+        // actually included that key.
+        const patch: {
+          currentPrice?: number | null
+          priceHistory?: typeof d.priceHistory
+          status?: string
+          updatedAt: Date
+        } = { updatedAt: new Date() }
         if (Object.prototype.hasOwnProperty.call(raw, 'currentPrice')) {
           patch.currentPrice = d.currentPrice ?? null
         }
         if (Object.prototype.hasOwnProperty.call(raw, 'priceHistory')) {
           patch.priceHistory = d.priceHistory ?? null
+        }
+        if (Object.prototype.hasOwnProperty.call(raw, 'status') && d.status) {
+          patch.status = d.status
         }
         await db.update(tradePlans).set(patch).where(eq(tradePlans.id, existing[0].id))
       } else {
@@ -162,6 +168,7 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
           thesis: d.thesis ?? null,
           invalidation: d.invalidation ?? null,
           priceHistory: d.priceHistory ?? null,
+          ...(d.status ? { status: d.status } : {}),
         })
       }
     })
