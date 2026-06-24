@@ -105,7 +105,12 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
       downColor: RED,
     })
 
-    const candles = (plan.priceHistory ?? []).map(c => ({
+    // lightweight-charts requires ascending time order and silently fails to
+    // render otherwise — priceHistory isn't guaranteed to arrive sorted.
+    const sortedHistory = [...(plan.priceHistory ?? [])]
+      .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
+
+    const candles = sortedHistory.map(c => ({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       time:  (c.t.includes('T') ? c.t.split('T')[0] : c.t) as any,
       open:  c.o,
