@@ -132,13 +132,23 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
       if (existing.length) {
         // entryLow/entryHigh/tp1-3/hardSl/thesis/invalidation are admin/chat-only
         // fields on an EXISTING plan — never written here, even if present in
-        // the payload. Only currentPrice, status, and (optionally) priceHistory
-        // move through this endpoint on update, and only when the caller
-        // actually included that key.
+        // the payload, UNLESS the caller explicitly opts in with
+        // `updateLevels: true` (a deliberate "yes, replace the plan's levels"
+        // flag, not just including the fields). Otherwise only currentPrice,
+        // status, and (optionally) priceHistory move through this endpoint on
+        // update, and only when the caller actually included that key.
         const patch: {
           currentPrice?: number | null
           priceHistory?: typeof d.priceHistory
           status?: string
+          entryLow?: number | null
+          entryHigh?: number | null
+          tp1?: number | null
+          tp2?: number | null
+          tp3?: number | null
+          hardSl?: number | null
+          thesis?: string | null
+          invalidation?: string | null
           updatedAt: Date
         } = { updatedAt: new Date() }
         if (Object.prototype.hasOwnProperty.call(raw, 'currentPrice')) {
@@ -149,6 +159,20 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         }
         if (Object.prototype.hasOwnProperty.call(raw, 'status') && d.status) {
           patch.status = d.status
+        }
+        if (raw.updateLevels === true) {
+          // Only touch the keys actually present in the payload — a partial
+          // level update (e.g. just entryLow/entryHigh) must not null out
+          // tp2/tp3/invalidation etc. just because they were omitted.
+          const has = (key: string) => Object.prototype.hasOwnProperty.call(raw, key)
+          if (has('entryLow'))      patch.entryLow      = d.entryLow ?? null
+          if (has('entryHigh'))     patch.entryHigh     = d.entryHigh ?? null
+          if (has('tp1'))           patch.tp1           = d.tp1 ?? null
+          if (has('tp2'))           patch.tp2           = d.tp2 ?? null
+          if (has('tp3'))           patch.tp3           = d.tp3 ?? null
+          if (has('hardSl'))        patch.hardSl        = d.hardSl ?? null
+          if (has('thesis'))        patch.thesis        = d.thesis ?? null
+          if (has('invalidation'))  patch.invalidation  = d.invalidation ?? null
         }
         await db.update(tradePlans).set(patch).where(eq(tradePlans.id, existing[0].id))
       } else {

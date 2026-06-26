@@ -21,8 +21,8 @@ export const widgetRegistry: Record<WidgetType, WidgetDef> = {
   },
   'ideas-table': {
     type: 'ideas-table',
-    eyebrow: 'Alım-Satım Önerileri',
-    title: 'Teknik Alım-Satım Önerileri',
+    eyebrow: 'Pozisyon Fikirleri',
+    title: 'Pozisyon Fikirleri',
     icon: ListChecks,
     defaultSize: { w: 5, h: 9, minW: 4, minH: 6 },
     Component: IdeasTableWidget,

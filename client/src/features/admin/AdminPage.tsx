@@ -8,7 +8,7 @@ type TableTarget = 'morning_notes' | 'ideas' | 'trade_plans' | 'heatmaps'
 
 const TABLES: { id: TableTarget; label: string; endpoint: string }[] = [
   { id: 'morning_notes', label: 'Piyasa Nabzı',          endpoint: '/api/morning-notes' },
-  { id: 'ideas',         label: 'Alım-Satım Önerisi',   endpoint: '/api/ideas'         },
+  { id: 'ideas',         label: 'Pozisyon Fikri',        endpoint: '/api/ideas'         },
   { id: 'trade_plans',   label: 'Trade Planı',           endpoint: '/api/trade-plans'  },
   { id: 'heatmaps',      label: 'Heatmap',               endpoint: '/api/heatmaps'     },
 ]

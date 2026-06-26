@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 
 import type { Idea } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { useSelectedTicker } from '@/features/dashboard/selected-ticker'
 import { StatusTabs, type StatusTab } from './StatusTabs'
 
 function Loading() {
@@ -69,6 +70,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export function IdeasTableWidget() {
   const [tab, setTab] = useState<StatusTab>('active')
+  const { setSelectedTicker } = useSelectedTicker()
 
   // /api/ideas (no date) returns one row per ticker — each ticker's own
   // latest record, not "everything dated on the single latest day". Without
@@ -106,7 +108,11 @@ export function IdeasTableWidget() {
             </thead>
             <tbody>
               {visible.map(idea => (
-                <tr key={idea.id} className="border-b border-faint2 hover:bg-bg">
+                <tr
+                  key={idea.id}
+                  onClick={() => setSelectedTicker(idea.ticker)}
+                  className="cursor-pointer border-b border-faint2 hover:bg-bg"
+                >
                   <td className="px-4 py-2.5">
                     <div className="font-mono font-semibold text-sm">{idea.ticker}</div>
                     {idea.exchange && (

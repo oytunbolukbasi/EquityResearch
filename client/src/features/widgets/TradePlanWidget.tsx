@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import type { TradePlan } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { useSelectedTicker } from '@/features/dashboard/selected-ticker'
 import { TradePlanChart } from './TradePlanChart'
 import { StatusTabs, type StatusTab } from './StatusTabs'
 
@@ -60,16 +61,28 @@ function LevelRow({
 // ─── main widget ─────────────────────────────────────────────────────────────
 export function TradePlanWidget() {
   const [tab, setTab] = useState<StatusTab>('active')
-  const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
+  const [localTicker, setLocalTicker] = useState<string | null>(null)
   const { data: plans, loading, error } = useApi<TradePlan[]>('/api/trade-plans')
+  const { selectedTicker: globalTicker } = useSelectedTicker()
 
   function changeTab(t: StatusTab) {
     setTab(t)
-    setSelectedTicker(null)
+    setLocalTicker(null)
   }
 
+  // A row clicked in Pozisyon Fikirleri sets the shared selectedTicker — jump
+  // to that ticker's plan and whichever tab (Aktif/Geçmiş) it actually lives
+  // in, regardless of what was showing before.
+  useEffect(() => {
+    if (!globalTicker || !plans) return
+    const match = plans.find(p => p.ticker === globalTicker)
+    if (!match) return
+    setTab(match.status === 'stopped' ? 'history' : 'active')
+    setLocalTicker(globalTicker)
+  }, [globalTicker, plans])
+
   const visible = plans?.filter(p => tab === 'active' ? p.status === 'active' : p.status === 'stopped')
-  const activePlan = visible?.find(p => p.ticker === selectedTicker) ?? visible?.[0]
+  const activePlan = visible?.find(p => p.ticker === localTicker) ?? visible?.[0]
 
   if (loading) {
     return (
@@ -101,7 +114,7 @@ export function TradePlanWidget() {
           <p className="text-sm text-mid">{tab === 'active' ? 'Aktif plan yok.' : 'Geçmiş plan yok.'}</p>
         </div>
       ) : (
-        <TradePlanBody plan={activePlan!} plans={visible} onSelect={setSelectedTicker} />
+        <TradePlanBody plan={activePlan!} plans={visible} onSelect={setLocalTicker} />
       )}
     </div>
   )
