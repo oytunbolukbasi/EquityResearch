@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { IoOpenOutline } from 'react-icons/io5'
 
 import type { TradePlan } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
@@ -14,6 +15,22 @@ function N2(n: number): string {
 function pctStr(price: number, current: number): string {
   const p = ((price - current) / current) * 100
   return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`
+}
+
+// TradingView's own exchange codes don't always match ours 1:1 (e.g. our
+// "XETRA" vs their "XETR") — map the ones that differ, pass the rest through.
+const TV_EXCHANGE_MAP: Record<string, string> = {
+  BIST: 'BIST',
+  NASDAQ: 'NASDAQ',
+  NYSE: 'NYSE',
+  XETRA: 'XETR',
+  XETR: 'XETR',
+}
+
+function tvChartUrl(ticker: string, exchange: string | null): string {
+  const tvExchange = exchange ? (TV_EXCHANGE_MAP[exchange.toUpperCase()] ?? exchange) : ''
+  const symbol = tvExchange ? `${tvExchange}:${ticker}` : ticker
+  return `https://tr.tradingview.com/chart/95XZ7reL/?symbol=${encodeURIComponent(symbol)}`
 }
 
 // ─── legend chip ─────────────────────────────────────────────────────────────
@@ -155,6 +172,15 @@ function TradePlanBody({
           {plan.exchange && (
             <span className="num text-xs text-mid">· {plan.exchange}</span>
           )}
+          <a
+            href={tvChartUrl(plan.ticker, plan.exchange)}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="TradingView'da aç"
+            className="flex items-center p-1 -m-1 text-mid hover:text-ink transition-colors [transition-duration:0.15s]"
+          >
+            <IoOpenOutline size={14} />
+          </a>
           {plan.status === 'stopped' && (
             <span
               className="num rounded px-1.5 py-0.5 text-[10px] font-medium"

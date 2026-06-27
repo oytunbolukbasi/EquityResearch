@@ -49,6 +49,7 @@ async function upsertTable<T>(
 bulkImportRouter.post('/', requireAdmin, async (req, res) => {
   const body = (req.body ?? {}) as Record<string, unknown>
   const results: Record<string, TableResult> = {}
+  const warnings: string[] = []
 
   if (body.morning_note !== undefined) {
     results.morning_note = await upsertTable(morningNoteInput, body.morning_note, async (d) => {
@@ -123,6 +124,13 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
     results.trade_plans = await upsertTable(tradePlanInput, body.trade_plans, async (d, rawItem) => {
       const ticker = d.ticker.toUpperCase()
       const raw = rawItem as Record<string, unknown>
+
+      if (d.priceHistory && d.priceHistory.length < 20) {
+        const msg = `⚠️ ${ticker} priceHistory kısa: ${d.priceHistory.length} bar var, beklenen ≥20`
+        console.warn(msg)
+        warnings.push(msg)
+      }
+
       const existing = await db
         .select({ id: tradePlans.id })
         .from(tradePlans)
@@ -198,5 +206,5 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
     })
   }
 
-  res.json({ success: true, results })
+  res.json({ success: true, results, ...(warnings.length ? { warnings } : {}) })
 })
