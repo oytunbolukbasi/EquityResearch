@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import {
   createChart,
-  BarSeries,
+  CandlestickSeries,
   LineSeries,
   LineStyle,
   type IChartApi,
@@ -99,10 +99,14 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
 
     chartRef.current = chart
 
-    // ─── OHLC bar series ──────────────────────────────────────────────────────
-    const barSeries = chart.addSeries(BarSeries, {
-      upColor:   GREEN,
-      downColor: RED,
+    // ─── Candlestick series ──────────────────────────────────────────────────
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor:         GREEN,
+      downColor:       RED,
+      borderUpColor:   GREEN,
+      borderDownColor: RED,
+      wickUpColor:     GREEN,
+      wickDownColor:   RED,
     })
 
     // lightweight-charts requires ascending time order and silently fails to
@@ -119,7 +123,7 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
       close: c.c,
     }))
 
-    if (candles.length) barSeries.setData(candles)
+    if (candles.length) candleSeries.setData(candles)
 
     // ─── Invisible anchor series to force Y-axis to show the candle range ────
     // Two transparent LineSeries, one anchored at visibleMin and one at
@@ -149,7 +153,7 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
 
     // ─── Price lines — only for levels inside the visible range ─────────────
     for (const l of inRange) {
-      barSeries.createPriceLine({
+      candleSeries.createPriceLine({
         price: l.price,
         color: l.color,
         lineWidth: 2,
