@@ -48,6 +48,10 @@ export const tradePlanInput = z.object({
   thesis: z.string().nullish(),
   invalidation: z.string().nullish(),
   priceHistory: z.array(ohlc).nullish(),
+  // Merge-by-date into the existing price_history instead of replacing it —
+  // see appendPriceHistory handling in bulk-import.ts. Plain /api/trade-plans
+  // POST (insert-only) ignores this; only bulk-import's update branch uses it.
+  appendPriceHistory: z.array(ohlc).nullish(),
   status: z.string().nullish(), // active | stopped
 })
 

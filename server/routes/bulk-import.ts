@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import type { ZodType } from 'zod'
 
 import { db } from '../db/client'
-import { morningNotes, ideas, heatmaps, tradePlans } from '../db/schema'
+import { morningNotes, ideas, heatmaps, tradePlans, type OhlcPoint } from '../db/schema'
 import { requireAdmin } from '../middleware/require-admin'
 import { morningNoteInput } from './morning-notes'
 import { ideaInput } from './ideas'
@@ -13,6 +13,16 @@ import { tradePlanInput } from './trade-plans'
 export const bulkImportRouter = Router()
 
 type TableResult = number | { error: string }
+
+// Merge `toAppend` into `existing` keyed by date ("t") — a bar with a date
+// that's already present overwrites that bar (DO UPDATE), a new date gets
+// added — then returns everything sorted ascending by date.
+function mergePriceHistory(existing: OhlcPoint[] | null, toAppend: OhlcPoint[]): OhlcPoint[] {
+  const byDate = new Map<string, OhlcPoint>()
+  for (const bar of existing ?? []) byDate.set(bar.t, bar)
+  for (const bar of toAppend) byDate.set(bar.t, bar)
+  return [...byDate.values()].sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
+}
 
 function zodErrorMessage(err: { issues: { path: PropertyKey[]; message: string }[] }): string {
   return err.issues
@@ -132,7 +142,7 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
       }
 
       const existing = await db
-        .select({ id: tradePlans.id })
+        .select({ id: tradePlans.id, priceHistory: tradePlans.priceHistory })
         .from(tradePlans)
         .where(eq(tradePlans.ticker, ticker))
         .limit(1)
@@ -164,6 +174,12 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         }
         if (Object.prototype.hasOwnProperty.call(raw, 'priceHistory')) {
           patch.priceHistory = d.priceHistory ?? null
+        }
+        if (d.appendPriceHistory?.length) {
+          // Merge wins over a plain `priceHistory` overwrite if both are
+          // somehow present in the same payload — append is the more
+          // specific, deliberate instruction.
+          patch.priceHistory = mergePriceHistory(existing[0].priceHistory, d.appendPriceHistory)
         }
         if (Object.prototype.hasOwnProperty.call(raw, 'status') && d.status) {
           patch.status = d.status
@@ -199,7 +215,9 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
           hardSl: d.hardSl ?? null,
           thesis: d.thesis ?? null,
           invalidation: d.invalidation ?? null,
-          priceHistory: d.priceHistory ?? null,
+          priceHistory: d.appendPriceHistory?.length
+            ? mergePriceHistory(d.priceHistory ?? null, d.appendPriceHistory)
+            : d.priceHistory ?? null,
           ...(d.status ? { status: d.status } : {}),
         })
       }
