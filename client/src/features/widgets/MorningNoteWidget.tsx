@@ -1,8 +1,10 @@
-import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
 import type { MacroBullet, MorningNote } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
-import { useDateFilter, withDate } from '@/features/dashboard/date-filter'
+
+const dateFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
 
 function Loading() {
   return (
@@ -30,25 +32,59 @@ function Bullet({ b }: { b: MacroBullet }) {
   )
 }
 
-export function MorningNoteWidget() {
-  const { date } = useDateFilter()
-  const { data: note, loading, error } = useApi<MorningNote | null>(
-    withDate('/api/morning-notes', date),
+function DateNav({
+  notes,
+  index,
+  onChange,
+}: {
+  notes: MorningNote[]
+  index: number
+  onChange: (i: number) => void
+}) {
+  const note = notes[index]
+  const dateStr = dateFmt.format(new Date(note.date + 'T12:00:00'))
+  const isNewest = index === 0
+  const isOldest = index >= notes.length - 1
+
+  return (
+    <div className="flex items-center justify-center gap-1 pb-3">
+      <button
+        disabled={isOldest}
+        onClick={() => onChange(index + 1)}
+        className="rounded p-0.5 text-mid transition-colors hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Önceki kayıt"
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+      <span className="num min-w-[140px] text-center text-[11px] font-medium tracking-wide text-mid">
+        {dateStr}
+      </span>
+      <button
+        disabled={isNewest}
+        onClick={() => onChange(index - 1)}
+        className="rounded p-0.5 text-mid transition-colors hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Sonraki kayıt"
+      >
+        <ChevronRight className="size-4" />
+      </button>
+    </div>
   )
+}
+
+export function MorningNoteWidget() {
+  const [index, setIndex] = useState(0)
+  const { data: notes, loading, error } = useApi<MorningNote[]>('/api/morning-notes/history')
 
   if (loading) return <Loading />
   if (error) return <Empty>Veri alınamadı.</Empty>
-  if (!note) return <Empty>{date ? 'Bu tarihte veri yok.' : 'Henüz morning note eklenmedi.'}</Empty>
+  if (!notes?.length) return <Empty>Henüz morning note eklenmedi.</Empty>
 
-  const dateStr = new Date(note.date + 'T12:00:00').toLocaleDateString('tr-TR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  const safeIndex = Math.min(index, notes.length - 1)
+  const note = notes[safeIndex]
 
   return (
     <div className="space-y-4">
-      <p className="num text-[10px] uppercase tracking-[0.12em] text-mid">{dateStr}</p>
+      <DateNav notes={notes} index={safeIndex} onChange={setIndex} />
 
       {note.topCall && (
         <section>

@@ -93,6 +93,12 @@ Her pozisyon için status belirle:
 - Tezi bozan önemli haber → `"review"`
 - Hiçbiri değilse → `"active"` (ideas'a EKLEME — değişiklik yok)
 
+> **Dashboard sekme mantığı (bilgi amaçlı):**
+> - **Aktif sekmesi** = `active` / `tp1_hit` / `tp2_hit` / `review`
+>   TP1/TP2'ye ulaşmış pozisyon hâlâ açık sayılır, oyun planı devam eder.
+> - **Geçmiş sekmesi** = `stopped` / `tp3_hit`
+>   TP3 nihai hedefe ulaşıldı — tez tamamlandı, kapatılmış sayılır.
+
 ---
 
 ## ADIM 2 — MAKRO & HABER TARAMASI
@@ -313,11 +319,11 @@ Yeni fikir eklendiğinde trade_plans'a TAM plan + priceHistory gönder.
 
 **BIST hisseleri için priceHistory:**
 1. Matriks AI historicalData (`symbol: TICKER, interval: daily, startDate: 60 gün önce, endDate: bugün, rawBars: true`, 2 deneme)
-2. Başarısız → `priceHistory: []` gönder, ADIM 8'de logla (sayfa kazıma DENEME)
+2. Başarısız → `priceHistory: []` gönder, ADIM 8'de logla (sayfa kazıma YAPMA — kesinlikle deneme)
 
 **ABD hisseleri için priceHistory:**
 1. Twelve Data time_series (`symbol: TICKER, interval: 1day, outputsize: 60`, 2 deneme)
-2. Başarısız → `priceHistory: []` gönder, ADIM 8'de logla (sayfa kazıma DENEME)
+2. Başarısız → `priceHistory: []` gönder, ADIM 8'de logla (sayfa kazıma YAPMA — kesinlikle deneme)
 
 > **KRİTİK:** priceHistory TARİHE GÖRE ARTAN sırada (en eski önce, en yeni sonda).
 > Bar formatı: `{"t": "YYYY-MM-DD", "o": 0.00, "h": 0.00, "l": 0.00, "c": 0.00}`
