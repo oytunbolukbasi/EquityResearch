@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { z, type ZodType } from 'zod'
 
 import { db } from '../db/client'
@@ -10,9 +10,17 @@ import { ideaInput } from './ideas'
 import { heatmapInput } from './heatmaps'
 import { tradePlanInput } from './trade-plans'
 
+const portfolioActionSchema = z.object({
+  ticker: z.string(),
+  action: z.string(),
+  reason: z.string(),
+})
+
 const portfolioInsightInput = z.object({
   date: z.string(),
-  body: z.string(),
+  body: z.string().optional(),
+  summary: z.string().optional(),
+  actions: z.array(portfolioActionSchema).nullish(),
 })
 
 export const bulkImportRouter = Router()
@@ -150,6 +158,7 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         .select({ id: tradePlans.id, priceHistory: tradePlans.priceHistory })
         .from(tradePlans)
         .where(eq(tradePlans.ticker, ticker))
+        .orderBy(desc(tradePlans.updatedAt))
         .limit(1)
 
       if (existing.length) {
@@ -177,14 +186,14 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         if (Object.prototype.hasOwnProperty.call(raw, 'currentPrice')) {
           patch.currentPrice = d.currentPrice ?? null
         }
-        if (Object.prototype.hasOwnProperty.call(raw, 'priceHistory')) {
-          patch.priceHistory = d.priceHistory ?? null
-        }
         if (d.appendPriceHistory?.length) {
-          // Merge wins over a plain `priceHistory` overwrite if both are
-          // somehow present in the same payload — append is the more
-          // specific, deliberate instruction.
           patch.priceHistory = mergePriceHistory(existing[0].priceHistory, d.appendPriceHistory)
+        } else if (Object.prototype.hasOwnProperty.call(raw, 'priceHistory') && d.priceHistory != null) {
+          // Only allow a full priceHistory overwrite when a non-null array is
+          // explicitly provided — prevents accidental wipes from stray
+          // `"priceHistory": null` in payloads that only intend to update
+          // status/currentPrice.
+          patch.priceHistory = d.priceHistory
         }
         if (Object.prototype.hasOwnProperty.call(raw, 'status') && d.status) {
           patch.status = d.status
@@ -231,7 +240,12 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
 
   if (body.portfolio_insight !== undefined) {
     results.portfolio_insight = await upsertTable(portfolioInsightInput, body.portfolio_insight, async (d) => {
-      const values = { date: d.date, body: d.body }
+      const bodyText = d.summary ?? d.body ?? ''
+      const values = {
+        date: d.date,
+        body: bodyText,
+        actions: d.actions ?? null,
+      }
       const existing = await db
         .select({ id: portfolioInsights.id })
         .from(portfolioInsights)

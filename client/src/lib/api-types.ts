@@ -103,9 +103,16 @@ export interface PortfolioSummary {
   usdTryRateIsFallback: boolean
 }
 
+export interface PortfolioAction {
+  ticker: string
+  action: string
+  reason: string
+}
+
 export interface PortfolioInsight {
   id: number
   date: string
   body: string
+  actions: PortfolioAction[] | null
   createdAt: string
 }

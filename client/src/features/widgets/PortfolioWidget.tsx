@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Loader2 } from 'lucide-react'
-import { IoSwapHorizontal } from 'react-icons/io5'
+import { IoSwapHorizontal, IoSparkles, IoClose } from 'react-icons/io5'
 
-import type { PortfolioClosedPosition, PortfolioInsight, PortfolioPosition, PortfolioSummary } from '@/lib/api-types'
+import type { PortfolioAction, PortfolioClosedPosition, PortfolioInsight, PortfolioPosition, PortfolioSummary } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { StatusTabs, type StatusTab } from './StatusTabs'
 
@@ -124,60 +125,155 @@ function CurrencyBlock({
   )
 }
 
+// ─── action badge colors ────────────────────────────────────────────────────
+const ACTION_STYLE: Record<string, { bg: string; color: string }> = {
+  'BEKLE':           { bg: '#eef3fb', color: '#2563a8' },
+  'KISMİ KÂR AL':   { bg: '#edf5f2', color: '#1a7a5e' },
+  'SAT':             { bg: '#fdf0ee', color: '#c0392b' },
+  'POZİSYON ARTIR':  { bg: '#e0f0e5', color: '#15603d' },
+}
+
+// ─── liquid glass modal ─────────────────────────────────────────────────────
+function ActionModal({ action, onClose }: { action: PortfolioAction; onClose: () => void }) {
+  const backdropRef = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true))
+  }, [])
+
+  function handleClose() {
+    setVisible(false)
+    setTimeout(onClose, 180)
+  }
+
+  const style = ACTION_STYLE[action.action] ?? { bg: '#f5f4f0', color: '#6b6b67' }
+
+  return createPortal(
+    <div
+      ref={backdropRef}
+      onClick={e => { if (e.target === backdropRef.current) handleClose() }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        background: visible ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0)',
+        transition: 'background 180ms ease',
+      }}
+    >
+      <div
+        style={{
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(20px) saturate(1.4)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+          border: '1px solid rgba(255,255,255,0.35)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
+          borderRadius: 16,
+          transform: visible ? 'scale(1)' : 'scale(0.95)',
+          opacity: visible ? 1 : 0,
+          transition: 'transform 180ms ease, opacity 180ms ease',
+          maxWidth: 380,
+          width: '100%',
+        }}
+      >
+        <div className="flex items-start justify-between p-5 pb-0">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-base font-bold text-ink">{action.ticker}</span>
+            <span
+              className="num rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+              style={{ background: style.bg, color: style.color }}
+            >
+              {action.action}
+            </span>
+          </div>
+          <button
+            onClick={handleClose}
+            className="rounded-full p-1 text-mid transition-colors hover:bg-black/5 hover:text-ink"
+          >
+            <IoClose size={16} />
+          </button>
+        </div>
+        <div className="p-5 pt-3">
+          <p className="text-sm leading-relaxed text-ink/80">{action.reason}</p>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 // ─── active positions table ─────────────────────────────────────────────────
 function PositionsTable({
-  positions, plMode, onTogglePlMode,
+  positions, plMode, onTogglePlMode, actionsMap,
 }: {
   positions: PortfolioPosition[]
   plMode: PlDisplayMode
   onTogglePlMode: () => void
+  actionsMap: Map<string, PortfolioAction>
 }) {
+  const [modalAction, setModalAction] = useState<PortfolioAction | null>(null)
+
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="sticky top-0 z-10 border-b border-faint bg-card">
-          <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Sembol</th>
-          <th className="num px-3 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Tip</th>
-          <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Miktar</th>
-          <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Maliyet</th>
-          <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Güncel Fiyat</th>
-          <th className="num px-4 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">
-            <span className="inline-flex items-center gap-1">
-              {plMode === 'percent' ? 'K/Z %' : 'K/Z'}
-              <button
-                onClick={onTogglePlMode}
-                title="Yüzde / değer göster"
-                aria-label="K/Z gösterim modunu değiştir"
-                className="rounded p-0.5 text-mid transition-colors hover:text-ink"
-              >
-                <IoSwapHorizontal size={12} />
-              </button>
-            </span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {positions.map(p => (
-          <tr key={p.id} className="border-b border-faint2 hover:bg-bg">
-            <td className="px-4 py-2.5">
-              <div className="font-mono font-semibold text-sm">{p.symbol}</div>
-              {p.name && <div className="truncate text-[10px] text-mid" style={{ maxWidth: 140 }}>{p.name}</div>}
-            </td>
-            <td className="px-3 py-2.5">
-              <TypeBadge type={p.type} />
-            </td>
-            <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">{fmtQty(p.quantity)}</td>
-            <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">{fmtMoney(p.buyPrice)}</td>
-            <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">
-              {p.currentPrice != null ? fmtMoney(p.currentPrice) : '—'}
-            </td>
-            <td className="px-4 py-2.5 text-right">
-              <PlText n={p.plAmount} pct={p.plPercent} mode={plMode} currencyPrefix={TYPE_CURRENCY_PREFIX[p.type] ?? ''} />
-            </td>
+    <>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="sticky top-0 z-10 border-b border-faint bg-card">
+            <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Sembol</th>
+            <th className="num px-3 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Tip</th>
+            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Miktar</th>
+            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Maliyet</th>
+            <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Güncel Fiyat</th>
+            <th className="num px-4 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">
+              <span className="inline-flex items-center gap-1">
+                {plMode === 'percent' ? 'K/Z %' : 'K/Z'}
+                <button
+                  onClick={onTogglePlMode}
+                  title="Yüzde / değer göster"
+                  aria-label="K/Z gösterim modunu değiştir"
+                  className="rounded p-0.5 text-mid transition-colors hover:text-ink"
+                >
+                  <IoSwapHorizontal size={12} />
+                </button>
+              </span>
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {positions.map(p => {
+            const action = actionsMap.get(p.symbol)
+            return (
+              <tr key={p.id} className="border-b border-faint2 hover:bg-bg">
+                <td className="px-4 py-2.5">
+                  <div className="font-mono font-semibold text-sm">{p.symbol}</div>
+                  {p.name && <div className="truncate text-[10px] text-mid" style={{ maxWidth: 140 }}>{p.name}</div>}
+                </td>
+                <td className="px-3 py-2.5">
+                  <TypeBadge type={p.type} />
+                </td>
+                <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">{fmtQty(p.quantity)}</td>
+                <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">{fmtMoney(p.buyPrice)}</td>
+                <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">
+                  {p.currentPrice != null ? fmtMoney(p.currentPrice) : '—'}
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  <span className="inline-flex items-center gap-1.5">
+                    <PlText n={p.plAmount} pct={p.plPercent} mode={plMode} currencyPrefix={TYPE_CURRENCY_PREFIX[p.type] ?? ''} />
+                    {action && (
+                      <button
+                        onClick={() => setModalAction(action)}
+                        title={`${action.ticker}: ${action.action}`}
+                        className="rounded p-0.5 text-amber-500 transition-colors hover:text-amber-600"
+                      >
+                        <IoSparkles size={13} />
+                      </button>
+                    )}
+                  </span>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      {modalAction && <ActionModal action={modalAction} onClose={() => setModalAction(null)} />}
+    </>
   )
 }
 
@@ -249,6 +345,11 @@ export function PortfolioWidget() {
   const usdPlAmountTRY = usdCurrentValueTRY != null ? usdCurrentValueTRY - usdCostBasisTRY : null
   const usdPlPercentTRY = usdPlAmountTRY != null && usdCostBasisTRY !== 0 ? (usdPlAmountTRY / usdCostBasisTRY) * 100 : null
 
+  const actionsMap = new Map<string, PortfolioAction>()
+  if (insight?.actions) {
+    for (const a of insight.actions) actionsMap.set(a.ticker, a)
+  }
+
   const rateNote = summary
     ? summary.usdTryRateIsFallback
       ? `Kur: ~${fmtMoney(summary.usdTryRate)} TL (tahmini, API erişilemedi)`
@@ -280,13 +381,13 @@ export function PortfolioWidget() {
             />
           </div>
 
-          {/* Insight */}
-          <div className="mb-3 rounded-lg border border-faint2 p-3">
-            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-mid">Günlük Analiz</p>
+          {/* Insight — short summary only */}
+          <div className="mb-3 rounded-lg border border-faint2 px-4 py-3.5">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-mid">Günlük Analiz</p>
             {insight?.body ? (
-              <p className="text-xs leading-relaxed text-ink">{insight.body}</p>
+              <p className="text-[13px] leading-[1.65] text-ink">{insight.body}</p>
             ) : (
-              <p className="text-xs text-mid">Henüz analiz yok.</p>
+              <p className="text-[13px] text-mid">Henüz analiz yok.</p>
             )}
           </div>
 
@@ -299,6 +400,7 @@ export function PortfolioWidget() {
                 positions={positions}
                 plMode={plMode}
                 onTogglePlMode={() => setPlMode(m => m === 'percent' ? 'value' : 'percent')}
+                actionsMap={actionsMap}
               />
             </div>
           )}

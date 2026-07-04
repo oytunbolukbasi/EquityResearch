@@ -80,9 +80,8 @@ export function IdeasTableWidget() {
   // the header never applies here.
   const { data: ideas, loading, error } = useApi<Idea[]>('/api/ideas')
 
-  // "Aktif" = active/tp1_hit/tp2_hit/tp3_hit/review — i.e. everything except
-  // stopped, which is exactly what's left out of that list.
-  const visible = ideas?.filter(i => tab === 'active' ? i.status !== 'stopped' : i.status === 'stopped')
+  const HISTORY_STATUSES = new Set(['stopped', 'tp3_hit'])
+  const visible = ideas?.filter(i => tab === 'active' ? !HISTORY_STATUSES.has(i.status) : HISTORY_STATUSES.has(i.status))
 
   if (loading) return <Loading />
   if (error) return <Empty>Veri alınamadı.</Empty>

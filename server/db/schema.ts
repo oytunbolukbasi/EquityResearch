@@ -78,12 +78,15 @@ export const heatmaps = pgTable('heatmaps', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+export type PortfolioAction = { ticker: string; action: string; reason: string }
+
 // Daily written commentary about the portfolio (separate DB owns the actual
 // positions/prices — this table just holds our own generated narrative).
 export const portfolioInsights = pgTable('portfolio_insights', {
   id: serial('id').primaryKey(),
   date: date('date').notNull(),
   body: text('body').notNull(),
+  actions: jsonb('actions').$type<PortfolioAction[]>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 

@@ -8,6 +8,8 @@ import { useSelectedTicker } from '@/features/dashboard/selected-ticker'
 import { TradePlanChart } from './TradePlanChart'
 import { StatusTabs, type StatusTab } from './StatusTabs'
 
+const HISTORY_STATUSES = new Set(['stopped', 'tp3_hit'])
+
 function N2(n: number): string {
   return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
@@ -87,18 +89,15 @@ export function TradePlanWidget() {
     setLocalTicker(null)
   }
 
-  // A row clicked in Pozisyon Fikirleri sets the shared selectedTicker — jump
-  // to that ticker's plan and whichever tab (Aktif/Geçmiş) it actually lives
-  // in, regardless of what was showing before.
   useEffect(() => {
     if (!globalTicker || !plans) return
     const match = plans.find(p => p.ticker === globalTicker)
     if (!match) return
-    setTab(match.status === 'stopped' ? 'history' : 'active')
+    setTab(HISTORY_STATUSES.has(match.status) ? 'history' : 'active')
     setLocalTicker(globalTicker)
   }, [globalTicker, plans])
 
-  const visible = plans?.filter(p => tab === 'active' ? p.status === 'active' : p.status === 'stopped')
+  const visible = plans?.filter(p => tab === 'active' ? !HISTORY_STATUSES.has(p.status) : HISTORY_STATUSES.has(p.status))
   const activePlan = visible?.find(p => p.ticker === localTicker) ?? visible?.[0]
 
   if (loading) {
@@ -181,12 +180,14 @@ function TradePlanBody({
           >
             <IoOpenOutline size={14} />
           </a>
-          {plan.status === 'stopped' && (
+          {HISTORY_STATUSES.has(plan.status) && (
             <span
               className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
-              style={{ background: '#fdf0ee', color: '#c0392b' }}
+              style={plan.status === 'tp3_hit'
+                ? { background: '#edf5f2', color: '#1a7a5e' }
+                : { background: '#fdf0ee', color: '#c0392b' }}
             >
-              SL
+              {plan.status === 'tp3_hit' ? 'TP3' : 'SL'}
             </span>
           )}
         </div>
