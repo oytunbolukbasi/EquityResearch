@@ -78,7 +78,17 @@ export const heatmaps = pgTable('heatmaps', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+// Daily written commentary about the portfolio (separate DB owns the actual
+// positions/prices — this table just holds our own generated narrative).
+export const portfolioInsights = pgTable('portfolio_insights', {
+  id: serial('id').primaryKey(),
+  date: date('date').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
 export type MorningNote = typeof morningNotes.$inferSelect
 export type Idea = typeof ideas.$inferSelect
 export type TradePlan = typeof tradePlans.$inferSelect
 export type Heatmap = typeof heatmaps.$inferSelect
+export type PortfolioInsight = typeof portfolioInsights.$inferSelect

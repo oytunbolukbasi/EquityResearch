@@ -15,6 +15,13 @@
       "when": 1782237409312,
       "tag": "0001_add_trade_plans_status",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783148122390,
+      "tag": "0002_add_portfolio_insights",
+      "breakpoints": true
     }
   ]
 }

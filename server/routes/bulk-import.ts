@@ -1,14 +1,19 @@
 import { Router } from 'express'
 import { and, eq } from 'drizzle-orm'
-import type { ZodType } from 'zod'
+import { z, type ZodType } from 'zod'
 
 import { db } from '../db/client'
-import { morningNotes, ideas, heatmaps, tradePlans, type OhlcPoint } from '../db/schema'
+import { morningNotes, ideas, heatmaps, tradePlans, portfolioInsights, type OhlcPoint } from '../db/schema'
 import { requireAdmin } from '../middleware/require-admin'
 import { morningNoteInput } from './morning-notes'
 import { ideaInput } from './ideas'
 import { heatmapInput } from './heatmaps'
 import { tradePlanInput } from './trade-plans'
+
+const portfolioInsightInput = z.object({
+  date: z.string(),
+  body: z.string(),
+})
 
 export const bulkImportRouter = Router()
 
@@ -220,6 +225,22 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
             : d.priceHistory ?? null,
           ...(d.status ? { status: d.status } : {}),
         })
+      }
+    })
+  }
+
+  if (body.portfolio_insight !== undefined) {
+    results.portfolio_insight = await upsertTable(portfolioInsightInput, body.portfolio_insight, async (d) => {
+      const values = { date: d.date, body: d.body }
+      const existing = await db
+        .select({ id: portfolioInsights.id })
+        .from(portfolioInsights)
+        .where(eq(portfolioInsights.date, d.date))
+        .limit(1)
+      if (existing.length) {
+        await db.update(portfolioInsights).set(values).where(eq(portfolioInsights.id, existing[0].id))
+      } else {
+        await db.insert(portfolioInsights).values(values)
       }
     })
   }
