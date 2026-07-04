@@ -242,8 +242,23 @@ function PositionsTable({
             return (
               <tr key={p.id} className="border-b border-faint2 hover:bg-bg">
                 <td className="px-4 py-2.5">
-                  <div className="font-mono font-semibold text-sm">{p.symbol}</div>
-                  {p.name && <div className="truncate text-[10px] text-mid" style={{ maxWidth: 140 }}>{p.name}</div>}
+                  <div className="flex items-center gap-1">
+                    <span className="inline-flex w-[18px] shrink-0 justify-center">
+                      {action ? (
+                        <button
+                          onClick={() => setModalAction(action)}
+                          title={`${action.ticker}: ${action.action}`}
+                          className="rounded p-0.5 text-amber-500 transition-colors hover:text-amber-600"
+                        >
+                          <IoSparkles size={13} />
+                        </button>
+                      ) : null}
+                    </span>
+                    <div>
+                      <div className="font-mono font-semibold text-sm">{p.symbol}</div>
+                      {p.name && <div className="truncate text-[10px] text-mid" style={{ maxWidth: 140 }}>{p.name}</div>}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-3 py-2.5">
                   <TypeBadge type={p.type} />
@@ -254,18 +269,7 @@ function PositionsTable({
                   {p.currentPrice != null ? fmtMoney(p.currentPrice) : '—'}
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  <span className="inline-flex items-center gap-1.5">
-                    <PlText n={p.plAmount} pct={p.plPercent} mode={plMode} currencyPrefix={TYPE_CURRENCY_PREFIX[p.type] ?? ''} />
-                    {action && (
-                      <button
-                        onClick={() => setModalAction(action)}
-                        title={`${action.ticker}: ${action.action}`}
-                        className="rounded p-0.5 text-amber-500 transition-colors hover:text-amber-600"
-                      >
-                        <IoSparkles size={13} />
-                      </button>
-                    )}
-                  </span>
+                  <PlText n={p.plAmount} pct={p.plPercent} mode={plMode} currencyPrefix={TYPE_CURRENCY_PREFIX[p.type] ?? ''} />
                 </td>
               </tr>
             )
