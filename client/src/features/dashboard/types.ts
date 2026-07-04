@@ -1,13 +1,14 @@
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
-/** The 5 v1 widget types. Order here is the order shown in the "add" menu. */
+/** Available widget types. Order here is the order shown in the "add" menu. */
 export const WIDGET_TYPES = [
   'morning-note',
   'ideas-table',
   'trade-plan',
   'bist-heatmap',
   'us-heatmap',
+  'portfolio',
 ] as const
 
 export type WidgetType = (typeof WIDGET_TYPES)[number]

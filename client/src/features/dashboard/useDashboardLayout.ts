@@ -13,6 +13,7 @@ export const DEFAULT_ITEMS: WidgetInstance[] = [
   { i: 'trade-plan', type: 'trade-plan' },
   { i: 'bist-heatmap', type: 'bist-heatmap' },
   { i: 'us-heatmap', type: 'us-heatmap' },
+  { i: 'portfolio', type: 'portfolio' },
 ]
 
 export const DEFAULT_LAYOUT: LayoutItem[] = [
@@ -21,6 +22,7 @@ export const DEFAULT_LAYOUT: LayoutItem[] = [
   { i: 'trade-plan', x: 0, y: 9, w: 7, h: 12, minW: 5, minH: 9 },
   { i: 'bist-heatmap', x: 7, y: 9, w: 5, h: 6, minW: 3, minH: 5 },
   { i: 'us-heatmap', x: 7, y: 15, w: 5, h: 6, minW: 3, minH: 5 },
+  { i: 'portfolio', x: 0, y: 21, w: 7, h: 12, minW: 5, minH: 8 },
 ]
 
 function load<T>(key: string, fallback: T): T {

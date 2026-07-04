@@ -59,3 +59,53 @@ export interface Heatmap {
   sectors: HeatmapSector[] | null
   createdAt: string
 }
+
+export interface PortfolioPosition {
+  id: string
+  symbol: string
+  name: string | null
+  type: string // 'stock' | 'us_stock' | 'fund'
+  quantity: number
+  buyPrice: number
+  buyDate: string
+  currentPrice: number | null
+  buyRate: number | null
+  costBasis: number
+  currentValue: number | null
+  plAmount: number | null
+  plPercent: number | null
+  costBasisTRY: number | null
+  currentValueTRY: number | null
+}
+
+export interface PortfolioClosedPosition {
+  symbol: string
+  buyPrice: number
+  sellPrice: number
+  quantity: number
+  pl: number
+  plPercent: number
+  sellDate: string
+}
+
+export interface PortfolioSnapshot {
+  date: string
+  totalValue: number
+  totalCost: number
+  unrealizedProfit: number
+  realizedProfit: number
+}
+
+export interface PortfolioSummary {
+  positions: PortfolioPosition[]
+  snapshots: PortfolioSnapshot[]
+  usdTryRate: number
+  usdTryRateIsFallback: boolean
+}
+
+export interface PortfolioInsight {
+  id: number
+  date: string
+  body: string
+  createdAt: string
+}
