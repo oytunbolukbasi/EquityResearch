@@ -167,7 +167,7 @@ function TradePlanBody({
       {/* Ticker header */}
       <div className="flex items-baseline justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="font-mono font-semibold">{plan.ticker}</span>
+          <span className="font-semibold">{plan.ticker}</span>
           {plan.exchange && (
             <span className="num text-xs text-mid">· {plan.exchange}</span>
           )}

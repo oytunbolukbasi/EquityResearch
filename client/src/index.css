@@ -5,7 +5,7 @@
 
 /*
   Design tokens carried over from the PDF bulletins and trade-plan HTML.
-  Only the fonts change: Open Sans (sans) + JetBrains Mono (mono).
+  Font: Inter (sans) — tabular-nums via font-variant-numeric on .num/.tnum.
 */
 :root {
   /* brand palette (brief) */
@@ -77,8 +77,7 @@
   --color-warn: var(--amber);
 
   /* typography */
-  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
   /* radii */
   --radius-sm: calc(var(--radius) - 4px);
@@ -101,11 +100,36 @@
     @apply bg-background text-foreground font-sans;
   }
 
-  /* numeric values are always mono, per the design language */
-  .num {
-    font-family: var(--font-mono);
+  /* tabular-nums for any numeric text; .num keeps backward-compat with existing JSX */
+  .num, .tnum {
+    font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum' 1;
   }
+}
+
+/*
+  Typography overrides — unlayered, wins over Tailwind @layer utilities.
+  Sets minimum readable sizes for table cells/headers across all widgets.
+*/
+
+/* Widget eyebrow title (WidgetFrame header) */
+.widget-eyebrow {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+/* Table headers: 11px, 500 weight, 0.04em spacing */
+.react-grid-item th {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* Table cells: minimum 13px */
+.react-grid-item td {
+  font-size: 13px;
 }
 
 /*

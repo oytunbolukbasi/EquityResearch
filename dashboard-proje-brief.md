@@ -1,5 +1,9 @@
 # Yatırım Dashboard — Proje Brief (Claude Code için)
 
+# Rol
+Sen modern web uygulamaları geliştiren kıdemli bir Frontend Geliştirici ve UI/UX Uzmanısın. Amacın, modern tasarım standartlarına uygun, kullanıcı dostu ve yüksek performanslı arayüzler kodlamaktır.
+
+
 ## Amaç
 Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u. claude.ai (equity-research projesi) içinde MCP connector'ları ve web search ile üretilen içerikler (morning note, trade idea, trade plan, sektör heatmap) bu panelde görselleştiriliyor. Tek kullanıcılı, düşük maliyetli, Railway'de deploy ediliyor.
 
@@ -14,7 +18,7 @@ Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u
 - **Deployment:** Railway (sadece uygulama; DB Neon'da kalıyor), GitHub'a push ile otomatik deploy
 
 ## Tasarım Dili
-Mevcut PDF bültenlerden ve trade plan HTML'inden taşınıyor, sadece font değişiyor.
+Mevcut PDF bültenlerden ve trade plan HTML'inden taşınıyor.
 
 ```css
 :root {
@@ -28,11 +32,19 @@ Mevcut PDF bültenlerden ve trade plan HTML'inden taşınıyor, sadece font değ
   --red:   #c0392b;
   --blue:  #2563a8;
   --amber: #9a6200;
-  --sans: 'Open Sans', sans-serif;
-  --mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 ```
-Light mode, minimal, yuvarlatılmış köşeli kartlar (radius ~14px), bol boşluk. Fiyat/oran gibi sayısal değerler hep `--mono` ile, başlık ve metin `--sans` ile yazılır. Türkçe karakter desteği (ç, ğ, ı, ş, ü, ö) her iki fontta da sorunsuz.
+Light mode, minimal, yuvarlatılmış köşeli kartlar (radius ~14px), bol boşluk.
+
+**Tipografi:**
+- Tek font: **Inter** (400/500/600/700, latin + latin-ext — Türkçe karakter tam desteği).
+- Sayısal değerlerde (fiyat, yüzde, miktar) mono font YOK; bunun yerine `font-variant-numeric: tabular-nums` ile sütun hizalaması korunuyor. CSS utility class: `.num` ve `.tnum`.
+- Widget eyebrow başlıkları: 14px / weight 600 / uppercase / tracking 0.01em.
+- Tablo başlıkları `<th>`: 11px / weight 500 / uppercase / tracking 0.04em.
+- Tablo hücreleri `<td>`: minimum 13px (CSS override, unlayered).
+- Piyasa Nabzı bölüm başlıkları (Ana Görüş / Makro / Sektör Odağı): 14px / weight 600.
+- Makro bullet satırları: 14px / line-height 1.65.
 
 ## Veri Modeli (Postgres / Drizzle, jsonb ağırlıklı — şema esnek kalsın)
 
@@ -63,12 +75,13 @@ heatmaps: {
 }
 ```
 
-## Widget'lar (v1 — 5 adet)
-1. **Günlük Morning Note** — `morning_notes` tablosundan en son kayıt; Top Call + madde listesi.
-2. **Teknik Alım-Satım Önerileri Tablosu** — `ideas` tablosu, günlük + historical filtre, durum etiketiyle (active/hit/stopped).
-3. **Trade Plan Viewer** — `trade_plans` tablosu, mevcut HTML'deki SVG yaklaşımı React component'e taşınır (giriş bandı, TP1/TP2/TP3, hard SL çizgileri).
-4. **BIST Sektör Heatmap** — `heatmaps` (market='BIST').
-5. **ABD Sektör Heatmap** — `heatmaps` (market='US').
+## Widget'lar (v1 — 6 adet)
+1. **Piyasa Nabzı** (eski: Morning Note) — `morning_notes` tablosundan; Top Call + Makro madde listesi + Sektör Odağı. Widget içi ◀ ▶ navigasyonuyla geçmiş notlara erişim.
+2. **Pozisyon Fikirleri** (eski: Alım-Satım Önerileri) — `ideas` tablosu, Aktif/Geçmiş sekmeli. Aktif: her ticker'ın kendi en son kaydı (`selectDistinctOn`). Geçmiş: stopped pozisyonlar. Satıra tıklayınca Trade Planı widget'ı o ticker'a geçer.
+3. **Trade Planı** — `trade_plans` tablosu. TradingView Lightweight Charts (CandlestickSeries) ile gerçek OHLC grafiği, Y-ekseni sadece fiyat geçmişine kilitli, dışarıda kalan seviyeler off-chart rozet olarak gösteriliyor. Aktif/Geçmiş sekmeli.
+4. **BIST Heatmap** — `heatmaps` (market='BIST').
+5. **ABD Heatmap** — `heatmaps` (market='US').
+6. **Portföy Durumu** — Ayrı salt-okunur Neon DB'den (`PORTFOLIO_DATABASE_URL`) açık/kapalı pozisyonlar. TL ve USD blokları ayrı özet kutularında; K/Z değer/yüzde toggle (IoSwapHorizontal); canlı USD/TRY kuru (Frankfurter API, fallback 41.50 TL); Günlük Analiz (portfolio_insights); Geçmiş sekmesinde kapatılan pozisyonlar.
 
 Tüm widget'lar react-grid-layout canvas'ında bağımsız öğeler; kullanıcı ekleyebilir, taşıyabilir, boyutlandırabilir, kaldırabilir. Layout `localStorage`'da veya basit bir `layouts` tablosunda saklanır.
 
@@ -99,7 +112,3 @@ claude.ai (equity-research projesi) içinde Claude, MCP connector'ları (FMP, Ma
 - Railway: GitHub repo'ya bağla, push'ta otomatik deploy. Tek servis (API + static frontend).
 - Drizzle migration'ları local'den veya Claude Code'dan `drizzle-kit push` ile Neon'a uygulanır.
 
-## Claude Code İçin Açık Noktalar
-- Admin "İçerik Ekle" sayfası tek textarea mı olsun, yoksa her widget tipi için ayrı form mu? (Başlangıç için tek textarea + JSON paste öneriyoruz.)
-- Layout kalıcılığı: localStorage yeterli mi, yoksa DB'ye mi yazılsın? (Tek kullanıcı olduğu için localStorage v1 için yeterli.)
-- Trade Plan Viewer'da fiyat geçmişi canlı mı çekilsin (FMP/web search), yoksa sadece publish anındaki statik veri mi gösterilsin? (v1: statik, publish anındaki veri.)

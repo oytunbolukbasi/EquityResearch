@@ -113,7 +113,7 @@ export function IdeasTableWidget() {
                   className="cursor-pointer border-b border-faint2 hover:bg-bg"
                 >
                   <td className="px-4 py-2.5">
-                    <div className="font-mono font-semibold text-sm">{idea.ticker}</div>
+                    <div className="font-semibold text-sm">{idea.ticker}</div>
                     {idea.exchange && (
                       <div className="num text-[10px] text-mid">{idea.exchange}</div>
                     )}

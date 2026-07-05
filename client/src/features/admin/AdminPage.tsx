@@ -289,7 +289,7 @@ export function AdminPage() {
             onChange={e => { setBulkJson(e.target.value); setBulkParseError(null); setBulkResult(null) }}
             spellCheck={false}
             placeholder={BULK_PLACEHOLDER}
-            style={{ minHeight: 320, fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 13 }}
+            style={{ minHeight: 320, fontFamily: 'ui-monospace, monospace', fontSize: 13 }}
             className={[
               'w-full resize-y rounded border bg-bg px-3 py-2.5 leading-relaxed outline-none transition-colors',
               bulkParseError

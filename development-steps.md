@@ -126,3 +126,67 @@ NOT: Bu fix git'e push edildi (commit 3359e5f) ama henüz bilinçli olarak prod'
 "sonraki versiyonda deploy ederiz" kararı verildi. Railway GitHub push'unda otomatik deploy
 tetiklediği için, bu commit aslında zaten production'a gitmiş olabilir; istenirse bir
 sonraki sürüme kadar geri alınması (revert) gerekebilir.
+
+GÖREV 10 — Portföy Durumu backend altyapısı
+Ayrı salt-okunur Neon DB (PORTFOLIO_DATABASE_URL) bağlantısı eklendi. server/db/portfolio-
+client.ts: sadece SELECT metotları (getOpenPositions, getClosedPositions, getRecentSnapshots)
+export ediyor — raw client hiç export edilmiyor, yazma yolu yapısal olarak kapalı.
+server/routes/portfolio.ts: GET /api/portfolio/summary (açık pozisyonlar + anlık snapshot),
+GET /api/portfolio/closed. portfolio_insights tablosu eklendi (Drizzle migration
+0002_add_portfolio_insights.sql); bulk-import endpoint'ine portfolio_insight tipi eklendi
+(date+body upsert). Frankfurter API'den canlı USD/TRY kuru çekiliyor
+(server/services/exchange-rate.ts), hata durumunda 41.50 TL fallback + isFallback flag.
+currentValueTRY = currentValue × usdTryRate olarak hesaplanıp response'a ekleniyor.
+
+GÖREV 11 — Portföy Durumu widget
+TL Pozisyonlar / USD Pozisyonlar CurrencyBlock'ları: Maliyet, Güncel Değer, K/Z (tutar +
+yüzde). K/Z sütununda değer↔yüzde toggle (IoSwapHorizontal, widget-seviyeli plMode state,
+us_stock için $ prefix). USD bloğu başlık satırına USD/TRY=46,81 kur notu eklendi
+(Frankfurter API; fallback durumunda "≈" sembolü + "(tahmini)" notu). Günlük Analiz bölümü
+portfolio_insights'ın son kaydını gösteriyor. Pozisyon tablosu: Aktif sekmesinde açık
+pozisyonlar + eylem aksiyonu (BEKLE/KISMİ KÂR AL/SAT/POZİSYON ARTIR), Geçmiş sekmesinde
+kapatılan pozisyonlar. Aksiyona tıklanınca "liquid glass" modal açılıyor (Framer Motion
+scale+opacity, backdrop-filter blur). Widget registry'e eklendi (Wallet ikonu, defaultSize
+w:7 h:12).
+
+GÖREV 12 — Trade Planı ek iyileştirmeler
+- Grafik tipi: BarSeries → CandlestickSeries (kullanıcı talebiyle geri alındı).
+- TradingView SuperCharts linki: ticker başlığının yanında IoOpenOutline ikonu, tıklanınca
+  TradingView chart URL'ine yönlendiriyor (BIST için :BIST suffix).
+- ASTOR / BIMAS / TUPRS priceHistory backfill: Python yfinance ile (.IS suffix) çekildi,
+  bulk-import appendPriceHistory ile yazıldı.
+- bulk-import appendPriceHistory: mevcut priceHistory ile gelen barlari tarih bazında merge
+  ediyor (üst üste yazma yok). Bar sayısı < 20 ise warnings[] array'ine uyarı düşüyor.
+- bulk-import updateLevels: true flag'i ile entryLow/entryHigh/tp1-3/hardSl/thesis/
+  invalidation güncellenebiliyor; sadece gönderilen alanlar değişiyor (hasOwnProperty
+  kontrolü — eksik alan null'a dönüştürülmüyor).
+- Piyasa Nabzı widget: global datepicker kaldırıldı, widget içi ◀ ▶ navigasyon eklendi
+  (/api/morning-notes/history tüm notları çekiyor, index state ile geziniyor).
+
+GÖREV 13 — Dashboard sürükle/bırak UX modernizasyonu (CSS-only)
+react-grid-layout kütüphanesine dokunulmadan saf CSS/stil katmanı değişiklikleri:
+- Drag: sürüklenen widget'ın iç div'i scale(1.02) + box-shadow 0 8px 32px rgba(0,0,0,0.12).
+  Kütüphanenin inline transform: translate() ile çakışmaması için scale iç div'e uygulandı.
+  z-index: 10, cursor: grabbing.
+- Widget header: cursor: grab (Tailwind cursor-move'un üzerine unlayered CSS ile yazıldı).
+- Placeholder: kırmızı dolgu → rgba(37,99,168,0.08) mavi tonu, border 25% opacity, opacity:1,
+  backdrop-filter: blur(1.2px), transition 200ms ease.
+- Yerleşme animasyonu: cubic-bezier(0.2, 0, 0, 1) 220ms (cssTransforms class'ı üzerine).
+- Resize handle: varsayılan sprite kaldırıldı, CSS ile 10×10 L-köşe çizgi (--mid → --ink
+  hover). touch-action: none, user-select: none.
+- Metin seçim kilidi: onDragStart/onResizeStart → body.rgl-interacting class ekleniyor,
+  onDragStop/onResizeStop → kaldırılıyor. CSS: body.rgl-interacting * { user-select: none
+  !important }. Widget header ve resize handle'a kalıcı user-select: none.
+- @media (prefers-reduced-motion: reduce): tüm bu transition'lar kapatılıyor.
+
+GÖREV 14 — Inter font migrasyonu + tipografi iyileştirmeleri
+Open Sans + JetBrains Mono tamamen kaldırıldı. Tek font: Inter (400/500/600/700,
+latin+latin-ext subset — Türkçe karakter desteği). Sayısal hizalama için font-variant-
+numeric: tabular-nums + font-feature-settings: 'tnum' 1 (CSS utility: .num ve .tnum).
+TradingView chart fontFamily Inter'a güncellendi. AdminPage textarea ui-monospace fallback'e
+döndürüldü. Tüm font-mono Tailwind class'ları kaldırıldı (ticker semboller, modal, tablo).
+Tipografi: widget eyebrow 14px/600, tablo th 11px unlayered CSS override, tablo td 13px
+unlayered CSS override, Piyasa Nabzı bölüm başlıkları 14px/600, makro bullet satırları
+leading-[1.65]. CurrencyBlock: değer satırları 15px/medium, K/Z 15px/semibold, etiketler
+12px, aralıklar genişletildi (space-y-2.5, pt-2.5). USD kur notu blok altından başlık
+satırına (USD POZİSYONLAR yanına) taşındı: "USD/TRY=46,81" formatı.

@@ -68,18 +68,19 @@ function TypeBadge({ type }: { type: string }) {
 }
 
 function PlText({
-  n, pct, mode, currencyPrefix = '',
+  n, pct, mode, currencyPrefix = '', className = '',
 }: {
   n: number | null
   pct: number | null
   mode: PlDisplayMode
   currencyPrefix?: string
+  className?: string
 }) {
-  if (n == null || pct == null) return <span className="num text-mid">—</span>
+  if (n == null || pct == null) return <span className={`num text-mid ${className}`}>—</span>
   const isUp = pct >= 0
   const text = mode === 'percent' ? fmtPct(pct) : fmtPlValue(n, currencyPrefix)
   return (
-    <span className={`num font-medium ${isUp ? 'text-up' : 'text-down'}`}>
+    <span className={`num font-medium ${isUp ? 'text-up' : 'text-down'} ${className}`}>
       {text}
     </span>
   )
@@ -87,40 +88,42 @@ function PlText({
 
 // ─── currency summary block ────────────────────────────────────────────────
 function CurrencyBlock({
-  title, costBasis, currentValue, plAmount, plPercent, note,
+  title, costBasis, currentValue, plAmount, plPercent, titleExtra,
 }: {
   title: string
   costBasis: number
   currentValue: number | null
   plAmount: number | null
   plPercent: number | null
-  note?: string
+  titleExtra?: string
 }) {
   return (
     <div className="rounded-lg border border-faint2 p-3">
-      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-mid">{title}</p>
-      <div className="space-y-1.5 text-xs">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-mid">{title}</p>
+        {titleExtra && <span className="num text-[10px] text-mid opacity-70">{titleExtra}</span>}
+      </div>
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-mid">Maliyet</span>
-          <span className="num font-medium text-ink">{fmtMoney(costBasis, 0)}</span>
+          <span className="text-[12px] text-mid">Maliyet</span>
+          <span className="num text-[15px] font-medium text-ink">{fmtMoney(costBasis, 0)}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-mid">Güncel Değer</span>
-          <span className="num font-medium text-ink">{currentValue != null ? fmtMoney(currentValue, 0) : '—'}</span>
+          <span className="text-[12px] text-mid">Güncel Değer</span>
+          <span className="num text-[15px] font-medium text-ink">{currentValue != null ? fmtMoney(currentValue, 0) : '—'}</span>
         </div>
-        <div className="flex items-center justify-between border-t border-faint2 pt-1.5">
-          <span className="text-mid">K/Z</span>
+        <div className="flex items-center justify-between border-t border-faint2 pt-2.5">
+          <span className="text-[12px] text-mid">K/Z</span>
           <span className="flex items-center gap-1.5">
             {plAmount != null && (
-              <span className={`num font-medium ${plAmount >= 0 ? 'text-up' : 'text-down'}`}>
+              <span className={`num text-[15px] font-semibold ${plAmount >= 0 ? 'text-up' : 'text-down'}`}>
                 {plAmount >= 0 ? '+' : ''}{fmtMoney(plAmount, 0)}
               </span>
             )}
-            <PlText n={plAmount} pct={plPercent} mode="percent" />
+            <PlText n={plAmount} pct={plPercent} mode="percent" className="text-[15px] font-semibold" />
           </span>
         </div>
       </div>
-      {note && <p className="mt-2 text-[10px] leading-relaxed text-mid opacity-75">{note}</p>}
     </div>
   )
 }
@@ -176,7 +179,7 @@ function ActionModal({ action, onClose }: { action: PortfolioAction; onClose: ()
       >
         <div className="flex items-start justify-between p-5 pb-0">
           <div className="flex items-center gap-2.5">
-            <span className="font-mono text-base font-bold text-ink">{action.ticker}</span>
+            <span className="text-base font-bold text-ink">{action.ticker}</span>
             <span
               className="num rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
               style={{ background: style.bg, color: style.color }}
@@ -255,7 +258,7 @@ function PositionsTable({
                       ) : null}
                     </span>
                     <div>
-                      <div className="font-mono font-semibold text-sm">{p.symbol}</div>
+                      <div className="font-semibold text-sm">{p.symbol}</div>
                       {p.name && <div className="truncate text-[10px] text-mid" style={{ maxWidth: 140 }}>{p.name}</div>}
                     </div>
                   </div>
@@ -299,7 +302,7 @@ function ClosedTable({ closed }: { closed: PortfolioClosedPosition[] }) {
         {closed.map((c, i) => (
           <tr key={`${c.symbol}-${c.sellDate}-${i}`} className="border-b border-faint2 hover:bg-bg">
             <td className="px-4 py-2.5">
-              <div className="font-mono font-semibold text-sm">{c.symbol}</div>
+              <div className="font-semibold text-sm">{c.symbol}</div>
               <div className="num text-[10px] text-mid">{c.sellDate.slice(0, 10)}</div>
             </td>
             <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap">{fmtQty(c.quantity)}</td>
@@ -356,8 +359,8 @@ export function PortfolioWidget() {
 
   const rateNote = summary
     ? summary.usdTryRateIsFallback
-      ? `Kur: ~${fmtMoney(summary.usdTryRate)} TL (tahmini, API erişilemedi)`
-      : `Kur: 1 USD = ${fmtMoney(summary.usdTryRate)} TL (Frankfurter API)`
+      ? `USD/TRY≈${fmtMoney(summary.usdTryRate, 2)} (tahmini)`
+      : `USD/TRY=${fmtMoney(summary.usdTryRate, 2)}`
     : undefined
 
   return (
@@ -381,7 +384,7 @@ export function PortfolioWidget() {
               currentValue={usdCurrentValueTRY}
               plAmount={usdPlAmountTRY}
               plPercent={usdPlPercentTRY}
-              note={rateNote}
+              titleExtra={rateNote}
             />
           </div>
 

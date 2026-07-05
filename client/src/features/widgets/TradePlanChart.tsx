@@ -12,7 +12,7 @@ import type { TradePlan } from '@/lib/api-types'
 const GREEN = '#1a7a5e'
 const RED   = '#c0392b'
 const BLUE  = '#2563a8'
-const MONO  = "'JetBrains Mono', ui-monospace, monospace"
+const INTER = "'Inter', ui-sans-serif, system-ui, sans-serif"
 
 function N2(n: number): string {
   return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
@@ -86,7 +86,7 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
       layout: {
         background: { color: 'transparent' },
         textColor: '#9a9a94',
-        fontFamily: MONO,
+        fontFamily: INTER,
       },
       grid: {
         vertLines: { color: '#eeede9', style: LineStyle.Solid },

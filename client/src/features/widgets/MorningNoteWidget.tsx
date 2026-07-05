@@ -88,17 +88,17 @@ export function MorningNoteWidget() {
 
       {note.topCall && (
         <section>
-          <h3 className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-warn">Ana Görüş</h3>
+          <h3 className="mb-1.5 text-[14px] font-semibold uppercase tracking-[0.04em] text-warn">Ana Görüş</h3>
           <p className="text-sm font-medium leading-relaxed">{note.topCall}</p>
         </section>
       )}
 
       {note.macroBullets && note.macroBullets.length > 0 && (
         <section>
-          <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-mid">Makro</h3>
+          <h3 className="mb-2 text-[14px] font-semibold uppercase tracking-[0.04em] text-mid">Makro</h3>
           <ul className="space-y-2">
             {note.macroBullets.map((b, i) => (
-              <li key={i} className="flex gap-2 text-sm">
+              <li key={i} className="flex gap-2 text-[14px] leading-[1.65]">
                 <span className="mt-0.5 shrink-0 text-mid">·</span>
                 <Bullet b={b} />
               </li>
@@ -109,7 +109,7 @@ export function MorningNoteWidget() {
 
       {(note.sectorDeepDive?.title || note.sectorDeepDive?.body) && (
         <section>
-          <h3 className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-mid">
+          <h3 className="mb-1.5 text-[14px] font-semibold uppercase tracking-[0.04em] text-mid">
             Sektör Odağı
           </h3>
           {note.sectorDeepDive.title && (
