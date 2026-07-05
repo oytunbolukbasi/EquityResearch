@@ -109,24 +109,107 @@
 }
 
 /*
-  react-grid-layout theming. Kept unlayered (and after the package's own
-  stylesheet, imported first in main.tsx) so these win the cascade.
+  react-grid-layout theming. Unlayered so these win the cascade over both the
+  package stylesheet (imported first in main.tsx) and Tailwind utility layers.
 */
-.react-grid-item.react-grid-placeholder {
-  background: var(--blue);
-  opacity: 0.1;
-  border-radius: var(--radius);
+
+/* ── global interaction lock ────────────────────────────────────────────── */
+body.rgl-interacting * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
-.react-grid-item.react-draggable-dragging {
+/* ── A: cursor ──────────────────────────────────────────────────────────── */
+.widget-drag-handle {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.react-grid-item.react-draggable-dragging .widget-drag-handle,
+.widget-drag-handle:active {
   cursor: grabbing;
 }
 
+/*
+  Scale + shadow during drag.
+  Scale goes on the *inner* div so it doesn't fight the library's inline
+  transform: translate(x, y) on the positioned item itself.
+*/
+.react-grid-item.react-draggable-dragging > div {
+  transform: scale(1.02);
+  transform-origin: center;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* z-index + subtle shadow transition on the grid item wrapper */
+.react-grid-item.react-draggable-dragging {
+  z-index: 10;
+  transition: box-shadow 150ms ease; /* overrides library's transition:none only for shadow */
+}
+
+/* ── B: placeholder ─────────────────────────────────────────────────────── */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(37, 99, 168, 0.08);   /* --blue at 8% */
+  border: 1px solid rgba(37, 99, 168, 0.25);
+  border-radius: var(--radius);
+  opacity: 1;                             /* override library's 0.2; colour carries transparency */
+  backdrop-filter: blur(2px);
+  transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+}
+
+/* ── C: settling animation ──────────────────────────────────────────────── */
+.react-grid-item.cssTransforms:not(.react-draggable-dragging):not(.resizing) {
+  transition-property: transform, width, height;
+  transition-duration: 220ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1); /* tok, zıplamasız yerleşme */
+}
+
+/* ── D: resize handle ───────────────────────────────────────────────────── */
+/* Smooth fade in/out already handled by library (opacity 0 → 1 on hover).
+   Add transition and replace the visual indicator. */
+.react-grid-item > .react-resizable-handle {
+  width: 20px;
+  height: 20px;
+  transition: opacity 150ms ease;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .react-grid-item > .react-resizable-handle::after {
-  right: 5px;
-  bottom: 5px;
-  width: 7px;
-  height: 7px;
-  border-right-color: var(--mid);
-  border-bottom-color: var(--mid);
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 10px;
+  height: 10px;
+  border-right: 1.5px solid var(--mid);
+  border-bottom: 1.5px solid var(--mid);
+  border-radius: 0 0 3px 0;
+  transition: border-color 150ms ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle::after {
+  border-right-color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* Same lift shadow during resize */
+.react-grid-item.resizing > div {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 150ms ease;
+}
+
+/* ── E: reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .react-grid-layout,
+  .react-grid-item,
+  .react-grid-item.cssTransforms:not(.react-draggable-dragging):not(.resizing),
+  .react-grid-item.react-draggable-dragging > div,
+  .react-grid-item.resizing > div,
+  .react-grid-item > .react-resizable-handle,
+  .react-grid-item > .react-resizable-handle::after {
+    transition: none !important;
+  }
 }

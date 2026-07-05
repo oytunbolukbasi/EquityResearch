@@ -46,6 +46,10 @@ export function DashboardCanvas({
             gridConfig={GRID_CONFIG}
             dragConfig={{ handle: '.widget-drag-handle', cancel: 'button' }}
             resizeConfig={{ handles: ['se'] }}
+            onDragStart={() => document.body.classList.add('rgl-interacting')}
+            onDragStop={() => document.body.classList.remove('rgl-interacting')}
+            onResizeStart={() => document.body.classList.add('rgl-interacting')}
+            onResizeStop={() => document.body.classList.remove('rgl-interacting')}
           >
             {items.map((item) => {
               const def = widgetRegistry[item.type]
