@@ -5,6 +5,7 @@ import type { Idea } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { useSelectedTicker } from '@/features/dashboard/selected-ticker'
 import { StatusTabs, type StatusTab } from './StatusTabs'
+import { RiskRewardBar } from '@/components/ui/risk-reward-bar'
 
 function Loading() {
   return (
@@ -102,6 +103,7 @@ export function IdeasTableWidget() {
                 <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Giriş</th>
                 <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">SL</th>
                 <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">TP1</th>
+                <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Risk/Getiri</th>
                 <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Durum</th>
               </tr>
             </thead>
@@ -131,6 +133,20 @@ export function IdeasTableWidget() {
                   </td>
                   <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#1a7a5e' }}>
                     {fmtN(idea.target1, 0)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex justify-end">
+                      {idea.stopLoss != null && idea.entryLow != null && idea.entryHigh != null && idea.target1 != null
+                        ? <RiskRewardBar
+                            stopLoss={idea.stopLoss}
+                            entryLow={idea.entryLow}
+                            entryHigh={idea.entryHigh}
+                            target1={idea.target1}
+                            direction={idea.direction}
+                          />
+                        : <span className="num text-mid text-xs">—</span>
+                      }
+                    </div>
                   </td>
                   <td className="px-4 py-2.5">
                     <StatusBadge status={idea.status} />
