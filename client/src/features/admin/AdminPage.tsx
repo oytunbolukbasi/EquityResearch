@@ -4,13 +4,12 @@ import { ArrowLeft, CheckCircle2, XCircle, Loader2, KeyRound } from 'lucide-reac
 import { Button } from '@/components/ui/button'
 
 // ─── table config ─────────────────────────────────────────────────────────────
-type TableTarget = 'morning_notes' | 'ideas' | 'trade_plans' | 'heatmaps'
+type TableTarget = 'morning_notes' | 'ideas' | 'trade_plans'
 
 const TABLES: { id: TableTarget; label: string; endpoint: string }[] = [
   { id: 'morning_notes', label: 'Piyasa Nabzı',          endpoint: '/api/morning-notes' },
   { id: 'ideas',         label: 'Pozisyon Fikri',        endpoint: '/api/ideas'         },
   { id: 'trade_plans',   label: 'Trade Planı',           endpoint: '/api/trade-plans'  },
-  { id: 'heatmaps',      label: 'Heatmap',               endpoint: '/api/heatmaps'     },
 ]
 
 const EXAMPLES: Record<TableTarget, unknown> = {
@@ -50,21 +49,12 @@ const EXAMPLES: Record<TableTarget, unknown> = {
       { t: '2026-06-01', o: 490, h: 498, l: 485, c: 493 },
     ],
   },
-  heatmaps: {
-    date: '2026-06-20',
-    market: 'BIST',
-    sectors: [
-      { name: 'Bankacılık', change_pct: 1.8 },
-      { name: 'Teknoloji',  change_pct: -0.6 },
-    ],
-  },
 }
 
 // ─── bulk import ──────────────────────────────────────────────────────────────
 const BULK_PLACEHOLDER = `{
   "morning_note": { "date": "2026-06-22", "topCall": "..." },
   "ideas": [{ "date": "2026-06-22", "ticker": "ENKAI", ... }],
-  "heatmaps": [{ "date": "2026-06-22", "market": "BIST", "sectors": [] }],
   "trade_plans": [{ "ticker": "ENKAI", "currentPrice": 92.35 }]
 }`
 

@@ -2,7 +2,6 @@ export type MacroBullet = string | { label: string; detail?: string }
 export type SectorDeepDive = { title?: string | null; body?: string | null; [key: string]: unknown }
 export type IdeaMetrics = Record<string, string | number | null>
 export type OhlcPoint = { t: string; o: number; h: number; l: number; c: number }
-export type HeatmapSector = { name: string; change_pct: number; note?: string | null }
 
 export interface MorningNote {
   id: number
@@ -50,14 +49,6 @@ export interface TradePlan {
   status: string
   createdAt: string
   updatedAt: string
-}
-
-export interface Heatmap {
-  id: number
-  date: string
-  market: string
-  sectors: HeatmapSector[] | null
-  createdAt: string
 }
 
 export interface PortfolioPosition {

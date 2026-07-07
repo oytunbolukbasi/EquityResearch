@@ -6,8 +6,6 @@ export const WIDGET_TYPES = [
   'morning-note',
   'ideas-table',
   'trade-plan',
-  'bist-heatmap',
-  'us-heatmap',
   'portfolio',
 ] as const
 

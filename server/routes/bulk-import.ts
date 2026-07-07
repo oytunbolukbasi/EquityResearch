@@ -3,11 +3,10 @@ import { and, desc, eq } from 'drizzle-orm'
 import { z, type ZodType } from 'zod'
 
 import { db } from '../db/client'
-import { morningNotes, ideas, heatmaps, tradePlans, portfolioInsights, type OhlcPoint } from '../db/schema'
+import { morningNotes, ideas, tradePlans, portfolioInsights, type OhlcPoint } from '../db/schema'
 import { requireAdmin } from '../middleware/require-admin'
 import { morningNoteInput } from './morning-notes'
 import { ideaInput } from './ideas'
-import { heatmapInput } from './heatmaps'
 import { tradePlanInput } from './trade-plans'
 
 const portfolioActionSchema = z.object({
@@ -123,22 +122,6 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         await db.update(ideas).set(values).where(eq(ideas.id, existing[0].id))
       } else {
         await db.insert(ideas).values(values)
-      }
-    })
-  }
-
-  if (body.heatmaps !== undefined) {
-    results.heatmaps = await upsertTable(heatmapInput, body.heatmaps, async (d) => {
-      const values = { date: d.date, market: d.market, sectors: d.sectors ?? null }
-      const existing = await db
-        .select({ id: heatmaps.id })
-        .from(heatmaps)
-        .where(and(eq(heatmaps.market, d.market), eq(heatmaps.date, d.date)))
-        .limit(1)
-      if (existing.length) {
-        await db.update(heatmaps).set(values).where(eq(heatmaps.id, existing[0].id))
-      } else {
-        await db.insert(heatmaps).values(values)
       }
     })
   }

@@ -9,20 +9,16 @@ const LAYOUT_KEY = 'dashboard:v1:layout'
 
 export const DEFAULT_ITEMS: WidgetInstance[] = [
   { i: 'morning-note', type: 'morning-note' },
-  { i: 'ideas-table', type: 'ideas-table' },
-  { i: 'trade-plan', type: 'trade-plan' },
-  { i: 'bist-heatmap', type: 'bist-heatmap' },
-  { i: 'us-heatmap', type: 'us-heatmap' },
   { i: 'portfolio', type: 'portfolio' },
+  { i: 'trade-plan', type: 'trade-plan' },
+  { i: 'ideas-table', type: 'ideas-table' },
 ]
 
 export const DEFAULT_LAYOUT: LayoutItem[] = [
-  { i: 'morning-note', x: 0, y: 0, w: 7, h: 9, minW: 4, minH: 6 },
-  { i: 'ideas-table', x: 7, y: 0, w: 5, h: 9, minW: 4, minH: 6 },
-  { i: 'trade-plan', x: 0, y: 9, w: 7, h: 12, minW: 5, minH: 9 },
-  { i: 'bist-heatmap', x: 7, y: 9, w: 5, h: 6, minW: 3, minH: 5 },
-  { i: 'us-heatmap', x: 7, y: 15, w: 5, h: 6, minW: 3, minH: 5 },
-  { i: 'portfolio', x: 0, y: 21, w: 7, h: 12, minW: 5, minH: 8 },
+  { i: 'morning-note', x: 0, y: 0,  w: 7, h: 9,  minW: 4, minH: 6 },
+  { i: 'portfolio',    x: 7, y: 0,  w: 5, h: 9,  minW: 5, minH: 8 },
+  { i: 'trade-plan',  x: 0, y: 9,  w: 7, h: 12, minW: 5, minH: 9 },
+  { i: 'ideas-table', x: 7, y: 9,  w: 5, h: 12, minW: 4, minH: 6 },
 ]
 
 function load<T>(key: string, fallback: T): T {
@@ -34,9 +30,28 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
+function loadItems(fallback: WidgetInstance[]): WidgetInstance[] {
+  const saved = load<WidgetInstance[]>(ITEMS_KEY, fallback)
+  // Drop any widget types that no longer exist in the registry (e.g. removed widgets).
+  return saved.filter((it) => it.type in widgetRegistry)
+}
+
+function loadLayout(items: WidgetInstance[], fallback: LayoutItem[]): LayoutItem[] {
+  const saved = load<LayoutItem[]>(LAYOUT_KEY, fallback)
+  const validIds = new Set(items.map((it) => it.i))
+  return saved.filter((l) => validIds.has(l.i))
+}
+
 export function useDashboardLayout() {
-  const [items, setItems] = useState<WidgetInstance[]>(() => load(ITEMS_KEY, DEFAULT_ITEMS))
-  const [layout, setLayout] = useState<LayoutItem[]>(() => load(LAYOUT_KEY, DEFAULT_LAYOUT))
+  const [items, setItems] = useState<WidgetInstance[]>(() => {
+    const i = loadItems(DEFAULT_ITEMS)
+    return i.length ? i : DEFAULT_ITEMS
+  })
+  const [layout, setLayout] = useState<LayoutItem[]>(() => {
+    const i = loadItems(DEFAULT_ITEMS)
+    const l = loadLayout(i.length ? i : DEFAULT_ITEMS, DEFAULT_LAYOUT)
+    return l.length ? l : DEFAULT_LAYOUT
+  })
 
   useEffect(() => {
     localStorage.setItem(ITEMS_KEY, JSON.stringify(items))
