@@ -1,20 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Loader2 } from 'lucide-react'
-import { IoClose } from 'react-icons/io5'
+import { Loader2, MoreHorizontal } from 'lucide-react'
 
 import { useApi } from '@/lib/use-api'
 
 // ─── Alpaca types ──────────────────────────────────────────────────────────────
-
-interface AlpacaAccount {
-  equity: string
-  buying_power: string
-  cash: string
-  last_equity: string
-  unrealized_pl: string
-  long_market_value: string
-}
 
 interface AlpacaPosition {
   symbol: string
@@ -40,6 +30,8 @@ interface AlpacaOrder {
   limit_price: string | null
   status: string
   created_at: string
+  submitted_at?: string
+  filled_at?: string
 }
 
 interface ClosedPaperPosition {
@@ -66,8 +58,12 @@ function fmtPct(n: number): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`
 }
 
-function fmtDate(iso: string): string {
-  const d = new Date(iso)
+// Alpaca returns ISO 8601 strings (e.g. "2024-01-15T14:32:00.000Z") or occasionally
+// Unix timestamps as numbers. Parse both; return "—" if unparseable.
+function fmtDate(raw: string | number | null | undefined): string {
+  if (raw == null || raw === '') return '—'
+  const d = typeof raw === 'number' ? new Date(raw * 1000) : new Date(raw)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
@@ -89,98 +85,262 @@ function Empty({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ─── compact KPI bar ──────────────────────────────────────────────────────────
+
+interface KpiItem { label: string; value: React.ReactNode; colorClass?: string }
+
+function KpiBar({ items }: { items: KpiItem[] }) {
+  return (
+    <div className="mb-3 flex overflow-hidden rounded-lg border border-faint2 divide-x divide-faint2">
+      {items.map(({ label, value, colorClass = 'text-ink' }, i) => (
+        <div key={i} className="flex-1 px-4 py-2.5 min-w-0">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-mid leading-none truncate">
+            {label}
+          </p>
+          <p className={`num text-base font-semibold leading-none ${colorClass}`}>{value}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── tabs ─────────────────────────────────────────────────────────────────────
 
 type PaperTab = 'positions' | 'closed' | 'orders'
 
-const PAPER_TABS: { key: PaperTab; label: string }[] = [
+const TAB_DEFS: { key: PaperTab; label: string }[] = [
   { key: 'positions', label: 'Aktif Pozisyonlar' },
   { key: 'closed',    label: 'Kapalı Pozisyonlar' },
   { key: 'orders',    label: 'Bekleyen Emirler' },
 ]
 
-function PaperTabs({ tab, onChange }: { tab: PaperTab; onChange: (t: PaperTab) => void }) {
+function PaperTabs({
+  tab,
+  onChange,
+  counts,
+}: {
+  tab: PaperTab
+  onChange: (t: PaperTab) => void
+  counts: Record<PaperTab, number>
+}) {
   return (
     <div className="mb-3 flex gap-3 border-b border-faint">
-      {PAPER_TABS.map(({ key, label }) => (
+      {TAB_DEFS.map(({ key, label }) => (
         <button
           key={key}
           onClick={() => onChange(key)}
           className={[
-            'num -mb-px border-b-2 px-1 pb-2 text-xs font-medium transition-colors whitespace-nowrap',
+            '-mb-px border-b-2 px-1 pb-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap',
             tab === key
               ? 'border-info text-info'
               : 'border-transparent text-mid hover:text-ink',
           ].join(' ')}
         >
-          {label}
+          {label} ({counts[key]})
         </button>
       ))}
     </div>
   )
 }
 
-// ─── summary cards ────────────────────────────────────────────────────────────
+// ─── RowActions ───────────────────────────────────────────────────────────────
 
-function SummaryCard({
-  label,
-  value,
-  sub,
-  variant = 'neutral',
-}: {
+interface RowActionDef {
   label: string
-  value: React.ReactNode
-  sub?: string
-  variant?: 'up' | 'down' | 'neutral'
-}) {
-  const cls = { up: 'text-up', down: 'text-down', neutral: 'text-ink' }[variant]
+  destructive?: boolean
+  confirmMessage?: string
+  confirmLabel?: string
+  onExecute: () => Promise<void>
+}
+
+function RowActions({ actions }: { actions: RowActionDef[] }) {
+  const [open, setOpen]           = useState(false)
+  const [visible, setVisible]     = useState(false)
+  const [confirming, setConfirming] = useState<RowActionDef | null>(null)
+  const [executing, setExecuting] = useState(false)
+  const [pos, setPos]             = useState<{ top: number; right: number } | null>(null)
+  const triggerRef  = useRef<HTMLButtonElement>(null)
+  const popoverRef  = useRef<HTMLDivElement>(null)
+
+  function openPopover() {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+    setConfirming(null)
+    setOpen(true)
+    requestAnimationFrame(() => setVisible(true))
+  }
+
+  function close() {
+    setVisible(false)
+    setOpen(false)
+    setConfirming(null)
+    setExecuting(false)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: PointerEvent) {
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t) || popoverRef.current?.contains(t)) return
+      close()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [open])
+
+  async function execute(action: RowActionDef) {
+    setExecuting(true)
+    try { await action.onExecute() }
+    finally { close() }
+  }
+
+  const transitionStyle = {
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(-4px)',
+    transition: 'opacity 150ms ease, transform 150ms ease',
+  } as const
+
   return (
-    <div className="rounded-lg border border-faint2 p-3">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-mid">{label}</p>
-      <p className={`num text-[18px] font-semibold leading-none ${cls}`}>{value}</p>
-      {sub && <p className="num mt-1 text-[10px] text-mid">{sub}</p>}
+    <div className="flex justify-end">
+      <button
+        ref={triggerRef}
+        onClick={openPopover}
+        aria-label="Eylemler"
+        className="rounded p-1.5 text-mid opacity-0 transition-opacity duration-150 group-hover/row:opacity-100 hover:bg-black/5 hover:text-ink"
+      >
+        <MoreHorizontal size={14} />
+      </button>
+
+      {open && pos && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 200, ...transitionStyle }}
+        >
+          {confirming ? (
+            <div className="w-52 rounded-xl border border-faint2 bg-card p-3 shadow-lg">
+              <p className="mb-3 text-xs leading-relaxed text-ink">{confirming.confirmMessage}</p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={close}
+                  disabled={executing}
+                  className="rounded-lg border border-faint2 px-3 py-1.5 text-xs text-mid transition-colors duration-150 hover:text-ink disabled:opacity-50"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  onClick={() => execute(confirming)}
+                  disabled={executing}
+                  className="flex items-center gap-1.5 rounded-lg border border-down/20 bg-down/10 px-3 py-1.5 text-xs font-medium text-down transition-colors duration-150 hover:bg-down/20 disabled:opacity-50"
+                >
+                  {executing && <Loader2 className="size-3 animate-spin" />}
+                  {confirming.confirmLabel ?? 'Onayla'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="min-w-[160px] overflow-hidden rounded-xl border border-faint2 bg-card shadow-lg">
+              {actions.map((action, i) => (
+                <button
+                  key={i}
+                  onClick={() => action.confirmMessage ? setConfirming(action) : void execute(action)}
+                  className={[
+                    'w-full px-3 py-2.5 text-left text-xs transition-colors duration-150 hover:bg-black/5',
+                    action.destructive ? 'font-medium text-down' : 'text-ink',
+                  ].join(' ')}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }
 
-// ─── active positions table ────────────────────────────────────────────────────
+// ─── th helper ────────────────────────────────────────────────────────────────
 
-function ActivePositionsTable({ positions }: { positions: AlpacaPosition[] }) {
+function Th({ children, align = 'right' }: { children?: React.ReactNode; align?: 'left' | 'right' }) {
+  return (
+    <th
+      className={[
+        'px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-mid whitespace-nowrap',
+        align === 'left' ? 'text-left' : 'text-right',
+      ].join(' ')}
+    >
+      {children}
+    </th>
+  )
+}
+
+// ─── active positions table ───────────────────────────────────────────────────
+
+function ActivePositionsTable({
+  positions,
+  onClose,
+}: {
+  positions: AlpacaPosition[]
+  onClose: (p: AlpacaPosition) => Promise<void>
+}) {
   return (
     <table className="w-full text-sm">
       <thead>
         <tr className="sticky top-0 z-10 border-b border-faint bg-card">
-          {['Sembol', 'Miktar', 'Giriş Fiyatı', 'Güncel Fiyat', 'K/Z', 'K/Z %', 'Piyasa Değeri', 'Açılış Tarihi'].map(h => (
-            <th key={h} className="num px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-mid whitespace-nowrap first:pl-4 last:pr-4">
-              {h}
-            </th>
-          ))}
+          <Th align="left">Sembol</Th>
+          <Th>Miktar</Th>
+          <Th>Giriş Fiyatı</Th>
+          <Th>Güncel Fiyat</Th>
+          <Th>K/Z</Th>
+          <Th>K/Z %</Th>
+          <Th>Piyasa Değeri</Th>
+          <Th>Tarih</Th>
+          <th className="w-8 px-2 py-2" />
         </tr>
       </thead>
       <tbody>
         {positions.map(p => {
-          const pl = parseFloat(p.unrealized_pl)
+          const pl    = parseFloat(p.unrealized_pl)
           const plPct = parseFloat(p.unrealized_plpc) * 100
-          const isUp = pl >= 0
+          const isUp  = pl >= 0
+          const plCls = isUp ? 'text-up' : 'text-down'
           return (
-            <tr key={p.symbol} className="border-b border-faint2 hover:bg-bg">
-              <td className="pl-4 pr-3 py-2.5">
-                <div className="font-semibold text-sm">{p.symbol}</div>
+            <tr
+              key={p.symbol}
+              className="group/row border-b border-faint2 transition-colors duration-150 hover:bg-bg"
+            >
+              <td className="py-3 pl-3 pr-3">
+                <div className="text-sm font-semibold text-ink">{p.symbol}</div>
                 <div className="num text-[10px] text-mid">{p.exchange}</div>
               </td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">{p.qty}</td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">${fmtUsd(parseFloat(p.avg_entry_price))}</td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">{p.qty}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">${fmtUsd(parseFloat(p.avg_entry_price))}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">
                 {p.current_price ? `$${fmtUsd(parseFloat(p.current_price))}` : '—'}
               </td>
-              <td className={`num px-3 py-2.5 text-xs font-medium whitespace-nowrap ${isUp ? 'text-up' : 'text-down'}`}>
-                {pl >= 0 ? '+' : ''}${fmtUsd(Math.abs(pl))}
+              <td className={`num px-3 py-3 text-right text-xs font-medium whitespace-nowrap ${plCls}`}>
+                {pl >= 0 ? '+' : '−'}${fmtUsd(Math.abs(pl))}
               </td>
-              <td className={`num px-3 py-2.5 text-xs font-medium whitespace-nowrap ${isUp ? 'text-up' : 'text-down'}`}>
+              <td className={`num px-3 py-3 text-right text-xs font-medium whitespace-nowrap ${plCls}`}>
                 {fmtPct(plPct)}
               </td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">${fmtUsd(parseFloat(p.market_value))}</td>
-              <td className="num pr-4 pl-3 py-2.5 text-xs whitespace-nowrap text-mid">{fmtDate(p.created_at)}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">${fmtUsd(parseFloat(p.market_value))}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap text-mid">
+                {fmtDate(p.created_at)}
+              </td>
+              <td className="py-3 pl-2 pr-3">
+                <RowActions
+                  actions={[{
+                    label: 'Pozisyonu Kapat',
+                    destructive: true,
+                    confirmMessage: `${p.symbol} pozisyonunu market fiyatından kapatmak istiyor musunuz?`,
+                    confirmLabel: 'Kapat',
+                    onExecute: () => onClose(p),
+                  }]}
+                />
+              </td>
             </tr>
           )
         })}
@@ -189,38 +349,44 @@ function ActivePositionsTable({ positions }: { positions: AlpacaPosition[] }) {
   )
 }
 
-// ─── closed positions table ────────────────────────────────────────────────────
+// ─── closed positions table ───────────────────────────────────────────────────
 
 function ClosedPositionsTable({ positions }: { positions: ClosedPaperPosition[] }) {
   return (
     <table className="w-full text-sm">
       <thead>
         <tr className="sticky top-0 z-10 border-b border-faint bg-card">
-          {['Sembol', 'Miktar', 'Giriş', 'Çıkış', 'K/Z', 'K/Z %', 'Kapanış Tarihi'].map(h => (
-            <th key={h} className="num px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-mid whitespace-nowrap first:pl-4 last:pr-4">
-              {h}
-            </th>
-          ))}
+          <Th align="left">Sembol</Th>
+          <Th>Miktar</Th>
+          <Th>Giriş</Th>
+          <Th>Çıkış</Th>
+          <Th>K/Z</Th>
+          <Th>K/Z %</Th>
+          <Th>Kapanış Tarihi</Th>
         </tr>
       </thead>
       <tbody>
         {positions.map((p, i) => {
-          const isUp = p.pl >= 0
+          const isUp  = p.pl >= 0
+          const plCls = isUp ? 'text-up' : 'text-down'
           return (
-            <tr key={`${p.symbol}-${i}`} className="border-b border-faint2 hover:bg-bg">
-              <td className="pl-4 pr-3 py-2.5">
-                <div className="font-semibold text-sm">{p.symbol}</div>
+            <tr
+              key={`${p.symbol}-${i}`}
+              className="group/row border-b border-faint2 transition-colors duration-150 hover:bg-bg"
+            >
+              <td className="py-3 pl-3 pr-3 text-sm font-semibold text-ink">{p.symbol}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">{p.qty}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">${fmtUsd(p.entryPrice)}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">${fmtUsd(p.exitPrice)}</td>
+              <td className={`num px-3 py-3 text-right text-xs font-medium whitespace-nowrap ${plCls}`}>
+                {p.pl >= 0 ? '+' : '−'}${fmtUsd(Math.abs(p.pl))}
               </td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">{p.qty}</td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">${fmtUsd(p.entryPrice)}</td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">${fmtUsd(p.exitPrice)}</td>
-              <td className={`num px-3 py-2.5 text-xs font-medium whitespace-nowrap ${isUp ? 'text-up' : 'text-down'}`}>
-                {p.pl >= 0 ? '+' : ''}${fmtUsd(Math.abs(p.pl))}
-              </td>
-              <td className={`num px-3 py-2.5 text-xs font-medium whitespace-nowrap ${isUp ? 'text-up' : 'text-down'}`}>
+              <td className={`num px-3 py-3 text-right text-xs font-medium whitespace-nowrap ${plCls}`}>
                 {fmtPct(p.plPct)}
               </td>
-              <td className="num pr-4 pl-3 py-2.5 text-xs whitespace-nowrap text-mid">{fmtDate(p.closedAt)}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap text-mid">
+                {fmtDate(p.closedAt)}
+              </td>
             </tr>
           )
         })}
@@ -229,21 +395,21 @@ function ClosedPositionsTable({ positions }: { positions: ClosedPaperPosition[] 
   )
 }
 
-// ─── open orders table ────────────────────────────────────────────────────────
+// ─── orders table ─────────────────────────────────────────────────────────────
 
 const ORDER_TYPE_LABEL: Record<string, string> = {
-  limit:       'Limit',
-  market:      'Market',
-  stop:        'Stop',
-  stop_limit:  'Stop-Limit',
+  limit:         'Limit',
+  market:        'Market',
+  stop:          'Stop',
+  stop_limit:    'Stop-Limit',
   trailing_stop: 'Trailing Stop',
 }
 
 const ORDER_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
-  new:            { bg: '#eef3fb', color: '#2563a8' },
+  new:              { bg: '#eef3fb', color: '#2563a8' },
   partially_filled: { bg: '#fef8e9', color: '#9a6200' },
-  accepted:       { bg: '#eef3fb', color: '#2563a8' },
-  pending_new:    { bg: '#eef3fb', color: '#2563a8' },
+  accepted:         { bg: '#eef3fb', color: '#2563a8' },
+  pending_new:      { bg: '#eef3fb', color: '#2563a8' },
 }
 
 function OrdersTable({
@@ -251,29 +417,36 @@ function OrdersTable({
   onCancel,
 }: {
   orders: AlpacaOrder[]
-  onCancel: (o: AlpacaOrder) => void
+  onCancel: (o: AlpacaOrder) => Promise<void>
 }) {
   return (
     <table className="w-full text-sm">
       <thead>
         <tr className="sticky top-0 z-10 border-b border-faint bg-card">
-          {['Sembol', 'Tip', 'Yön', 'Miktar', 'Limit Fiyat', 'Durum', 'Oluşturma Tarihi', ''].map((h, i) => (
-            <th key={i} className="num px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-mid whitespace-nowrap first:pl-4 last:pr-4">
-              {h}
-            </th>
-          ))}
+          <Th align="left">Sembol</Th>
+          <Th align="left">Tip</Th>
+          <Th align="left">Yön</Th>
+          <Th>Miktar</Th>
+          <Th>Limit Fiyat</Th>
+          <Th align="left">Durum</Th>
+          <Th>Tarih</Th>
+          <th className="w-8 px-2 py-2" />
         </tr>
       </thead>
       <tbody>
         {orders.map(o => {
-          const style = ORDER_STATUS_STYLE[o.status] ?? { bg: '#f5f4f0', color: '#9a9a94' }
+          const statusStyle = ORDER_STATUS_STYLE[o.status] ?? { bg: '#f5f4f0', color: '#9a9a94' }
+          const dateRaw     = o.submitted_at ?? o.created_at
           return (
-            <tr key={o.id} className="border-b border-faint2 hover:bg-bg">
-              <td className="pl-4 pr-3 py-2.5 font-semibold text-sm">{o.symbol}</td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap text-mid">
+            <tr
+              key={o.id}
+              className="group/row border-b border-faint2 transition-colors duration-150 hover:bg-bg"
+            >
+              <td className="py-3 pl-3 pr-3 text-sm font-semibold text-ink">{o.symbol}</td>
+              <td className="num px-3 py-3 text-xs text-mid whitespace-nowrap">
                 {ORDER_TYPE_LABEL[o.type] ?? o.type}
               </td>
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-3">
                 <span
                   className="num rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
                   style={o.side === 'buy'
@@ -283,27 +456,31 @@ function OrdersTable({
                   {o.side === 'buy' ? 'Alış' : 'Satış'}
                 </span>
               </td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">{o.qty}</td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap">
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">{o.qty}</td>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">
                 {o.limit_price ? `$${fmtUsd(parseFloat(o.limit_price))}` : '—'}
               </td>
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-3">
                 <span
                   className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
-                  style={{ background: style.bg, color: style.color }}
+                  style={{ background: statusStyle.bg, color: statusStyle.color }}
                 >
                   {o.status}
                 </span>
               </td>
-              <td className="num px-3 py-2.5 text-xs whitespace-nowrap text-mid">{fmtDate(o.created_at)}</td>
-              <td className="pr-4 pl-3 py-2.5 text-right">
-                <button
-                  onClick={() => onCancel(o)}
-                  title="Emri iptal et"
-                  className="rounded px-2 py-1 text-[10px] font-medium text-down border border-down/25 hover:bg-down/5 transition-colors num"
-                >
-                  İptal
-                </button>
+              <td className="num px-3 py-3 text-right text-xs whitespace-nowrap text-mid">
+                {fmtDate(dateRaw)}
+              </td>
+              <td className="py-3 pl-2 pr-3">
+                <RowActions
+                  actions={[{
+                    label: 'Emri İptal Et',
+                    destructive: true,
+                    confirmMessage: `${o.symbol} emrini iptal etmek istiyor musunuz?`,
+                    confirmLabel: 'İptal Et',
+                    onExecute: () => onCancel(o),
+                  }]}
+                />
               </td>
             </tr>
           )
@@ -313,107 +490,13 @@ function OrdersTable({
   )
 }
 
-// ─── cancel modal ──────────────────────────────────────────────────────────────
-
-function CancelModal({
-  order,
-  onConfirm,
-  onClose,
-  cancelling,
-}: {
-  order: AlpacaOrder
-  onConfirm: () => void
-  onClose: () => void
-  cancelling: boolean
-}) {
-  const backdropRef = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true))
-  }, [])
-
-  function handleClose() {
-    if (cancelling) return
-    setVisible(false)
-    setTimeout(onClose, 180)
-  }
-
-  return createPortal(
-    <div
-      ref={backdropRef}
-      onClick={e => { if (e.target === backdropRef.current) handleClose() }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        background: visible ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0)',
-        transition: 'background 180ms ease',
-      }}
-    >
-      <div
-        style={{
-          background: 'rgba(255,255,255,0.72)',
-          backdropFilter: 'blur(20px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-          border: '1px solid rgba(255,255,255,0.35)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
-          borderRadius: 16,
-          transform: visible ? 'scale(1)' : 'scale(0.95)',
-          opacity: visible ? 1 : 0,
-          transition: 'transform 180ms ease, opacity 180ms ease',
-          maxWidth: 360,
-          width: '100%',
-        }}
-      >
-        <div className="p-5">
-          <div className="mb-3 flex items-start justify-between">
-            <div>
-              <p className="text-base font-bold text-ink">{order.symbol}</p>
-              <p className="mt-0.5 text-sm text-mid">
-                {order.side === 'buy' ? 'Alış' : 'Satış'} · {ORDER_TYPE_LABEL[order.type] ?? order.type}
-                {order.limit_price ? ` · $${fmtUsd(parseFloat(order.limit_price))}` : ''}
-              </p>
-            </div>
-            <button
-              onClick={handleClose}
-              className="rounded-full p-1 text-mid transition-colors hover:bg-black/5 hover:text-ink"
-            >
-              <IoClose size={16} />
-            </button>
-          </div>
-          <p className="mb-4 text-sm leading-relaxed text-ink/80">Bu emri iptal etmek istiyor musunuz?</p>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={handleClose}
-              disabled={cancelling}
-              className="num rounded-lg border border-faint2 px-4 py-2 text-sm text-mid transition-colors hover:text-ink disabled:opacity-50"
-            >
-              Vazgeç
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={cancelling}
-              className="num flex items-center gap-2 rounded-lg border border-down/20 bg-down/10 px-4 py-2 text-sm font-medium text-down transition-colors hover:bg-down/20 disabled:opacity-50"
-            >
-              {cancelling && <Loader2 className="size-3.5 animate-spin" />}
-              Emri İptal Et
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  )
-}
-
 // ─── main widget ──────────────────────────────────────────────────────────────
 
 export function PaperTradingWidget() {
-  const [tab, setTab] = useState<PaperTab>('positions')
-  const [cancelTarget, setCancelTarget] = useState<AlpacaOrder | null>(null)
-  const [cancelling, setCancelling] = useState(false)
+  const [tab, setTab]                   = useState<PaperTab>('positions')
   const [ordersVersion, setOrdersVersion] = useState(0)
 
-  const { data: positions, loading: posLoading, error: posError } =
+  const { data: positions,      loading: posLoading,    error: posError } =
     useApi<AlpacaPosition[]>('/api/paper-trading/positions')
 
   const { data: closedPositions, loading: closedLoading } =
@@ -422,31 +505,45 @@ export function PaperTradingWidget() {
   const { data: openOrders, loading: ordersLoading } =
     useApi<AlpacaOrder[]>(`/api/paper-trading/orders?status=open&_v=${ordersVersion}`)
 
-  // Summary computations
   const unrealizedPl = (positions ?? []).reduce((s, p) => s + parseFloat(p.unrealized_pl), 0)
-  const realizedPl = (closedPositions ?? []).reduce((s, p) => s + p.pl, 0)
-  const totalPl = unrealizedPl + realizedPl
-  const winCount = (closedPositions ?? []).filter(p => p.pl > 0).length
-  const lossCount = (closedPositions ?? []).filter(p => p.pl < 0).length
+  const realizedPl   = (closedPositions ?? []).reduce((s, p) => s + p.pl, 0)
+  const totalPl      = unrealizedPl + realizedPl
+  const winCount     = (closedPositions ?? []).filter(p => p.pl > 0).length
+  const lossCount    = (closedPositions ?? []).filter(p => p.pl < 0).length
 
-  async function handleCancelConfirm() {
-    if (!cancelTarget) return
+  async function cancelOrder(o: AlpacaOrder) {
     const adminKey = localStorage.getItem('eqr:admin-key') ?? ''
-    setCancelling(true)
-    try {
-      await fetch(`/api/paper-trading/orders/${cancelTarget.id}`, {
-        method: 'DELETE',
-        headers: { 'x-admin-key': adminKey },
-      })
-      setOrdersVersion(v => v + 1)
-      setCancelTarget(null)
-    } finally {
-      setCancelling(false)
-    }
+    await fetch(`/api/paper-trading/orders/${o.id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-key': adminKey },
+    })
+    setOrdersVersion(v => v + 1)
   }
 
-  const totalPlSign = totalPl >= 0 ? '+' : '-'
-  const totalPlClass = totalPl >= 0 ? 'up' as const : 'down' as const
+  async function closePosition(p: AlpacaPosition) {
+    const adminKey = localStorage.getItem('eqr:admin-key') ?? ''
+    await fetch('/api/paper-trading/orders', {
+      method: 'POST',
+      headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol: p.symbol,
+        qty: String(Math.abs(parseFloat(p.qty))),
+        side: 'sell',
+        type: 'market',
+        time_in_force: 'day',
+      }),
+    })
+    setOrdersVersion(v => v + 1)
+  }
+
+  const totalPlClass = totalPl >= 0 ? 'text-up' : 'text-down'
+  const totalPlSign  = totalPl >= 0 ? '+' : '−'
+
+  const counts: Record<PaperTab, number> = {
+    positions: positions?.length ?? 0,
+    closed:    closedPositions?.length ?? 0,
+    orders:    openOrders?.length ?? 0,
+  }
 
   if (posError) {
     return (
@@ -458,46 +555,43 @@ export function PaperTradingWidget() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Summary */}
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <SummaryCard
-          label="Toplam K/Z"
-          value={`${totalPlSign}$${fmtUsd(Math.abs(totalPl))}`}
-          sub={positions ? `Açık: ${unrealizedPl >= 0 ? '+' : ''}$${fmtUsd(unrealizedPl)}` : undefined}
-          variant={totalPlClass}
-        />
-        <SummaryCard
-          label="Kazanan İşlem"
-          value={closedPositions ? String(winCount) : '—'}
-          variant="up"
-        />
-        <SummaryCard
-          label="Kaybeden İşlem"
-          value={closedPositions ? String(lossCount) : '—'}
-          variant="down"
-        />
-        <SummaryCard
-          label="Açık Pozisyon"
-          value={positions ? String(positions.length) : '—'}
-          variant="neutral"
-        />
-      </div>
+      <KpiBar
+        items={[
+          {
+            label: 'Toplam K/Z',
+            value: `${totalPlSign}$${fmtUsd(Math.abs(totalPl))}`,
+            colorClass: totalPlClass,
+          },
+          {
+            label: 'Kazanan',
+            value: closedPositions ? String(winCount) : '—',
+            colorClass: 'text-up',
+          },
+          {
+            label: 'Kaybeden',
+            value: closedPositions ? String(lossCount) : '—',
+            colorClass: 'text-down',
+          },
+          {
+            label: 'Açık Pozisyon',
+            value: positions ? String(positions.length) : '—',
+          },
+        ]}
+      />
 
-      {/* Tabs */}
-      <PaperTabs tab={tab} onChange={setTab} />
+      <PaperTabs tab={tab} onChange={setTab} counts={counts} />
 
-      {/* Tab content */}
       {tab === 'positions' && (
         posLoading ? <Loading /> :
-        !positions?.length ? <Empty>Açık pozisyon yok.</Empty> :
+        !positions?.length ? <Empty>Açık pozisyon yok</Empty> :
         <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
-          <ActivePositionsTable positions={positions} />
+          <ActivePositionsTable positions={positions} onClose={closePosition} />
         </div>
       )}
 
       {tab === 'closed' && (
         closedLoading ? <Loading /> :
-        !closedPositions?.length ? <Empty>Kapalı pozisyon yok.</Empty> :
+        !closedPositions?.length ? <Empty>Henüz kapanmış işlem yok</Empty> :
         <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
           <ClosedPositionsTable positions={closedPositions} />
         </div>
@@ -505,19 +599,10 @@ export function PaperTradingWidget() {
 
       {tab === 'orders' && (
         ordersLoading ? <Loading /> :
-        !openOrders?.length ? <Empty>Bekleyen emir yok.</Empty> :
+        !openOrders?.length ? <Empty>Bekleyen emir yok</Empty> :
         <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
-          <OrdersTable orders={openOrders} onCancel={setCancelTarget} />
+          <OrdersTable orders={openOrders} onCancel={cancelOrder} />
         </div>
-      )}
-
-      {cancelTarget && (
-        <CancelModal
-          order={cancelTarget}
-          onConfirm={handleCancelConfirm}
-          onClose={() => setCancelTarget(null)}
-          cancelling={cancelling}
-        />
       )}
     </div>
   )
