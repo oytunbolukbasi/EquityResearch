@@ -134,9 +134,9 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
       const exchange = (d.exchange ?? existing[0]?.exchange ?? '').toUpperCase()
       const isUS = exchange === 'NYSE' || exchange === 'NASDAQ'
       if (isUS) {
-        if (d.status === 'active' && !existing.length && d.entryHigh != null) {
-          // New US idea → queue a limit buy at entryHigh
-          alpacaActions.push({ action: 'buy', ticker: d.ticker.toUpperCase(), limitPrice: d.entryHigh })
+        if (d.status === 'active' && !existing.length && d.entryLow != null) {
+          // New US idea → queue a limit buy at entryLow (patient entry at band floor)
+          alpacaActions.push({ action: 'buy', ticker: d.ticker.toUpperCase(), limitPrice: d.entryLow })
         } else if (d.status === 'stopped') {
           // Stopped → cancel open orders and/or close position
           alpacaActions.push({ action: 'stop', ticker: d.ticker.toUpperCase() })
