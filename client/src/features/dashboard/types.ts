@@ -7,6 +7,7 @@ export const WIDGET_TYPES = [
   'ideas-table',
   'trade-plan',
   'portfolio',
+  'paper-trading',
 ] as const
 
 export type WidgetType = (typeof WIDGET_TYPES)[number]

@@ -8,17 +8,19 @@ const ITEMS_KEY = 'dashboard:v1:items'
 const LAYOUT_KEY = 'dashboard:v1:layout'
 
 export const DEFAULT_ITEMS: WidgetInstance[] = [
-  { i: 'morning-note', type: 'morning-note' },
-  { i: 'portfolio', type: 'portfolio' },
-  { i: 'trade-plan', type: 'trade-plan' },
-  { i: 'ideas-table', type: 'ideas-table' },
+  { i: 'morning-note',  type: 'morning-note' },
+  { i: 'portfolio',     type: 'portfolio' },
+  { i: 'trade-plan',   type: 'trade-plan' },
+  { i: 'ideas-table',  type: 'ideas-table' },
+  { i: 'paper-trading', type: 'paper-trading' },
 ]
 
 export const DEFAULT_LAYOUT: LayoutItem[] = [
-  { i: 'morning-note', x: 0, y: 0,  w: 7, h: 9,  minW: 4, minH: 6 },
-  { i: 'portfolio',    x: 7, y: 0,  w: 5, h: 9,  minW: 5, minH: 8 },
-  { i: 'trade-plan',  x: 0, y: 9,  w: 7, h: 12, minW: 5, minH: 9 },
-  { i: 'ideas-table', x: 7, y: 9,  w: 5, h: 12, minW: 4, minH: 6 },
+  { i: 'morning-note',   x: 0, y: 0,  w: 7,  h: 9,  minW: 4, minH: 6 },
+  { i: 'portfolio',      x: 7, y: 0,  w: 5,  h: 9,  minW: 5, minH: 8 },
+  { i: 'trade-plan',    x: 0, y: 9,  w: 7,  h: 12, minW: 5, minH: 9 },
+  { i: 'ideas-table',   x: 7, y: 9,  w: 5,  h: 12, minW: 4, minH: 6 },
+  { i: 'paper-trading', x: 0, y: 21, w: 12, h: 14, minW: 8, minH: 10 },
 ]
 
 function load<T>(key: string, fallback: T): T {

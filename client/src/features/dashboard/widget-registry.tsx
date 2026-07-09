@@ -1,6 +1,7 @@
 import { IdeasTableWidget } from '@/features/widgets/IdeasTableWidget'
-import { LineChart, ListChecks, Newspaper, Wallet } from 'lucide-react'
+import { LineChart, ListChecks, Newspaper, TrendingUp, Wallet } from 'lucide-react'
 import { MorningNoteWidget } from '@/features/widgets/MorningNoteWidget'
+import { PaperTradingWidget } from '@/features/widgets/PaperTradingWidget'
 import { PortfolioWidget } from '@/features/widgets/PortfolioWidget'
 import { TradePlanWidget } from '@/features/widgets/TradePlanWidget'
 import { WIDGET_TYPES, type WidgetDef, type WidgetType } from './types'
@@ -41,6 +42,14 @@ export const widgetRegistry: Record<WidgetType, WidgetDef> = {
     icon: Wallet,
     defaultSize: { w: 7, h: 12, minW: 5, minH: 8 },
     Component: PortfolioWidget,
+  },
+  'paper-trading': {
+    type: 'paper-trading',
+    eyebrow: 'PAPER TRADING',
+    title: 'Paper Trading',
+    icon: TrendingUp,
+    defaultSize: { w: 12, h: 14, minW: 8, minH: 10 },
+    Component: PaperTradingWidget,
   },
 }
 

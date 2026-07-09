@@ -9,6 +9,7 @@ import { ideasRouter } from './routes/ideas'
 import { tradePlansRouter } from './routes/trade-plans'
 import { bulkImportRouter } from './routes/bulk-import'
 import { portfolioRouter } from './routes/portfolio'
+import { paperTradingRouter } from './routes/paper-trading'
 
 const app = express()
 app.use(express.json({ limit: '2mb' }))
@@ -22,6 +23,7 @@ api.use('/ideas', ideasRouter)
 api.use('/trade-plans', tradePlansRouter)
 api.use('/admin/bulk-import', bulkImportRouter)
 api.use('/portfolio', portfolioRouter)
+api.use('/paper-trading', paperTradingRouter)
 app.use('/api', api)
 
 // In production this single service also serves the built client.

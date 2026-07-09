@@ -8,6 +8,7 @@ import { requireAdmin } from '../middleware/require-admin'
 import { morningNoteInput } from './morning-notes'
 import { ideaInput } from './ideas'
 import { tradePlanInput } from './trade-plans'
+import { alpacaFetch, AlpacaError } from '../lib/alpaca'
 
 const portfolioActionSchema = z.object({
   ticker: z.string(),
@@ -94,6 +95,9 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
     })
   }
 
+  type AlpacaAction = { action: 'buy'; ticker: string; limitPrice: number } | { action: 'stop'; ticker: string }
+  const alpacaActions: AlpacaAction[] = []
+
   if (body.ideas !== undefined) {
     results.ideas = await upsertTable(ideaInput, body.ideas, async (d) => {
       const values = {
@@ -113,8 +117,10 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         riskNote: d.riskNote ?? null,
         ...(d.status ? { status: d.status } : {}),
       }
+      // Also select exchange so we can use it for status-only updates where
+      // d.exchange might be null (the payload only includes what changed).
       const existing = await db
-        .select({ id: ideas.id })
+        .select({ id: ideas.id, exchange: ideas.exchange })
         .from(ideas)
         .where(and(eq(ideas.date, d.date), eq(ideas.ticker, d.ticker)))
         .limit(1)
@@ -123,7 +129,82 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
       } else {
         await db.insert(ideas).values(values)
       }
+
+      // Alpaca auto-order: only for US exchanges (NYSE/NASDAQ)
+      const exchange = (d.exchange ?? existing[0]?.exchange ?? '').toUpperCase()
+      const isUS = exchange === 'NYSE' || exchange === 'NASDAQ'
+      if (isUS) {
+        if (d.status === 'active' && !existing.length && d.entryHigh != null) {
+          // New US idea → queue a limit buy at entryHigh
+          alpacaActions.push({ action: 'buy', ticker: d.ticker.toUpperCase(), limitPrice: d.entryHigh })
+        } else if (d.status === 'stopped') {
+          // Stopped → cancel open orders and/or close position
+          alpacaActions.push({ action: 'stop', ticker: d.ticker.toUpperCase() })
+        }
+      }
     })
+
+    // Process queued Alpaca actions after all DB writes succeed
+    for (const act of alpacaActions) {
+      try {
+        if (act.action === 'buy') {
+          // Skip if an open order for this ticker already exists
+          const open = await alpacaFetch<{ id: string }[]>(
+            `/v2/orders?status=open&symbols=${encodeURIComponent(act.ticker)}&limit=10`,
+          )
+          if (!open?.length) {
+            const order = await alpacaFetch('/v2/orders', {
+              method: 'POST',
+              body: JSON.stringify({
+                symbol: act.ticker,
+                qty: '1',
+                side: 'buy',
+                type: 'limit',
+                time_in_force: 'gtc',
+                limit_price: String(act.limitPrice),
+              }),
+            })
+            console.log(`[alpaca] limit buy created: ${act.ticker} @ ${act.limitPrice}`, (order as Record<string, unknown>)?.['id'])
+          } else {
+            console.log(`[alpaca] skipped buy: ${act.ticker} already has open order`)
+          }
+        } else {
+          // 1. Cancel any pending limit orders BEFORE placing the market sell,
+          //    so the sell order we create isn't included in the cancellation pass.
+          const openOrders = await alpacaFetch<{ id: string }[]>(
+            `/v2/orders?status=open&symbols=${encodeURIComponent(act.ticker)}&limit=10`,
+          )
+          for (const o of openOrders ?? []) {
+            await alpacaFetch(`/v2/orders/${o.id}`, { method: 'DELETE' })
+            console.log(`[alpaca] order cancelled: ${act.ticker} ${o.id}`)
+          }
+          // 2. Close position if one exists
+          try {
+            const pos = await alpacaFetch<{ qty: string }>(`/v2/positions/${act.ticker}`)
+            if (pos) {
+              await alpacaFetch('/v2/orders', {
+                method: 'POST',
+                body: JSON.stringify({
+                  symbol: act.ticker,
+                  qty: String(Math.abs(parseFloat(pos.qty))),
+                  side: 'sell',
+                  type: 'market',
+                  time_in_force: 'day',
+                }),
+              })
+              console.log(`[alpaca] market sell created: ${act.ticker}`)
+            }
+          } catch (e) {
+            // 404 = no position, that's fine
+            if (!(e instanceof AlpacaError && e.statusCode === 404)) throw e
+          }
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error(`[alpaca] action failed for ${act.ticker}:`, e)
+        warnings.push(`alpaca/${act.ticker}: ${msg}`)
+      }
+    }
   }
 
   if (body.trade_plans !== undefined) {

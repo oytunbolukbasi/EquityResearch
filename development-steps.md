@@ -190,3 +190,50 @@ unlayered CSS override, Piyasa Nabzı bölüm başlıkları 14px/600, makro bull
 leading-[1.65]. CurrencyBlock: değer satırları 15px/medium, K/Z 15px/semibold, etiketler
 12px, aralıklar genişletildi (space-y-2.5, pt-2.5). USD kur notu blok altından başlık
 satırına (USD POZİSYONLAR yanına) taşındı: "USD/TRY=46,81" formatı.
+
+GÖREV 15 — Favicon ve header ikonu
+Tarayıcı sekmesi favicon'u ve header'daki sol üst logo BotMessageSquare (lucide-react)
+ikonuyla değiştirildi. SVG favicon inline olarak inject ediliyor (CSS currentColor ile tema
+uyumlu); header'da ikon + "Equity Research" metni yan yana.
+
+GÖREV 16 — Pozisyon Fikirleri Risk/Getiri mini-barı
+IdeasTableWidget her satırın altına Risk:Reward mini-bar eklendi. Kırmızı segment risk
+(giriş–stop) ve yeşil segment getiri (giriş–hedef1) oranını görsel olarak gösteriyor. Sağda
+kompakt "R:R 1:2.4" rozeti. Hesaplama: entryHigh, stopLoss, target1 değerleri üzerinden
+yapılıyor; eksik değerde bar render edilmiyor.
+
+GÖREV 17 — BIST ve US Heatmap widget kaldırma
+BIST Heatmap ve ABD Heatmap widget'ları tamamen kaldırıldı (kullanıcı talebi). Kaldırılan
+dosyalar: client/src/features/widgets/BistHeatmapWidget.tsx ve UsHeatmapWidget.tsx.
+Widget-registry, WIDGET_TYPES, DEFAULT_ITEMS/DEFAULT_LAYOUT ve admin sayfasından referanslar
+temizlendi. Backend'de /api/heatmaps route'u ve bulk-import'taki heatmaps parse bloğu
+kaldırıldı. DB'deki heatmaps tablosu korundu (veri kaybı önlemek için).
+localStorage migration guard eklendi: kayıtlı layout'ta kalan bist-heatmap/us-heatmap
+öğeleri loadItems() filtresiyle temizlenip sayfa çökmesi önlendi.
+
+GÖREV 18 — Alpaca Paper Trading entegrasyonu
+Sadece ABD hisseleri (NYSE/NASDAQ) kapsıyor; BIST pozisyonları bu fazda yok.
+
+A — Backend proxy (server/lib/alpaca.ts + server/routes/paper-trading.ts):
+AlpacaError sınıfı ve alpacaFetch() yardımcısı (APCA header'ları, 204 null, hata mesajı
+parse). 6 proxy endpoint: GET /account, /positions, /orders, /activities/fills,
+/orders/:id (DELETE ile iptal), POST /orders. FIFO kapatılan-pozisyon hesabı:
+fill aktiviteleri transaction_time'a göre sıralanıp buy kuyruğuna ekleniyor, sell
+gelince kuyruğun başındaki buy ile eşleştirilip P&L hesaplanıyor. Railway env değişkenleri:
+ALPACA_API_KEY, ALPACA_API_SECRET, ALPACA_BASE_URL.
+
+B — PaperTradingWidget (client/src/features/widgets/PaperTradingWidget.tsx):
+4 özet kart: Toplam K/Z (realized + unrealized), Kazanan pozisyon sayısı, Kaybeden pozisyon
+sayısı, Açık Pozisyon sayısı. 3 sekme: Açık Pozisyonlar (mevcut pozisyonlar + unrealized
+P&L), Kapatılan (FIFO eşleşmeli realized P&L), Emirler (açık/kısmi emirler + iptal butonu).
+İptal butonu liquid-glass CancelModal açıyor (createPortal + backdrop-filter blur).
+Admin key localStorage'dan okunuyor (eqr:admin-key). Widget registry: eyebrow 'PAPER
+TRADING' (büyük harf — Türkçe locale'de CSS uppercase i→İ dönüşümünü önlemek için),
+defaultSize w:12 h:14. Default layout'ta en alta eklendi (y:21).
+
+C — Otomatik Alpaca emri (server/routes/bulk-import.ts):
+Bulk-import'a NYSE/NASDAQ exchange kontrolü eklendi. Yeni aktif fikir → entryHigh fiyatından
+limit alış emri (qty:1, gtc); aynı ticker'da zaten açık emir varsa atlanıyor. Status 'stopped'
+→ önce açık limit emirleri iptal ediliyor, sonra pozisyon market satışıyla kapatılıyor
+(sıralama kritik: ters sırada market satış emri kendi iptaliyle karşılaşıyordu — düzeltildi).
+BIST ticker'ları için Alpaca işlemi tetiklenmiyor.
