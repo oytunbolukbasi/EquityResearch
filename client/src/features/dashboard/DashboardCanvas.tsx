@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { bottom, GridLayout, useContainerWidth, type Layout, type LayoutItem } from 'react-grid-layout'
 
 import { AddWidgetMenu } from './AddWidgetMenu'
@@ -33,8 +34,14 @@ export function DashboardCanvas({
     return li
   })
 
+  // rowHeight(40) + vertical margin(16) = 56px per grid unit — dots align with snap rows
+  const canvasBg: CSSProperties = {
+    backgroundImage: 'radial-gradient(circle, var(--faint) 1px, transparent 1px)',
+    backgroundSize: '56px 56px',
+  }
+
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} style={canvasBg}>
       {items.length === 0 ? (
         <EmptyState onAdd={addWidget} />
       ) : (

@@ -27,11 +27,7 @@ export function AddWidgetMenu({
           Widget Ekle
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="num text-mid text-[11px] tracking-[0.12em] uppercase">
-          Widget Ekle
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="end" className="w-60 widget-add-panel">
         {WIDGET_ORDER.map((type) => {
           const def = widgetRegistry[type]
           const Icon = def.icon

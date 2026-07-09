@@ -225,6 +225,38 @@ body.rgl-interacting * {
   transition: box-shadow 150ms ease;
 }
 
+/* ── F: Widget Ekle panel — grain + pale blue gradient ─────────────────── */
+/*
+  SVG feTurbulence grain (256×256 tile, 7% opacity) layered over a
+  subtle blue gradient. Grain uses fractalNoise so it tiles seamlessly.
+  Blue value: #2563a8 (var(--blue)) at 4% opacity.
+*/
+/* Grain via ::before so feTurbulence filter actually renders (CSS bg-image
+   data URIs suppress SVG filters in Chromium). z-index:-1 keeps it behind
+   menu items; isolation:isolate confines the stacking context. */
+.widget-add-panel {
+  position: relative;
+  isolation: isolate;
+  background-image: linear-gradient(
+    135deg,
+    rgba(37, 99, 168, 0.18) 0%,
+    rgba(37, 99, 168, 0.05) 55%,
+    transparent 85%
+  );
+}
+
+.widget-add-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 300px 300px;
+  opacity: 0.07;
+}
+
 /* ── E: reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .react-grid-layout,

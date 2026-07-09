@@ -27,7 +27,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1400px] px-5 py-6 sm:px-8">
+        <main className="px-5 py-6 sm:px-8">
           <DashboardCanvas
             items={items}
             layout={layout}
