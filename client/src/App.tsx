@@ -27,7 +27,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="px-5 py-6 sm:px-8">
+        <main className="py-6">
           <DashboardCanvas
             items={items}
             layout={layout}

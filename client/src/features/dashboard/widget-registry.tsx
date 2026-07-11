@@ -16,7 +16,7 @@ export const widgetRegistry: Record<WidgetType, WidgetDef> = {
     eyebrow: 'Piyasa Nabzı',
     title: 'Piyasa Nabzı',
     icon: Newspaper,
-    defaultSize: { w: 7, h: 9, minW: 4, minH: 6 },
+    defaultSize: { w: 5, h: 14, minW: 4, minH: 6 },
     Component: MorningNoteWidget,
   },
   'ideas-table': {
@@ -24,7 +24,7 @@ export const widgetRegistry: Record<WidgetType, WidgetDef> = {
     eyebrow: 'Pozisyon Fikirleri',
     title: 'Pozisyon Fikirleri',
     icon: ListChecks,
-    defaultSize: { w: 5, h: 9, minW: 4, minH: 6 },
+    defaultSize: { w: 5, h: 16, minW: 4, minH: 6 },
     Component: IdeasTableWidget,
   },
   'trade-plan': {
@@ -32,7 +32,7 @@ export const widgetRegistry: Record<WidgetType, WidgetDef> = {
     eyebrow: 'Trade Planı',
     title: 'Trade Plan Viewer',
     icon: LineChart,
-    defaultSize: { w: 7, h: 12, minW: 5, minH: 9 },
+    defaultSize: { w: 7, h: 16, minW: 5, minH: 9 },
     Component: TradePlanWidget,
   },
   'portfolio': {
@@ -40,7 +40,7 @@ export const widgetRegistry: Record<WidgetType, WidgetDef> = {
     eyebrow: 'Portföy Durumu',
     title: 'Portföy Durumu',
     icon: Wallet,
-    defaultSize: { w: 7, h: 12, minW: 5, minH: 8 },
+    defaultSize: { w: 7, h: 14, minW: 5, minH: 8 },
     Component: PortfolioWidget,
   },
   'paper-trading': {
@@ -48,7 +48,7 @@ export const widgetRegistry: Record<WidgetType, WidgetDef> = {
     eyebrow: 'PAPER TRADING',
     title: 'Paper Trading',
     icon: TrendingUp,
-    defaultSize: { w: 12, h: 14, minW: 8, minH: 10 },
+    defaultSize: { w: 12, h: 14, minW: 4, minH: 3 },
     Component: PaperTradingWidget,
   },
 }

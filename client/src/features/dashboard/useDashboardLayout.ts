@@ -16,11 +16,11 @@ export const DEFAULT_ITEMS: WidgetInstance[] = [
 ]
 
 export const DEFAULT_LAYOUT: LayoutItem[] = [
-  { i: 'morning-note',   x: 0, y: 0,  w: 7,  h: 9,  minW: 4, minH: 6 },
-  { i: 'portfolio',      x: 7, y: 0,  w: 5,  h: 9,  minW: 5, minH: 8 },
-  { i: 'trade-plan',    x: 0, y: 9,  w: 7,  h: 12, minW: 5, minH: 9 },
-  { i: 'ideas-table',   x: 7, y: 9,  w: 5,  h: 12, minW: 4, minH: 6 },
-  { i: 'paper-trading', x: 0, y: 21, w: 12, h: 14, minW: 8, minH: 10 },
+  { i: 'morning-note',   x: 0, y: 0,  w: 5,  h: 14, minW: 4, minH: 6 },
+  { i: 'portfolio',      x: 5, y: 0,  w: 7,  h: 14, minW: 5, minH: 8 },
+  { i: 'trade-plan',    x: 0, y: 14, w: 7,  h: 16, minW: 5, minH: 9 },
+  { i: 'ideas-table',   x: 7, y: 14, w: 5,  h: 16, minW: 4, minH: 6 },
+  { i: 'paper-trading', x: 0, y: 30, w: 12, h: 14, minW: 4, minH: 3  },
 ]
 
 function load<T>(key: string, fallback: T): T {

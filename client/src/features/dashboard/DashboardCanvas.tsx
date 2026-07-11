@@ -6,7 +6,7 @@ import { widgetRegistry } from './widget-registry'
 import { WidgetFrame } from './WidgetFrame'
 import type { WidgetInstance, WidgetType } from './types'
 
-const GRID_CONFIG = { cols: 12, rowHeight: 40, margin: [16, 16], containerPadding: [0, 0] } as const
+const GRID_CONFIG = { cols: 12, rowHeight: 40, margin: [16, 16], containerPadding: [4, 0] } as const
 
 interface DashboardCanvasProps {
   items: WidgetInstance[]
@@ -35,9 +35,11 @@ export function DashboardCanvas({
   })
 
   // rowHeight(40) + vertical margin(16) = 56px per grid unit — dots align with snap rows
+  // min-height fills viewport so empty space below widgets is also draggable
   const canvasBg: CSSProperties = {
     backgroundImage: 'radial-gradient(circle, var(--faint) 1px, transparent 1px)',
     backgroundSize: '56px 56px',
+    minHeight: 'calc(100vh - 49px)',
   }
 
   return (
