@@ -30,6 +30,8 @@ export interface Idea {
   riskNote: string | null
   status: string
   createdAt: string
+  firstDate: string | null
+  endDate: string | null
 }
 
 export interface TradePlan {

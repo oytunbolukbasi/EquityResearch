@@ -137,7 +137,7 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         if (d.status === 'active' && !existing.length && d.entryLow != null) {
           // New US idea → queue a limit buy at entryLow (patient entry at band floor)
           alpacaActions.push({ action: 'buy', ticker: d.ticker.toUpperCase(), limitPrice: d.entryLow })
-        } else if (d.status === 'stopped') {
+        } else if (d.status === 'stopped' || d.status === 'tp1_hit' || d.status === 'tp2_hit' || d.status === 'tp3_hit') {
           // Stopped → cancel open orders and/or close position
           alpacaActions.push({ action: 'stop', ticker: d.ticker.toUpperCase() })
         }

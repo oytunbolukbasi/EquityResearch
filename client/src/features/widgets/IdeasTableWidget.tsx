@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { IoInformationCircleOutline } from 'react-icons/io5'
 
 import type { Idea } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { useSelectedTicker } from '@/features/dashboard/selected-ticker'
 import { StatusTabs, type StatusTab } from './StatusTabs'
 import { RiskRewardBar } from '@/components/ui/risk-reward-bar'
+
+const HISTORY_STATUSES = new Set(['stopped', 'tp1_hit', 'tp2_hit', 'tp3_hit'])
 
 function Loading() {
   return (
@@ -28,6 +32,16 @@ function fmtN(n: number | null, decimals = 2): string {
   return n.toLocaleString('tr-TR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
+  })
+}
+
+function fmtDate(s: string | null | undefined): string {
+  if (!s) return '—'
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   })
 }
 
@@ -69,23 +83,93 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+function RiskRewardTooltip() {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+
+  function toggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    setOpen((v) => !v)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (
+        tooltipRef.current &&
+        !tooltipRef.current.contains(e.target as Node) &&
+        btnRef.current &&
+        !btnRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); toggle() }}
+        className="ml-0.5 align-middle transition-colors"
+        style={{ color: 'var(--mid)', lineHeight: 0 }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--mid)')}
+      >
+        <IoInformationCircleOutline size={13} />
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={tooltipRef}
+            style={{
+              position: 'fixed',
+              top: pos.top,
+              right: pos.right,
+              zIndex: 9999,
+              width: 280,
+            }}
+            className="rounded-lg border border-faint bg-card p-3 shadow-lg"
+          >
+            <p className="mb-1 text-xs font-semibold text-ink">Risk/Getiri Oranı</p>
+            <p className="text-[11px] leading-relaxed text-mid">
+              Potansiyel kazancın potansiyel kayba oranı:
+            </p>
+            <p className="num mt-1 text-[11px] font-medium text-ink">
+              (TP1 − Giriş) ÷ (Giriş − Stop)
+            </p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-mid">
+              Giriş için bant ortalaması (Low + High) / 2 kullanılır. Örnek: Giriş 100, Stop 90, TP1 130 → R/R = 3,0×
+            </p>
+          </div>,
+          document.body,
+        )}
+    </>
+  )
+}
+
 export function IdeasTableWidget() {
   const [tab, setTab] = useState<StatusTab>('active')
   const { setSelectedTicker } = useSelectedTicker()
 
-  // /api/ideas (no date) returns one row per ticker — each ticker's own
-  // latest record, not "everything dated on the single latest day". Without
-  // that, a ticker whose status hasn't changed in a week stays parked on its
-  // original date and disappears the moment any other ticker gets a newer
-  // entry. Both tabs read the same per-ticker-latest set; the date filter in
-  // the header never applies here.
   const { data: ideas, loading, error } = useApi<Idea[]>('/api/ideas')
 
-  const HISTORY_STATUSES = new Set(['stopped', 'tp3_hit'])
-  const visible = ideas?.filter(i => tab === 'active' ? !HISTORY_STATUSES.has(i.status) : HISTORY_STATUSES.has(i.status))
+  const visible = ideas?.filter((i) =>
+    tab === 'active' ? !HISTORY_STATUSES.has(i.status) : HISTORY_STATUSES.has(i.status),
+  )
 
   if (loading) return <Loading />
   if (error) return <Empty>Veri alınamadı.</Empty>
+
+  const isHistory = tab === 'history'
 
   return (
     <div className="flex h-full flex-col">
@@ -103,12 +187,21 @@ export function IdeasTableWidget() {
                 <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Giriş</th>
                 <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">SL</th>
                 <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">TP1</th>
-                <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Risk/Getiri</th>
+                <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">
+                  <span className="inline-flex items-center justify-end gap-0.5">
+                    Risk/Getiri
+                    <RiskRewardTooltip />
+                  </span>
+                </th>
+                <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Öneri Tarihi</th>
+                {isHistory && (
+                  <th className="num px-3 py-2 text-right text-[10px] uppercase tracking-wider text-mid font-medium whitespace-nowrap">Bitiş Tarihi</th>
+                )}
                 <th className="num px-4 py-2 text-left text-[10px] uppercase tracking-wider text-mid font-medium">Durum</th>
               </tr>
             </thead>
             <tbody>
-              {visible.map(idea => (
+              {visible.map((idea) => (
                 <tr
                   key={idea.id}
                   onClick={() => setSelectedTicker(idea.ticker)}
@@ -148,6 +241,14 @@ export function IdeasTableWidget() {
                       }
                     </div>
                   </td>
+                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: 'var(--mid)' }}>
+                    {fmtDate(idea.firstDate)}
+                  </td>
+                  {isHistory && (
+                    <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: 'var(--mid)' }}>
+                      {fmtDate(idea.endDate)}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5">
                     <StatusBadge status={idea.status} />
                   </td>

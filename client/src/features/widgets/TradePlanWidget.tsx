@@ -8,7 +8,7 @@ import { useSelectedTicker } from '@/features/dashboard/selected-ticker'
 import { TradePlanChart } from './TradePlanChart'
 import { StatusTabs, type StatusTab } from './StatusTabs'
 
-const HISTORY_STATUSES = new Set(['stopped', 'tp3_hit'])
+const HISTORY_STATUSES = new Set(['stopped', 'tp1_hit', 'tp2_hit', 'tp3_hit'])
 
 function N2(n: number): string {
   return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })

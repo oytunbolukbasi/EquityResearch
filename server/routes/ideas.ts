@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, min, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '../db/client'
@@ -38,7 +38,26 @@ ideasRouter.get('/', async (req, res) => {
     .select()
     .from(latestPerTicker)
     .orderBy(desc(latestPerTicker.date))
-  res.json(rows)
+
+  // Enrich each row with firstDate (oldest record date) and endDate (latest
+  // terminal-status record date) computed across ALL records for each ticker.
+  const dateMeta = await db
+    .select({
+      ticker: ideas.ticker,
+      firstDate: min(ideas.date),
+      endDate: sql<string | null>`MAX(CASE WHEN ${ideas.status} IN ('stopped','tp1_hit','tp2_hit','tp3_hit') THEN ${ideas.date} END)`,
+    })
+    .from(ideas)
+    .groupBy(ideas.ticker)
+
+  const metaByTicker = new Map(dateMeta.map((r) => [r.ticker, r]))
+  res.json(
+    rows.map((r) => ({
+      ...r,
+      firstDate: metaByTicker.get(r.ticker)?.firstDate ?? null,
+      endDate: metaByTicker.get(r.ticker)?.endDate ?? null,
+    })),
+  )
 })
 
 // GET /api/ideas/history → all ideas, newest first
