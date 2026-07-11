@@ -1,13 +1,10 @@
 import type { CSSProperties } from 'react'
-import { bottom, getCompactor, GridLayout, useContainerWidth, type Layout, type LayoutItem } from 'react-grid-layout'
+import { bottom, GridLayout, useContainerWidth, type Layout, type LayoutItem } from 'react-grid-layout'
 
 import { AddWidgetMenu } from './AddWidgetMenu'
 import { widgetRegistry } from './widget-registry'
 import { WidgetFrame } from './WidgetFrame'
 import type { WidgetInstance, WidgetType } from './types'
-
-// Free-placement compactor: no auto-compact, block collisions (Midas Atlas behaviour)
-const FREE_COMPACTOR = getCompactor(null, false, true)
 
 const GRID_CONFIG = { cols: 12, rowHeight: 40, margin: [16, 16], containerPadding: [0, 0] } as const
 
@@ -38,16 +35,13 @@ export function DashboardCanvas({
   })
 
   // rowHeight(40) + vertical margin(16) = 56px per grid unit — dots align with snap rows
-  // min-height spans viewport minus sticky header (~49px) so empty space below widgets
-  // is still part of the droppable canvas (user can drag widgets down freely)
-  const canvasStyle: CSSProperties = {
+  const canvasBg: CSSProperties = {
     backgroundImage: 'radial-gradient(circle, var(--faint) 1px, transparent 1px)',
     backgroundSize: '56px 56px',
-    minHeight: 'calc(100vh - 49px)',
   }
 
   return (
-    <div ref={containerRef} style={canvasStyle}>
+    <div ref={containerRef} style={canvasBg}>
       {items.length === 0 ? (
         <EmptyState onAdd={addWidget} />
       ) : (
@@ -57,9 +51,8 @@ export function DashboardCanvas({
             layout={gridLayout}
             onLayoutChange={onLayoutChange}
             gridConfig={GRID_CONFIG}
-            compactor={FREE_COMPACTOR}
             dragConfig={{ handle: '.widget-drag-handle', cancel: 'button' }}
-            resizeConfig={{ handles: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] }}
+            resizeConfig={{ handles: ['se'] }}
             onDragStart={() => document.body.classList.add('rgl-interacting')}
             onDragStop={() => document.body.classList.remove('rgl-interacting')}
             onResizeStart={() => document.body.classList.add('rgl-interacting')}
