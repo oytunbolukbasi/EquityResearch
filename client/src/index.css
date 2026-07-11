@@ -174,7 +174,7 @@ body.rgl-interacting * {
 
 /* ── B: placeholder ─────────────────────────────────────────────────────── */
 .react-grid-item.react-grid-placeholder {
-  background: rgba(37, 99, 168, 0.08);   /* --blue at 8% */
+  background: rgba(37, 99, 168, 0.05);   /* --blue at 5% — softer against dotted grid */
   border: 1px solid rgba(37, 99, 168, 0.25);
   border-radius: var(--radius);
   opacity: 1;                             /* override library's 0.2; colour carries transparency */
@@ -189,34 +189,53 @@ body.rgl-interacting * {
   transition-timing-function: cubic-bezier(0.2, 0, 0, 1); /* tok, zıplamasız yerleşme */
 }
 
-/* ── D: resize handle ───────────────────────────────────────────────────── */
-/* Smooth fade in/out already handled by library (opacity 0 → 1 on hover).
-   Add transition and replace the visual indicator. */
+/* ── D: resize handles — 8-direction (Midas Atlas pattern) ─────────────── */
+
+/* Base: invisible hit-areas, no background */
 .react-grid-item > .react-resizable-handle {
-  width: 20px;
-  height: 20px;
   transition: opacity 150ms ease;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  background: none;
 }
 
+/* Corner handles: 1rem × 1rem */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-ne,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-nw,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-sw,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-se {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Edge N/S: span full width, thin hit area */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-n,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
+  left: 1rem;
+  right: 1rem;
+  width: auto;
+  height: 0.5rem;
+  margin-left: 0;
+  cursor: ns-resize;
+  transform: none;
+}
+
+/* Edge E/W: span full height, thin hit area */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-w {
+  top: 1rem;
+  bottom: 1rem;
+  height: auto;
+  width: 0.5rem;
+  margin-top: 0;
+  cursor: ew-resize;
+  transform: none;
+}
+
+/* All handles: pure hit-area, no visual — cursor change is the only affordance */
 .react-grid-item > .react-resizable-handle::after {
-  content: "";
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 10px;
-  height: 10px;
-  border-right: 1.5px solid var(--mid);
-  border-bottom: 1.5px solid var(--mid);
-  border-radius: 0 0 3px 0;
-  transition: border-color 150ms ease;
-}
-
-.react-grid-item:hover > .react-resizable-handle::after {
-  border-right-color: var(--ink);
-  border-bottom-color: var(--ink);
+  display: none;
 }
 
 /* Same lift shadow during resize */
@@ -257,7 +276,13 @@ body.rgl-interacting * {
   opacity: 0.07;
 }
 
-/* ── E: reduced motion ──────────────────────────────────────────────────── */
+/* ── E: performance hints ───────────────────────────────────────────────── */
+.react-grid-item { isolation: isolate; }
+.react-grid-item.resizing { will-change: width, height; }
+.react-grid-item.react-draggable-dragging { will-change: transform; }
+.react-grid-item img { pointer-events: none; user-select: none; }
+
+/* ── F: reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .react-grid-layout,
   .react-grid-item,

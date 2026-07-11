@@ -52,7 +52,7 @@ export function DashboardCanvas({
             onLayoutChange={onLayoutChange}
             gridConfig={GRID_CONFIG}
             dragConfig={{ handle: '.widget-drag-handle', cancel: 'button' }}
-            resizeConfig={{ handles: ['se'] }}
+            resizeConfig={{ handles: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] }}
             onDragStart={() => document.body.classList.add('rgl-interacting')}
             onDragStop={() => document.body.classList.remove('rgl-interacting')}
             onResizeStart={() => document.body.classList.add('rgl-interacting')}
