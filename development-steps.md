@@ -211,6 +211,55 @@ kaldırıldı. DB'deki heatmaps tablosu korundu (veri kaybı önlemek için).
 localStorage migration guard eklendi: kayıtlı layout'ta kalan bist-heatmap/us-heatmap
 öğeleri loadItems() filtresiyle temizlenip sayfa çökmesi önlendi.
 
+GÖREV 19 — TradingView SuperCharts URL düzeltmesi
+Trade Planı widget'ındaki IoOpenOutline linki hardcoded bir chart ID (95XZ7reL) içeriyordu
+ve bu ID o hesaba ait özel bir grafik olduğundan başkalarında açılmıyordu. tvChartUrl()
+fonksiyonu ID'yi kaldırıp sadece sembol bazlı URL kullanacak şekilde güncellendi:
+https://tr.tradingview.com/chart/?symbol=EXCHANGE:TICKER. TV_EXCHANGE_MAP ile borsa
+kodu eşlemesi (XETRA→XETR vb.) korundu.
+
+GÖREV 20 — 8 yönlü resize handle (Midas Atlas stili)
+react-grid-layout'un varsayılan sadece-köşe resize'ı 8 yöne (N/S/E/W/NE/NW/SE/SW) çıkarıldı.
+CSS katmanı (index.css):
+- Köşe handle'lar: 1rem × 1rem, görünmez hit-area
+- Kenar N/S: left/right: 1rem, width: auto, height: 0.5rem, cursor: ns-resize
+- Kenar E/W: top/bottom: 1rem, height: auto, width: 0.5rem, cursor: ew-resize
+- ::after { display: none } — orijinal görsel ok/sprite kaldırıldı; cursor değişimi tek
+  affordance olarak yeterli. DashboardCanvas.tsx'te resizeConfig.handles dizisi eklendi.
+Serbest konumlandırma (compactType: null) denenip kullanıcı tarafından geri alındı.
+
+GÖREV 21 — Canvas edge-to-edge + default layout yükseklik güncellemesi
+- main'deki px-4 kaldırıldı; dotted background pencere kenarına kadar uzanıyor.
+  Widget'lar arasındaki kenar boşluğu containerPadding: [4, 0] ile sağlanıyor.
+- DEFAULT_LAYOUT yükseklikleri ekran görüntüsü piksel analizi ile güncellendi:
+  Satır 1 h:14 (560px), Satır 2 h:16 (640px). Morning Note (w:5) / Portföy (w:7)
+  genişlik düzeni korundu. Paper Trading minH: 10→3, minW: 8→4.
+- resetLayout() butonu artık yeni DEFAULT_LAYOUT'u doğru yüklüyor.
+
+GÖREV 22 — Pozisyon Fikirleri: status semantiği + tarih kolonları + R/R tooltip
+
+A — Status semantiği:
+  HISTORY_STATUSES kümesi ['stopped', 'tp3_hit'] → ['stopped', 'tp1_hit', 'tp2_hit', 'tp3_hit']
+  olarak genişletildi. tp1/tp2 hedeflerine ulaşan pozisyonlar artık Geçmiş sekmesine
+  düşüyor (daha önce Aktif'te kalıyordu). TradePlanWidget aynı kümeyi kullandığından
+  seçili ticker'ın sekmesi otomatik doğru yere yönleniyor. Alpaca otomatik kapatma
+  (bulk-import.ts) artık tp1_hit/tp2_hit/tp3_hit statuslerinde de market satış + açık
+  emir iptali yapıyor.
+
+B — Tarih kolonları:
+  Backend (GET /api/ideas): ikinci bir agregasyon sorgusu ile her ticker için firstDate
+  (MIN(date) — ilk öneri tarihi) ve endDate (MAX(date) WHERE status IN terminal statuses
+  — bitiş tarihi) hesaplanıp response'a ekleniyor.
+  Frontend: Aktif sekmesinde "Öneri Tarihi" kolonu; Geçmiş sekmesinde "Öneri Tarihi" +
+  "Bitiş Tarihi" kolonları. Format: Türkçe kısa ay ("9 Tem 2026"), var(--mid) rengi.
+
+C — Risk/Getiri tooltip:
+  Kolon başlığının yanına IoInformationCircleOutline ikonu (13px) eklendi. Tıklanınca
+  formülü açıklayan tooltip açılıyor: "(TP1 − Giriş) ÷ (Giriş − Stop), giriş için bant
+  ortalaması kullanılır." Tooltip, overflow-auto scroll container'ın dışına kaçmaması için
+  createPortal + position: fixed ile document.body'ye render ediliyor. Dışarıya tıklayınca
+  kapanıyor (mousedown event listener).
+
 GÖREV 18 — Alpaca Paper Trading entegrasyonu
 Sadece ABD hisseleri (NYSE/NASDAQ) kapsıyor; BIST pozisyonları bu fazda yok.
 
