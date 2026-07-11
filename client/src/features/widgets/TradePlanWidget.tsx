@@ -32,7 +32,7 @@ const TV_EXCHANGE_MAP: Record<string, string> = {
 function tvChartUrl(ticker: string, exchange: string | null): string {
   const tvExchange = exchange ? (TV_EXCHANGE_MAP[exchange.toUpperCase()] ?? exchange) : ''
   const symbol = tvExchange ? `${tvExchange}:${ticker}` : ticker
-  return `https://tr.tradingview.com/chart/95XZ7reL/?symbol=${encodeURIComponent(symbol)}`
+  return `https://tr.tradingview.com/chart/?symbol=${encodeURIComponent(symbol)}`
 }
 
 // ─── legend chip ─────────────────────────────────────────────────────────────
