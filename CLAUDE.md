@@ -453,4 +453,22 @@ Canlıya giden değişiklikler
 
 GÖREV 25 - Portföy Durumu Widget Kompakt Mod
 
-Portföy Durumu widget'ı artık varsayılan kompakt (sadece K/Z + tek satır analiz) açılıyor; "Daha Fazla Göster" ile Maliyet/Güncel Değer ve tam analiz genişliyor. 
+Portföy Durumu widget'ı artık varsayılan kompakt (sadece K/Z + tek satır analiz) açılıyor; "Daha Fazla Göster" ile Maliyet/Güncel Değer ve tam analiz genişliyor.
+
+GÖREV 26 - Mobil tek-kolon reflow (stacked fallback)
+
+DashboardCanvas sabit 12-kolon grid kullanıyordu; ekran daralınca widget'lar yan
+yana sıkışıp okunamaz hale geliyordu (design-critique bulgusu). Kütüphanenin yerleşik
+ResponsiveGridLayout'u yerine kalıcılığa dokunmayan "stacked fallback" tercih edildi:
+- Yeni useMediaQuery hook'u (client/src/lib/use-media-query.ts, theme.tsx matchMedia
+  desenini aynalıyor).
+- DashboardCanvas'ta ≤768px'de GridLayout tamamen atlanıp widget'lar tek dikey kolonda
+  render ediliyor (aynı WidgetFrame + widgetRegistry). Sıra, masaüstü layout'unun (y, x)
+  değerine göre → mobil dizilim masaüstü yukarıdan-aşağı görünümüyle eşleşiyor. Her widget
+  70vh sabit sarmalayıcıda, uzun içerik widget içinde scroll ediyor.
+- WidgetFrame'e showHandle prop'u (default true) eklendi; mobilde false → sürüklenemezliği
+  ima eden grip ikonu gizleniyor.
+- Mobilde sürükle/boyutlandır ve onLayoutChange YOK → kayıtlı layout (localStorage +
+  layouts DB) hiç değişmiyor; pencere genişleyince grid aynı düzenle geri dönüyor.
+Yan fayda: mobilde tam genişlik sayesinde Pozisyon Fikirleri'nin "Durum" kolonu artık
+görünür (masaüstündeki tablo taşması sorunu mobilde ortadan kalkıyor). 
