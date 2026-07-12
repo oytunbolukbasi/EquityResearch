@@ -7,9 +7,12 @@ interface WidgetFrameProps {
   eyebrow: string
   onRemove: () => void
   children: React.ReactNode
+  // Off in the mobile stacked view: no grid → no drag, so hide the grip
+  // (and its drag-handle styling) which would otherwise imply draggability.
+  showHandle?: boolean
 }
 
-export function WidgetFrame({ eyebrow, onRemove, children }: WidgetFrameProps) {
+export function WidgetFrame({ eyebrow, onRemove, children, showHandle = true }: WidgetFrameProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.985 }}
@@ -17,8 +20,12 @@ export function WidgetFrame({ eyebrow, onRemove, children }: WidgetFrameProps) {
       transition={{ duration: 0.18, ease: 'easeOut' }}
       className="bg-card flex h-full flex-col overflow-hidden rounded-lg border"
     >
-      <header className="widget-drag-handle flex cursor-move items-center gap-2 border-b px-4 py-2.5 select-none">
-        <GripVertical className="text-faint size-4 shrink-0" />
+      <header
+        className={`flex items-center gap-2 border-b px-4 py-2.5 select-none ${
+          showHandle ? 'widget-drag-handle cursor-move' : ''
+        }`}
+      >
+        {showHandle && <GripVertical className="text-faint size-4 shrink-0" />}
         <div className="min-w-0 flex-1 overflow-hidden">
           <span className="widget-eyebrow text-ink">
             {eyebrow}

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { bottom, GridLayout, useContainerWidth, type Layout, type LayoutItem } from 'react-grid-layout'
 
+import { useMediaQuery } from '@/lib/use-media-query'
 import { AddWidgetMenu } from './AddWidgetMenu'
 import { widgetRegistry } from './widget-registry'
 import { WidgetFrame } from './WidgetFrame'
@@ -20,6 +21,7 @@ export function DashboardCanvas({
   items, layout, onLayoutChange, addWidget, removeWidget,
 }: DashboardCanvasProps) {
   const { width, containerRef, mounted } = useContainerWidth()
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   // Reconcile: guarantee a layout entry for every item, even if localStorage
   // has drifted (e.g. an item with no stored position). New items stack below.
@@ -42,10 +44,37 @@ export function DashboardCanvas({
     minHeight: 'calc(100vh - 49px)',
   }
 
+  // Mobile stack order follows the desktop layout's visual top-to-bottom (y, then x).
+  const stackedItems = isMobile
+    ? [...items].sort((a, b) => {
+        const la = byId.get(a.i)
+        const lb = byId.get(b.i)
+        if (!la || !lb) return 0
+        return la.y - lb.y || la.x - lb.x
+      })
+    : items
+
   return (
     <div ref={containerRef} style={canvasBg}>
       {items.length === 0 ? (
         <EmptyState onAdd={addWidget} />
+      ) : isMobile ? (
+        // Below 768px: bypass the grid entirely and stack widgets in one column.
+        // No drag/resize, no onLayoutChange → the persisted layout is untouched;
+        // widening the window re-mounts GridLayout with the same stored layout.
+        <div className="flex flex-col gap-4 p-4">
+          {stackedItems.map((item) => {
+            const def = widgetRegistry[item.type]
+            const Widget = def.Component
+            return (
+              <div key={item.i} className="h-[70vh]">
+                <WidgetFrame eyebrow={def.eyebrow} onRemove={() => removeWidget(item.i)} showHandle={false}>
+                  <Widget />
+                </WidgetFrame>
+              </div>
+            )
+          })}
+        </div>
       ) : (
         mounted && (
           <GridLayout
