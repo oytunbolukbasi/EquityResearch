@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BotMessageSquare } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 import { DashboardCanvas } from '@/features/dashboard/DashboardCanvas'
 import { AdminPage } from '@/features/admin/AdminPage'
@@ -20,7 +21,14 @@ export default function App() {
         <header className="bg-card/70 sticky top-0 z-20 border-b backdrop-blur">
           <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-3 sm:px-8">
             <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-              <BotMessageSquare className="size-5 text-[var(--up)]" strokeWidth={1.75} />
+              <motion.span
+                className="inline-flex"
+                initial={{ rotate: 0 }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.9, ease: 'easeInOut' }}
+              >
+                <BotMessageSquare className="size-5 text-[var(--up)]" strokeWidth={1.75} />
+              </motion.span>
               EQR
             </h1>
             <DashboardWidgetControls onAdd={addWidget} onReset={resetLayout} />
