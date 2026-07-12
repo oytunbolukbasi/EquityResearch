@@ -5,14 +5,14 @@ Sen modern web uygulamaları geliştiren kıdemli bir Frontend Geliştirici ve U
 
 
 ## Amaç
-Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u. claude.ai (equity-research projesi) içinde MCP connector'ları ve web search ile üretilen içerikler (morning note, trade idea, trade plan, sektör heatmap) bu panelde görselleştiriliyor. Tek kullanıcılı, düşük maliyetli, Railway'de deploy ediliyor.
+Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u. claude.ai (equity-research projesi) içinde MCP connector'ları ve web search ile üretilen içerikler (morning note, trade idea, trade plan, paper trading) bu panelde görselleştiriliyor. Tek kullanıcılı, düşük maliyetli, Railway'de deploy ediliyor.
 
 ## Tech Stack
 - **Frontend:** React 19 + Vite + TypeScript
 - **Styling:** Tailwind CSS v4 + shadcn/ui (Radix tabanlı)
 - **Canvas / widget sistemi:** react-grid-layout — sürükle, yeniden boyutlandır, grid'e snap, layout JSON olarak saklanır
 - **Animasyon:** Framer Motion (widget ekleme/taşıma geçişleri için, abartısız)
-- **Backend:** Node.js + Express (veya Hono) — tek servis, build edilmiş React static dosyalarını da serve eder
+- **Backend:** Node.js + Express — tek servis, build edilmiş React static dosyalarını da serve eder
 - **ORM:** Drizzle ORM (Neon serverless driver ile birlikte)
 - **Veritabanı:** Neon Postgres (mevcut hesap) — pooled connection string kullan
 - **Deployment:** Railway (sadece uygulama; DB Neon'da kalıyor), GitHub'a push ile otomatik deploy
@@ -78,26 +78,28 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 
 ## Veri Modeli (Postgres / Drizzle, jsonb ağırlıklı — şema esnek kalsın)
 
-- Bu klasördeki cowork-instructions-final.md dosyasında detaylar var.  
+- Ana DB tabloları: `morning_notes`, `ideas`, `trade_plans`, `portfolio_insights`,
+  `layouts` (+ arayüzde kullanılmayan ama korunan `heatmaps`).
+- Portföy pozisyonları AYRI, salt-okunur bir DB'de (`PORTFOLIO_DATABASE_URL`):
+  `positions`, `closed_positions` (o app'in sahibi; buradan sadece SELECT edilir).
+- İçerik JSON şeması ve alan isimleri: bu klasördeki cowork-instructions-final.md.
 
-## Widget'lar (v1 — 6 adet)
-1. **Piyasa Nabzı** (eski: Morning Note) — `morning_notes` tablosundan; Top Call + Makro madde listesi + Sektör Odağı. Widget içi ◀ ▶ navigasyonuyla geçmiş notlara erişim.
-2. **Pozisyon Fikirleri** (eski: Alım-Satım Önerileri) — `ideas` tablosu, Aktif/Geçmiş sekmeli. Aktif: her ticker'ın kendi en son kaydı (`selectDistinctOn`). Geçmiş: stopped pozisyonlar. Satıra tıklayınca Trade Planı widget'ı o ticker'a geçer.
-3. **Trade Planı** — `trade_plans` tablosu. TradingView Lightweight Charts (CandlestickSeries) ile gerçek OHLC grafiği, Y-ekseni sadece fiyat geçmişine kilitli, dışarıda kalan seviyeler off-chart rozet olarak gösteriliyor. Aktif/Geçmiş sekmeli.
-4. **BIST Heatmap** — `heatmaps` (market='BIST').
-5. **ABD Heatmap** — `heatmaps` (market='US'). (Bu widget iptal edildi)
-6. **Portföy Durumu** — Ayrı salt-okunur Neon DB'den (`PORTFOLIO_DATABASE_URL`) açık/kapalı pozisyonlar. TL ve USD blokları ayrı özet kutularında; K/Z değer/yüzde toggle (IoSwapHorizontal); canlı USD/TRY kuru (Frankfurter API, fallback 41.50 TL); Günlük Analiz (portfolio_insights); Geçmiş sekmesinde kapatılan pozisyonlar.
-7. **Paper Trading** - Alpaca API bağlantısı ile besleniyor widget'taki veriler. Agent'ın ideas ve trade planlarını kullanarak Alpaca otomatik pozisyon açılıyor. 
+## Widget'lar (5 aktif)
+1. **Piyasa Nabzı** (route/tablo adı `morning_notes`, `/api/morning-notes`) — Top Call + Makro madde listesi + Sektör Odağı. Widget içi ◀ ▶ navigasyonuyla geçmiş notlara erişim.
+2. **Pozisyon Fikirleri** — `ideas` tablosu, Aktif/Geçmiş sekmeli. Aktif: her ticker'ın kendi en son kaydı (`selectDistinctOn`, status `active`/`review`). Geçmiş: terminal statüler (`stopped`, `tp1_hit`, `tp2_hit`, `tp3_hit`) doğru TP/SL rozetiyle. Öneri/Bitiş tarihi kolonları + Risk/Getiri mini-bar ve formül tooltip'i. Satıra tıklayınca Trade Planı o ticker'a geçer.
+3. **Trade Planı** — `trade_plans` tablosu. TradingView Lightweight Charts (CandlestickSeries) gerçek OHLC grafiği; Y-ekseni sadece fiyat geçmişine kilitli, dışarıda kalan seviyeler off-chart rozet. Seviyeler grafiğin altında tek pill satırında (etiket + fiyat + %). **Varsayılan açılış = en güncel tarihli aktif idea** (statü `/api/ideas`'ten türetilir; senkron olmayan `trade_plans.status`'a güvenilmez). Aktif/Geçmiş sekmeli.
+4. **Portföy Durumu** — Ayrı salt-okunur Neon DB'den (`PORTFOLIO_DATABASE_URL`) açık/kapalı pozisyonlar. TL ve USD blokları ayrı özet kutularında; K/Z değer↔yüzde toggle; canlı USD/TRY kuru (Frankfurter API, hata durumunda fallback + `isFallback` flag); Günlük Analiz (`portfolio_insights`); Geçmiş sekmesinde kapatılan pozisyonlar. **Varsayılan kompakt mod** (yalnız K/Z + tek satır analiz), "Daha Fazla Göster" ile Maliyet/Güncel Değer ve tam analiz genişler.
+5. **Paper Trading** — Alpaca Paper Trading API. Agent'ın ideas/trade planlarını kullanarak otomatik pozisyon açıyor/kapatıyor (**sadece NYSE/NASDAQ; BIST hariç**). 3 sekme: Açık Pozisyonlar / Kapatılan (FIFO realized P&L) / Emirler.
 
-Tüm widget'lar react-grid-layout canvas'ında bağımsız öğeler; kullanıcı ekleyebilir, taşıyabilir, boyutlandırabilir, kaldırabilir. Layout `localStorage`'da veya basit bir `layouts` tablosunda saklanır.
+> **Kaldırılan widget'lar:** BIST Heatmap + ABD Heatmap (GÖREV 17). DB'deki `heatmaps` tablosu veri kaybı önlemek için korundu ama arayüzde yok.
+
+Tüm widget'lar react-grid-layout canvas'ında bağımsız öğeler; kullanıcı ekleyebilir, taşıyabilir, boyutlandırabilir, kaldırabilir. Layout `localStorage`'da + `layouts` tablosunda saklanır (cihaz/tarayıcı bazında; header'daki Kaydet butonuyla yazılır, o cihazda açılışta otomatik geri yüklenir).
 
 
 ## İçerik Besleme Akışı
-claude.ai (equity-research projesi) içinde Claude, MCP connector'ları (FMP, Matriks AI, Quartr) ve web search kullanarak içeriği üretir ve yukarıdaki şemaya uygun JSON döner. Bu JSON, dashboard'daki basit bir 
+Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek web_search) günlük içeriği (morning_note / ideas / trade_plans / portfolio_insight) üretip şemaya uygun JSON döner. JSON, `/admin` sayfasındaki **"Toplu İçerik Girişi"** textarea'sına yapıştırılıp `POST /api/admin/bulk-import` ile kaydedilir (`x-admin-key` korumalı; her tablo bağımsız hata izolasyonlu upsert). ABD (NYSE/NASDAQ) fikirleri için bulk-import ayrıca otomatik Alpaca Paper Trading emri yönetir.
 
-**"İçerik Ekle"** sayfasına yapıştırılıp kaydedilir (tek bir textarea + POST). Bu chat'in network erişimi sandboxlı olduğu için şu an otomatik push yapılamıyor; ileride istenirse Claude Code üzerinden (ayrı MCP kurulumuyla) otomatikleştirilebilir — v1 kapsamında değil.
-
-- Bu klasördeki cowork-instructions-final.md dosyasında detaylar var.
+- Tam görev akışı, statü yaşam döngüsü ve JSON şeması: bu klasördeki cowork-instructions-final.md.
 
 ## Deployment Notları
 - Neon: proje oluştur, **pooled** connection string'i al, `DATABASE_URL` olarak Railway env'ine ekle.
@@ -106,6 +108,17 @@ claude.ai (equity-research projesi) içinde Claude, MCP connector'ları (FMP, Ma
 
 
 
+
+---
+
+# Geliştirme Günlüğü (tarihsel — kronolojik kayıt)
+
+> Aşağıdaki **"Proje İlk Session'ı"** ve **GÖREV 1-25** bölümleri tarihsel geliştirme
+> kaydıdır; projenin GÜNCEL durumu için yukarıdaki bölümler geçerlidir. Erken kararların
+> bir kısmı sonraki görevlerle değiştirilmiştir — ör. **Open Sans/JetBrains Mono → Inter**
+> (GÖREV 14), **BIST/ABD Heatmap widget'ları kaldırıldı** (GÖREV 17), **seviye tablosu tek
+> pill satırına birleşti** (GÖREV 24), **portfolio_snapshots bağımlılığı kaldırıldı** (kaynak
+> tablo silindi). Çelişki görürsen **en yüksek numaralı GÖREV** geçerlidir.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
