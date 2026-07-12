@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Loader2 } from 'lucide-react'
+import { ChevronDown, Loader2 } from 'lucide-react'
 import { IoSwapHorizontal, IoSparkles, IoClose } from 'react-icons/io5'
 
 import type { PortfolioAction, PortfolioClosedPosition, PortfolioInsight, PortfolioPosition, PortfolioSummary } from '@/lib/api-types'
@@ -88,7 +88,7 @@ function PlText({
 
 // ─── currency summary block ────────────────────────────────────────────────
 function CurrencyBlock({
-  title, costBasis, currentValue, plAmount, plPercent, titleExtra,
+  title, costBasis, currentValue, plAmount, plPercent, titleExtra, collapsed,
 }: {
   title: string
   costBasis: number
@@ -96,6 +96,7 @@ function CurrencyBlock({
   plAmount: number | null
   plPercent: number | null
   titleExtra?: string
+  collapsed: boolean
 }) {
   return (
     <div className="rounded-lg border border-faint2 p-3">
@@ -103,26 +104,40 @@ function CurrencyBlock({
         <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-mid">{title}</p>
         {titleExtra && <span className="num text-[10px] text-mid opacity-70">{titleExtra}</span>}
       </div>
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[12px] text-mid">Maliyet</span>
-          <span className="num text-[15px] font-medium text-ink">{fmtMoney(costBasis, 0)}</span>
+      {/* Maliyet + Güncel Değer collapse away; K/Z always stays. grid-rows 0fr→1fr
+          animates height:auto smoothly without a hardcoded max-height. */}
+      <div
+        className={`grid transition-all duration-300 ease-out ${
+          collapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-mid">Maliyet</span>
+              <span className="num text-[15px] font-medium text-ink">{fmtMoney(costBasis, 0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-mid">Güncel Değer</span>
+              <span className="num text-[15px] font-medium text-ink">{currentValue != null ? fmtMoney(currentValue, 0) : '—'}</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[12px] text-mid">Güncel Değer</span>
-          <span className="num text-[15px] font-medium text-ink">{currentValue != null ? fmtMoney(currentValue, 0) : '—'}</span>
-        </div>
-        <div className="flex items-center justify-between border-t border-faint2 pt-2.5">
-          <span className="text-[12px] text-mid">K/Z</span>
-          <span className="flex items-center gap-1.5">
-            {plAmount != null && (
-              <span className={`num text-[15px] font-semibold ${plAmount >= 0 ? 'text-up' : 'text-down'}`}>
-                {plAmount >= 0 ? '+' : ''}{fmtMoney(plAmount, 0)}
-              </span>
-            )}
-            <PlText n={plAmount} pct={plPercent} mode="percent" className="text-[15px] font-semibold" />
-          </span>
-        </div>
+      </div>
+      <div
+        className={`flex items-center justify-between ${
+          collapsed ? '' : 'mt-2.5 border-t border-faint2 pt-2.5'
+        }`}
+      >
+        <span className="text-[12px] text-mid">K/Z</span>
+        <span className="flex items-center gap-1.5">
+          {plAmount != null && (
+            <span className={`num text-[15px] font-semibold ${plAmount >= 0 ? 'text-up' : 'text-down'}`}>
+              {plAmount >= 0 ? '+' : ''}{fmtMoney(plAmount, 0)}
+            </span>
+          )}
+          <PlText n={plAmount} pct={plPercent} mode="percent" className="text-[15px] font-semibold" />
+        </span>
       </div>
     </div>
   )
@@ -325,6 +340,9 @@ function ClosedTable({ closed }: { closed: PortfolioClosedPosition[] }) {
 export function PortfolioWidget() {
   const [tab, setTab] = useState<StatusTab>('active')
   const [plMode, setPlMode] = useState<PlDisplayMode>('percent')
+  // Compact by default: currency blocks show only K/Z and the analysis is
+  // clamped to one line, so the positions table sits higher in the widget.
+  const [collapsed, setCollapsed] = useState(true)
 
   const { data: summary, loading: loadingSummary, error: errorSummary } = useApi<PortfolioSummary>('/api/portfolio/summary')
   const { data: closed, loading: loadingClosed, error: errorClosed } = useApi<PortfolioClosedPosition[]>('/api/portfolio/closed')
@@ -377,6 +395,7 @@ export function PortfolioWidget() {
               currentValue={tlCurrentValue}
               plAmount={tlPlAmount}
               plPercent={tlPlPercent}
+              collapsed={collapsed}
             />
             <CurrencyBlock
               title="USD Pozisyonlar"
@@ -385,17 +404,30 @@ export function PortfolioWidget() {
               plAmount={usdPlAmountTRY}
               plPercent={usdPlPercentTRY}
               titleExtra={rateNote}
+              collapsed={collapsed}
             />
           </div>
 
-          {/* Insight — short summary only */}
+          {/* Insight — clamped to one line when collapsed */}
           <div className="mb-3 rounded-lg border border-faint2 px-4 py-3.5">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-mid">Günlük Analiz</p>
             {insight?.body ? (
-              <p className="text-[13px] leading-[1.65] text-ink">{insight.body}</p>
+              <p className={`text-[13px] leading-[1.65] text-ink ${collapsed ? 'line-clamp-1' : ''}`}>{insight.body}</p>
             ) : (
               <p className="text-[13px] text-mid">Henüz analiz yok.</p>
             )}
+          </div>
+
+          {/* Collapse / expand toggle */}
+          <div className="mb-3 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setCollapsed(c => !c)}
+              className="flex items-center gap-1 rounded-full border border-faint2 bg-card px-4 py-1 text-[11px] font-semibold text-mid shadow-sm transition-colors hover:text-info"
+            >
+              {collapsed ? 'Daha Fazla Göster' : 'Daha Az Göster'}
+              <ChevronDown className={`size-3.5 transition-transform duration-300 ${collapsed ? '' : 'rotate-180'}`} />
+            </button>
           </div>
 
           {/* Table */}
