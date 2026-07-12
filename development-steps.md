@@ -211,6 +211,33 @@ kaldırıldı. DB'deki heatmaps tablosu korundu (veri kaybı önlemek için).
 localStorage migration guard eklendi: kayıtlı layout'ta kalan bist-heatmap/us-heatmap
 öğeleri loadItems() filtresiyle temizlenip sayfa çökmesi önlendi.
 
+GÖREV 18 — Alpaca Paper Trading entegrasyonu
+Sadece ABD hisseleri (NYSE/NASDAQ) kapsıyor; BIST pozisyonları bu fazda yok.
+
+A — Backend proxy (server/lib/alpaca.ts + server/routes/paper-trading.ts):
+AlpacaError sınıfı ve alpacaFetch() yardımcısı (APCA header'ları, 204 null, hata mesajı
+parse). 6 proxy endpoint: GET /account, /positions, /orders, /activities/fills,
+/orders/:id (DELETE ile iptal), POST /orders. FIFO kapatılan-pozisyon hesabı:
+fill aktiviteleri transaction_time'a göre sıralanıp buy kuyruğuna ekleniyor, sell
+gelince kuyruğun başındaki buy ile eşleştirilip P&L hesaplanıyor. Railway env değişkenleri:
+ALPACA_API_KEY, ALPACA_API_SECRET, ALPACA_BASE_URL.
+
+B — PaperTradingWidget (client/src/features/widgets/PaperTradingWidget.tsx):
+4 özet kart: Toplam K/Z (realized + unrealized), Kazanan pozisyon sayısı, Kaybeden pozisyon
+sayısı, Açık Pozisyon sayısı. 3 sekme: Açık Pozisyonlar (mevcut pozisyonlar + unrealized
+P&L), Kapatılan (FIFO eşleşmeli realized P&L), Emirler (açık/kısmi emirler + iptal butonu).
+İptal butonu liquid-glass CancelModal açıyor (createPortal + backdrop-filter blur).
+Admin key localStorage'dan okunuyor (eqr:admin-key). Widget registry: eyebrow 'PAPER
+TRADING' (büyük harf — Türkçe locale'de CSS uppercase i→İ dönüşümünü önlemek için),
+defaultSize w:12 h:14. Default layout'ta en alta eklendi (y:21).
+
+C — Otomatik Alpaca emri (server/routes/bulk-import.ts):
+Bulk-import'a NYSE/NASDAQ exchange kontrolü eklendi. Yeni aktif fikir → entryHigh fiyatından
+limit alış emri (qty:1, gtc); aynı ticker'da zaten açık emir varsa atlanıyor. Status 'stopped'
+→ önce açık limit emirleri iptal ediliyor, sonra pozisyon market satışıyla kapatılıyor
+(sıralama kritik: ters sırada market satış emri kendi iptaliyle karşılaşıyordu — düzeltildi).
+BIST ticker'ları için Alpaca işlemi tetiklenmiyor.
+
 GÖREV 19 — TradingView SuperCharts URL düzeltmesi
 Trade Planı widget'ındaki IoOpenOutline linki hardcoded bir chart ID (95XZ7reL) içeriyordu
 ve bu ID o hesaba ait özel bir grafik olduğundan başkalarında açılmıyordu. tvChartUrl()
@@ -260,29 +287,40 @@ C — Risk/Getiri tooltip:
   createPortal + position: fixed ile document.body'ye render ediliyor. Dışarıya tıklayınca
   kapanıyor (mousedown event listener).
 
-GÖREV 18 — Alpaca Paper Trading entegrasyonu
-Sadece ABD hisseleri (NYSE/NASDAQ) kapsıyor; BIST pozisyonları bu fazda yok.
+GÖREV 23 — Light/Dark tema token sistemi + panel dark mode (grafik dahil)
+Sıcak-antrasit bir dark tema, Tailwind v4'ün mevcut .dark variant'ı (@custom-variant dark
++ @theme inline) üzerine kuruldu. Tek bir .dark {} bloğu ham brand değişkenlerini (--bg/
+--card/--ink/--mid/--faint/--faint2 + parlatılmış --green/--red/--blue/--amber) eziyor,
+bunlar tüm shadcn semantic token'larına otomatik yayılıyor.
 
-A — Backend proxy (server/lib/alpaca.ts + server/routes/paper-trading.ts):
-AlpacaError sınıfı ve alpacaFetch() yardımcısı (APCA header'ları, 204 null, hata mesajı
-parse). 6 proxy endpoint: GET /account, /positions, /orders, /activities/fills,
-/orders/:id (DELETE ile iptal), POST /orders. FIFO kapatılan-pozisyon hesabı:
-fill aktiviteleri transaction_time'a göre sıralanıp buy kuyruğuna ekleniyor, sell
-gelince kuyruğun başındaki buy ile eşleştirilip P&L hesaplanıyor. Railway env değişkenleri:
-ALPACA_API_KEY, ALPACA_API_SECRET, ALPACA_BASE_URL.
+A — Token mimarisi (client/src/index.css):
+:root'a yeni semantic accent katmanı eklendi — accent alias'ları (--up/--down/--info/--warn),
+eşleşmiş badge tint arka planları (--*-tint), TP merdiveni (--tp1..3 + tint'leri), cam modal/
+scrim (--glass-bg/--glass-border/--scrim) ve grafik token'ları (--chart-grid/--chart-axis).
+Light değerler eski hardcoded hex'lerle birebir aynı (regresyon yok); .dark'ta accent'ler
+parlatılıyor, tint'ler translucent rgba'ya dönüyor. @theme inline'a --color-*-tint eklendi.
 
-B — PaperTradingWidget (client/src/features/widgets/PaperTradingWidget.tsx):
-4 özet kart: Toplam K/Z (realized + unrealized), Kazanan pozisyon sayısı, Kaybeden pozisyon
-sayısı, Açık Pozisyon sayısı. 3 sekme: Açık Pozisyonlar (mevcut pozisyonlar + unrealized
-P&L), Kapatılan (FIFO eşleşmeli realized P&L), Emirler (açık/kısmi emirler + iptal butonu).
-İptal butonu liquid-glass CancelModal açıyor (createPortal + backdrop-filter blur).
-Admin key localStorage'dan okunuyor (eqr:admin-key). Widget registry: eyebrow 'PAPER
-TRADING' (büyük harf — Türkçe locale'de CSS uppercase i→İ dönüşümünü önlemek için),
-defaultSize w:12 h:14. Default layout'ta en alta eklendi (y:21).
+B — Tema state + toggle (client/src/lib/theme.tsx):
+ThemeProvider + useTheme(). İlk açılışta localStorage['eqr:theme'], yoksa
+prefers-color-scheme. Toggle seçimi saklıyor. .dark class'ı document.documentElement'e
+SENKRON uygulanıyor (setTheme içinde imperatif) — böylece hem portal'lı Radix dropdown'ları/
+Portfolio cam modal'ı temayı izliyor, hem de child effect'ler (grafik) toggle sonrası doğru
+paleti okuyor (React child effect'leri parent'tan önce çalıştığı için kritik). index.html
+<head>'ine FOUC önleyici inline script eklendi (render öncesi class'ı basıyor). main.tsx
+<App/>'i ThemeProvider ile sardı; DashboardWidgetControls'a Sun/Moon toggle butonu eklendi.
 
-C — Otomatik Alpaca emri (server/routes/bulk-import.ts):
-Bulk-import'a NYSE/NASDAQ exchange kontrolü eklendi. Yeni aktif fikir → entryHigh fiyatından
-limit alış emri (qty:1, gtc); aynı ticker'da zaten açık emir varsa atlanıyor. Status 'stopped'
-→ önce açık limit emirleri iptal ediliyor, sonra pozisyon market satışıyla kapatılıyor
-(sıralama kritik: ters sırada market satış emri kendi iptaliyle karşılaşıyordu — düzeltildi).
-BIST ticker'ları için Alpaca işlemi tetiklenmiyor.
+C — Widget migrasyonu:
+IdeasTableWidget/TradePlanWidget/PortfolioWidget/PaperTradingWidget'taki ~95 hardcoded hex
+inline-style + App logosu var() token'larına çevrildi (yapısal refactor yok, sadece hex→var).
+
+D — Grafik dark mode (client/src/features/widgets/TradePlanChart.tsx):
+lightweight-charts canvas tabanlı olup CSS değişkeni okuyamadığından, effect içinde
+getComputedStyle ile aktif tema renkleri (concrete token'lar: --green/--red/--faint2/
+--chart-axis/--tp1..3/--blue) somut string'e çözülüyor. theme effect deps'ine eklendi
+([plan, theme]) — grafik zaten her değişimde tamamen yeniden kurulduğundan toggle'da doğru
+renklerle rebuild oluyor. Off-chart rozetler var() + color-mix border kullanıyor.
+
+E — Bonus fix: GÖREV 22'nin tp1/tp2_hit → Geçmiş değişikliğiyle açığa çıkan gizli etiket
+hatası düzeltildi — TradePlanWidget geçmiş rozeti artık status'e göre TP1/TP2/TP3/SL'yi
+doğru gösteriyor (eskiden ternary sadece TP3 veya SL üretiyordu).
+
