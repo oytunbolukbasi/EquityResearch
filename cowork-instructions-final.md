@@ -104,6 +104,18 @@ BIST/NYSE/NASDAQ/Xetra'dan 0-3 yeni long fikri. Başka borsa önerme.
 
 Yeni fikir taramasında Equity Research Plugin'indeki /idea-generation skill'ini kullan. Ancak idea-generation çıktıları panel için tasarlanmış  json output formatında olsun. 
 
+> **NOT — `/screen` = `/idea-generation` kısayolu.** `commands/screen.md`, doğrudan
+> `idea-generation` skill'ini yükler; ayrı bir metodolojisi yoktur. Bu adım zaten aynı
+> workflow'u kullanır, dolayısıyla ekstra bir "screen" talimatına gerek yok.
+>
+> **BIST uyarlaması (önemli).** Skill ABD/hisse-raporu odaklı metrikler kullanır
+> (EV/EBITDA, FCF verimi, SaaS net retention). BIST isimleri için bunları uygun
+> karşılıklarıyla değiştir — bankalarda **P/DD + ROE**, sanayide **F/K + FAVÖK marjı**
+> vb. Metrikleri yfinance'ten gerçek veriyle doldur; kapsama yoksa (BIST'te analist
+> hedefi/tavsiye çoğu zaman boş döner) sayı uydurma, tezi teknik yapı + makro tema
+> üzerinden kur. (Örn. AKBNK: ROE ~%23 / net kâr büyümesi ~%39 YoY + dezenflasyon
+> re-rating teması.)
+
 Detayları aşağıda:
 
 ---
