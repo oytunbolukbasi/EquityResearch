@@ -330,3 +330,7 @@ Canlıya giden değişiklikler
 İŞ 1: Trade Plan grafiği artık en güncel tarihli aktif idea ile açılıyor (ORCL gibi geçmiş öneriler Aktif'ten çıktı, tüm statü mantığı /api/ideas'e dayalı)
 İŞ 2: Seviye tablosu tek bir pill satırına birleşti (etiket + fiyat + %); ayrı tablo kalktı
 İŞ 3: Header'da Kaydet butonu; düzen layouts tablosuna cihaz/tarayıcı + tarih-saat olarak yazılıyor, o cihazda açılışta otomatik geri yükleniyor
+
+GÖREV 25 - Portföy Durumu Widget Kompakt Mod
+
+Portföy Durumu widget'ı artık varsayılan kompakt (sadece K/Z + tek satır analiz) açılıyor; "Daha Fazla Göster" ile Maliyet/Güncel Değer ve tam analiz genişliyor. 
