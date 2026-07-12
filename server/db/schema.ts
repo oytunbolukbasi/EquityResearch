@@ -90,8 +90,20 @@ export const portfolioInsights = pgTable('portfolio_insights', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+// Saved dashboard layouts, keyed by device/browser. Each save is a new row;
+// the newest createdAt per deviceKey is what gets restored. items/layout are
+// stored verbatim as the client's react-grid-layout state (jsonb, opaque here).
+export const layouts = pgTable('layouts', {
+  id: serial('id').primaryKey(),
+  deviceKey: text('device_key').notNull(), // e.g. "desktop:chrome"
+  items: jsonb('items').$type<unknown>().notNull(),
+  layout: jsonb('layout').$type<unknown>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
 export type MorningNote = typeof morningNotes.$inferSelect
 export type Idea = typeof ideas.$inferSelect
 export type TradePlan = typeof tradePlans.$inferSelect
 export type Heatmap = typeof heatmaps.$inferSelect
 export type PortfolioInsight = typeof portfolioInsights.$inferSelect
+export type LayoutRow = typeof layouts.$inferSelect

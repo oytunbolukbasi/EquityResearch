@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { IoOpenOutline } from 'react-icons/io5'
 
-import type { TradePlan } from '@/lib/api-types'
+import type { Idea, TradePlan } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { useSelectedTicker } from '@/features/dashboard/selected-ticker'
 import { TradePlanChart } from './TradePlanChart'
@@ -35,45 +35,22 @@ function tvChartUrl(ticker: string, exchange: string | null): string {
   return `https://tr.tradingview.com/chart/?symbol=${encodeURIComponent(symbol)}`
 }
 
-// ─── legend chip ─────────────────────────────────────────────────────────────
-function LegendChip({ color, bg, children }: { color: string; bg: string; children: React.ReactNode }) {
+// ─── legend chip (label + price + optional %) ─────────────────────────────────
+function LegendChip({
+  color, bg, label, price, pct,
+}: {
+  color: string; bg: string; label: string; price: string; pct: string | null
+}) {
   return (
     <span
       className="num inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
       style={{ background: bg, color }}
     >
       <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
-      {children}
+      <span>{label}</span>
+      <span className="font-semibold">{price}</span>
+      {pct && <span className="opacity-70">{pct}</span>}
     </span>
-  )
-}
-
-// ─── levels table row ─────────────────────────────────────────────────────────
-function LevelRow({
-  dotColor, label, price, pct, isUp,
-}: {
-  dotColor: string; label: string; price: string; pct: string | null; isUp: boolean
-}) {
-  return (
-    <div className="num flex items-center justify-between border-b border-faint2 py-2 text-xs last:border-0">
-      <span className="flex items-center gap-2 text-mid">
-        <span className="size-2 shrink-0 rounded-full" style={{ background: dotColor }} />
-        {label}
-      </span>
-      <span className="flex items-center gap-2">
-        <span className="font-medium text-ink">{price}</span>
-        {pct && (
-          <span
-            className="rounded px-1.5 py-0.5 text-[10px]"
-            style={isUp
-              ? { background: 'var(--up-tint)', color: 'var(--up)' }
-              : { background: 'var(--down-tint)', color: 'var(--down)' }}
-          >
-            {pct}
-          </span>
-        )}
-      </span>
-    </div>
   )
 }
 
@@ -82,7 +59,17 @@ export function TradePlanWidget() {
   const [tab, setTab] = useState<StatusTab>('active')
   const [localTicker, setLocalTicker] = useState<string | null>(null)
   const { data: plans, loading, error } = useApi<TradePlan[]>('/api/trade-plans')
+  // Ideas are the source of truth for a ticker's real status/recency — a
+  // trade_plan's own `status` column drifts (currentPrice updates keep pushing
+  // updatedAt while status stays 'active' even after the idea went terminal),
+  // which is why a past idea like ORCL used to surface as the default plan.
+  const { data: ideas } = useApi<Idea[]>('/api/ideas')
   const { selectedTicker: globalTicker } = useSelectedTicker()
+
+  // ticker (uppercased) → its latest idea. Falls back to the plan's own status
+  // when no idea exists for that ticker (e.g. a plan added without an idea).
+  const ideaByTicker = new Map((ideas ?? []).map(i => [i.ticker.toUpperCase(), i]))
+  const effStatus = (p: TradePlan) => ideaByTicker.get(p.ticker.toUpperCase())?.status ?? p.status
 
   function changeTab(t: StatusTab) {
     setTab(t)
@@ -93,12 +80,30 @@ export function TradePlanWidget() {
     if (!globalTicker || !plans) return
     const match = plans.find(p => p.ticker === globalTicker)
     if (!match) return
-    setTab(HISTORY_STATUSES.has(match.status) ? 'history' : 'active')
+    setTab(HISTORY_STATUSES.has(effStatus(match)) ? 'history' : 'active')
     setLocalTicker(globalTicker)
-  }, [globalTicker, plans])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalTicker, plans, ideas])
 
-  const visible = plans?.filter(p => tab === 'active' ? !HISTORY_STATUSES.has(p.status) : HISTORY_STATUSES.has(p.status))
-  const activePlan = visible?.find(p => p.ticker === localTicker) ?? visible?.[0]
+  const visible = plans?.filter(p => tab === 'active' ? !HISTORY_STATUSES.has(effStatus(p)) : HISTORY_STATUSES.has(effStatus(p)))
+
+  // Default (no explicit selection): on the Active tab, the plan of the most
+  // recent-dated active idea. /api/ideas is already ordered date DESC, so the
+  // first non-terminal idea with a visible plan wins. Falls back to visible[0].
+  function pickDefault(): TradePlan | undefined {
+    if (!visible?.length) return undefined
+    const local = visible.find(p => p.ticker === localTicker)
+    if (local) return local
+    if (tab === 'active' && ideas) {
+      for (const idea of ideas) {
+        if (HISTORY_STATUSES.has(idea.status)) continue
+        const p = visible.find(v => v.ticker.toUpperCase() === idea.ticker.toUpperCase())
+        if (p) return p
+      }
+    }
+    return visible[0]
+  }
+  const activePlan = pickDefault()
 
   if (loading) {
     return (
@@ -130,18 +135,19 @@ export function TradePlanWidget() {
           <p className="text-sm text-mid">{tab === 'active' ? 'Aktif plan yok.' : 'Geçmiş plan yok.'}</p>
         </div>
       ) : (
-        <TradePlanBody plan={activePlan!} plans={visible} onSelect={setLocalTicker} />
+        <TradePlanBody plan={activePlan!} plans={visible} onSelect={setLocalTicker} effStatus={effStatus(activePlan!)} />
       )}
     </div>
   )
 }
 
 function TradePlanBody({
-  plan, plans, onSelect,
+  plan, plans, onSelect, effStatus,
 }: {
   plan: TradePlan
   plans: TradePlan[]
   onSelect: (ticker: string) => void
+  effStatus: string
 }) {
   const cur = plan.currentPrice
 
@@ -153,13 +159,13 @@ function TradePlanBody({
         : plan.entryLow != null ? N2(plan.entryLow) : '—',
       rawPrice: plan.entryLow != null && plan.entryHigh != null
         ? (plan.entryLow + plan.entryHigh) / 2 : plan.entryLow ?? null,
-      dotColor: 'var(--info)',
+      color: 'var(--info)', tint: 'var(--info-tint)',
       isEntry: true,
     },
-    { label: 'TP1',     price: plan.tp1    != null ? N2(plan.tp1)    : '—', rawPrice: plan.tp1    ?? null, dotColor: 'var(--tp1)' },
-    { label: 'TP2',     price: plan.tp2    != null ? N2(plan.tp2)    : '—', rawPrice: plan.tp2    ?? null, dotColor: 'var(--tp2)' },
-    { label: 'TP3',     price: plan.tp3    != null ? N2(plan.tp3)    : '—', rawPrice: plan.tp3    ?? null, dotColor: 'var(--tp3)' },
-    { label: 'Hard SL', price: plan.hardSl != null ? N2(plan.hardSl) : '—', rawPrice: plan.hardSl ?? null, dotColor: 'var(--down)' },
+    { label: 'TP1',     price: plan.tp1    != null ? N2(plan.tp1)    : '—', rawPrice: plan.tp1    ?? null, color: 'var(--tp1)', tint: 'var(--tp1-tint)' },
+    { label: 'TP2',     price: plan.tp2    != null ? N2(plan.tp2)    : '—', rawPrice: plan.tp2    ?? null, color: 'var(--tp2)', tint: 'var(--tp2-tint)' },
+    { label: 'TP3',     price: plan.tp3    != null ? N2(plan.tp3)    : '—', rawPrice: plan.tp3    ?? null, color: 'var(--tp3)', tint: 'var(--tp3-tint)' },
+    { label: 'Hard SL', price: plan.hardSl != null ? N2(plan.hardSl) : '—', rawPrice: plan.hardSl ?? null, color: 'var(--down)', tint: 'var(--down-tint)' },
   ]
 
   return (
@@ -180,12 +186,12 @@ function TradePlanBody({
           >
             <IoOpenOutline size={14} />
           </a>
-          {HISTORY_STATUSES.has(plan.status) && (() => {
-            const isStop = plan.status === 'stopped'
+          {HISTORY_STATUSES.has(effStatus) && (() => {
+            const isStop = effStatus === 'stopped'
             const label = isStop
               ? 'SL'
-              : plan.status === 'tp1_hit' ? 'TP1'
-              : plan.status === 'tp2_hit' ? 'TP2'
+              : effStatus === 'tp1_hit' ? 'TP1'
+              : effStatus === 'tp2_hit' ? 'TP2'
               : 'TP3'
             return (
               <span
@@ -220,29 +226,19 @@ function TradePlanBody({
       {/* lightweight-charts chart */}
       <TradePlanChart plan={plan} />
 
-      {/* Legend chips */}
+      {/* Level pills — label + price + % merged into the legend */}
       <div className="flex flex-wrap gap-1.5">
-        {plan.entryLow  != null && <LegendChip color="var(--info)" bg="var(--info-tint)">Giriş Bandı</LegendChip>}
-        {plan.tp1       != null && <LegendChip color="var(--tp1)" bg="var(--tp1-tint)">TP1</LegendChip>}
-        {plan.tp2       != null && <LegendChip color="var(--tp2)" bg="var(--tp2-tint)">TP2</LegendChip>}
-        {plan.tp3       != null && <LegendChip color="var(--tp3)" bg="var(--tp3-tint)">TP3</LegendChip>}
-        {plan.hardSl    != null && <LegendChip color="var(--down)" bg="var(--down-tint)">Hard SL</LegendChip>}
-      </div>
-
-      {/* Levels table */}
-      <div className="border-t border-faint pt-3">
-        {levels.map((row, i) => {
+        {levels.filter(row => row.rawPrice != null).map((row, i) => {
           const pct = !('isEntry' in row) && row.rawPrice != null && cur != null
             ? pctStr(row.rawPrice, cur) : null
-          const isUp = row.rawPrice != null && cur != null ? row.rawPrice >= cur : true
           return (
-            <LevelRow
+            <LegendChip
               key={i}
-              dotColor={row.dotColor}
+              color={row.color}
+              bg={row.tint}
               label={row.label}
               price={row.price}
               pct={pct}
-              isUp={isUp}
             />
           )
         })}

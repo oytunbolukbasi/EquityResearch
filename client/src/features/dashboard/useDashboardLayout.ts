@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { bottom, type Layout, type LayoutItem } from 'react-grid-layout'
 import { widgetRegistry } from './widget-registry'
+import { getDeviceKey } from '@/lib/device-key'
 import type { WidgetInstance, WidgetType } from './types'
 
 // Versioned keys so the persisted layout can be migrated later if needed.
@@ -95,5 +96,47 @@ export function useDashboardLayout() {
     setLayout(DEFAULT_LAYOUT)
   }, [])
 
-  return { items, layout, addWidget, removeWidget, onLayoutChange, resetLayout }
+  // Replace the whole layout from an external source (DB restore), dropping any
+  // widget types no longer in the registry and layout entries with no item.
+  const applyLayout = useCallback((nextItems: WidgetInstance[], nextLayout: LayoutItem[]) => {
+    const validItems = nextItems.filter((it) => it.type in widgetRegistry)
+    if (!validItems.length) return
+    const ids = new Set(validItems.map((it) => it.i))
+    setItems(validItems)
+    setLayout(nextLayout.filter((l) => ids.has(l.i)))
+  }, [])
+
+  // On mount, restore this device/browser's most recently saved layout from the
+  // DB (canonical across sessions). Falls back silently to the localStorage /
+  // default layout already in state when there's nothing saved or the fetch fails.
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/layouts?deviceKey=${encodeURIComponent(getDeviceKey())}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((row: { items: WidgetInstance[]; layout: LayoutItem[] } | null) => {
+        if (cancelled || !row) return
+        applyLayout(row.items, row.layout)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [applyLayout])
+
+  // Persist the current layout to the DB under this device/browser key. Public
+  // endpoint (no admin key). Returns whether the save succeeded.
+  const saveLayout = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/layouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceKey: getDeviceKey(), items, layout }),
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }, [items, layout])
+
+  return { items, layout, addWidget, removeWidget, onLayoutChange, resetLayout, saveLayout }
 }

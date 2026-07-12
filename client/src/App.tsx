@@ -12,7 +12,7 @@ export default function App() {
   if (window.location.pathname === '/admin') return <AdminPage />
 
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
-  const { items, layout, addWidget, removeWidget, onLayoutChange, resetLayout } =
+  const { items, layout, addWidget, removeWidget, onLayoutChange, resetLayout, saveLayout } =
     useDashboardLayout()
 
   return (
@@ -31,7 +31,7 @@ export default function App() {
               </motion.span>
               EQR
             </h1>
-            <DashboardWidgetControls onAdd={addWidget} onReset={resetLayout} />
+            <DashboardWidgetControls onAdd={addWidget} onReset={resetLayout} onSave={saveLayout} />
           </div>
         </header>
 
