@@ -18,24 +18,54 @@ Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u
 - **Deployment:** Railway (sadece uygulama; DB Neon'da kalıyor), GitHub'a push ile otomatik deploy
 
 ## Tasarım Dili
-Mevcut PDF bültenlerden ve trade plan HTML'inden taşınıyor.
+Renk paleti mevcut PDF bültenlerden ve trade plan HTML'inden taşındı; üzerine tam bir
+**light/dark tema token sistemi** kuruldu (sıcak-antrasit dark). Minimal, yuvarlatılmış
+köşeli kartlar (radius ~14px), bol boşluk — her iki temada da.
+
+**Token mimarisi (Tailwind v4, CSS-first — `tailwind.config` yok):**
+- `@custom-variant dark (&:is(.dark *))` + `@theme inline` sayesinde ham brand
+  değişkenlerini tek bir `.dark {}` bloğunda ezmek, semantic class kullanan (`bg-card`,
+  `text-mid`, `bg-background`…) tüm arayüzü otomatik yeniden renklendirir.
+- **Ham brand katmanı** — light `:root`, dark `.dark`:
 
 ```css
 :root {
-  --bg:    #f7f6f3;
-  --white: #ffffff;
-  --ink:   #1a1a18;
-  --mid:   #6b6b67;
-  --faint: #d8d7d2;
-  --faint2:#eeede9;
-  --green: #1a7a5e;
-  --red:   #c0392b;
-  --blue:  #2563a8;
-  --amber: #9a6200;
+  --bg:    #f7f6f3;  --white: #ffffff;  --ink:   #1a1a18;
+  --mid:   #6b6b67;  --faint: #d8d7d2;  --faint2:#eeede9;
+  --green: #1a7a5e;  --red:   #c0392b;  --blue:  #2563a8;  --amber: #9a6200;
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
+.dark {
+  --bg:  #16130f;  --card: #201c17;  --ink: #f0ede8;
+  --mid: #a19b91;  --faint: #3a352e; --faint2: #2a251f;
+  /* accent'ler dark'ta kontrast için parlatılıyor */
+  --green: #3fae86; --red: #e06b5d; --blue: #6ba3e0; --amber: #d9a441;
+}
 ```
-Light mode, minimal, yuvarlatılmış köşeli kartlar (radius ~14px), bol boşluk.
+
+- **Semantic accent katmanı** — inline-style'ların tek renk kaynağı. Widget badge/status
+  chip, chart serisi ve seviye çizgileri bunları `var()` ile kullanır; `.dark` bunları
+  yeniden eşler (parlatılmış accent + translucent tint dolgular):
+  - Accent alias'ları: `--up` / `--down` / `--info` / `--warn`
+  - Badge tint arka planları: `--up-tint` / `--down-tint` / `--info-tint` / `--warn-tint` /
+    `--neutral-tint` (light'ta pale hex, dark'ta translucent rgba)
+  - TP merdiveni: `--tp1..3` + `--tp1..3-tint`
+  - Cam modal + scrim: `--glass-bg` / `--glass-border` / `--scrim`
+  - Grafik: `--chart-grid` / `--chart-axis`
+
+**Tema state + toggle (`client/src/lib/theme.tsx`):**
+- İlk açılışta OS tercihini (`prefers-color-scheme`) izler; header'daki Sun/Moon toggle ile
+  override edilir ve seçim `localStorage['eqr:theme']`'de saklanır.
+- `.dark` class'ı `document.documentElement`'e **senkron** uygulanır — böylece portal'lı
+  Radix dropdown'ları/modal'lar temayı izler ve child effect'ler (grafik) toggle sonrası
+  doğru paleti okur. `index.html`'e FOUC önleyici inline script eklendi (render öncesi
+  class'ı basar → açık→koyu flash yok).
+
+**Grafik dark mode (lightweight-charts):** Kütüphane canvas tabanlı olup CSS değişkeni
+okuyamaz; renkler effect içinde `getComputedStyle` ile aktif temanın *concrete* token'larından
+(`--green`/`--red`/`--faint2`/`--chart-axis`/`--tp1..3`/`--blue`) somut string'e çözülür.
+`theme`, effect deps'inde (`[plan, theme]`) — grafik her değişimde tamamen yeniden
+kurulduğundan toggle'da doğru renklerle rebuild olur.
 
 **Tipografi:**
 - Tek font: **Inter** (400/500/600/700, latin + latin-ext — Türkçe karakter tam desteği).
