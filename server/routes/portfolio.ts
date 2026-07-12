@@ -19,12 +19,11 @@ portfolioRouter.get('/insight', async (_req, res) => {
   res.json(rows[0] ?? null)
 })
 
-// GET /api/portfolio/summary — open positions with derived P/L + last 30
-// days of portfolio snapshots. Read-only against the separate portfolio DB.
+// GET /api/portfolio/summary — open positions with derived P/L. Read-only
+// against the separate portfolio DB.
 portfolioRouter.get('/summary', async (_req, res) => {
-  const [positions, snapshots, { rate: usdTryRate, isFallback: usdTryRateIsFallback }] = await Promise.all([
+  const [positions, { rate: usdTryRate, isFallback: usdTryRateIsFallback }] = await Promise.all([
     portfolioRepo.getOpenPositions(),
-    portfolioRepo.getRecentSnapshots(30),
     getExchangeRate('USDTRY'),
   ])
 
@@ -54,7 +53,7 @@ portfolioRouter.get('/summary', async (_req, res) => {
     }
   })
 
-  res.json({ positions: enriched, snapshots, usdTryRate, usdTryRateIsFallback })
+  res.json({ positions: enriched, usdTryRate, usdTryRateIsFallback })
 })
 
 // GET /api/portfolio/closed — closed positions, newest sell first.

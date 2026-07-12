@@ -47,14 +47,6 @@ export interface PortfolioClosedPositionRow {
   sellDate: string
 }
 
-export interface PortfolioSnapshotRow {
-  date: string
-  totalValue: number
-  totalCost: number
-  unrealizedProfit: number
-  realizedProfit: number
-}
-
 // numeric columns come back from Postgres as strings (to avoid silent
 // precision loss) — the app only ever displays/adds these, so plain floats
 // are fine and much easier for the widgets to consume as JSON.
@@ -100,23 +92,5 @@ export const portfolioRepo = {
       plPercent: toNum(r.pl_percent),
       sellDate: r.sell_date as string,
     }))
-  },
-
-  async getRecentSnapshots(days = 30): Promise<PortfolioSnapshotRow[]> {
-    const rows = await sql`
-      SELECT date, total_value, total_cost, unrealized_profit, realized_profit
-      FROM portfolio_snapshots
-      ORDER BY date DESC
-      LIMIT ${days}
-    `
-    return rows
-      .map((r) => ({
-        date: r.date as string,
-        totalValue: toNum(r.total_value),
-        totalCost: toNum(r.total_cost),
-        unrealizedProfit: toNum(r.unrealized_profit),
-        realizedProfit: toNum(r.realized_profit),
-      }))
-      .reverse() // oldest -> newest, matches priceHistory convention elsewhere
   },
 }

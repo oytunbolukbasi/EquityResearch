@@ -81,17 +81,8 @@ export interface PortfolioClosedPosition {
   sellDate: string
 }
 
-export interface PortfolioSnapshot {
-  date: string
-  totalValue: number
-  totalCost: number
-  unrealizedProfit: number
-  realizedProfit: number
-}
-
 export interface PortfolioSummary {
   positions: PortfolioPosition[]
-  snapshots: PortfolioSnapshot[]
   usdTryRate: number
   usdTryRateIsFallback: boolean
 }
