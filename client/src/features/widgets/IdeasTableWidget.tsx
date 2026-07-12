@@ -49,14 +49,14 @@ function DirectionBadge({ direction }: { direction: string | null }) {
   if (direction === 'long')
     return (
       <span className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
-        style={{ background: '#edf5f2', color: '#1a7a5e' }}>
+        style={{ background: 'var(--up-tint)', color: 'var(--up)' }}>
         LONG
       </span>
     )
   if (direction === 'short')
     return (
       <span className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
-        style={{ background: '#fdf0ee', color: '#c0392b' }}>
+        style={{ background: 'var(--down-tint)', color: 'var(--down)' }}>
         SHORT
       </span>
     )
@@ -65,16 +65,16 @@ function DirectionBadge({ direction }: { direction: string | null }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
-    active:     { label: 'Aktif',  bg: '#eef3fb', color: '#2563a8' },
-    hit_target: { label: 'Hedef', bg: '#edf5f2', color: '#1a7a5e' },
-    tp1_hit:    { label: 'TP1',   bg: '#edf5f2', color: '#1a7a5e' },
-    tp2_hit:    { label: 'TP2',   bg: '#edf5f2', color: '#1a7a5e' },
-    tp3_hit:    { label: 'TP3',   bg: '#edf5f2', color: '#1a7a5e' },
-    review:     { label: 'İncele', bg: '#fef8e9', color: '#9a6200' },
-    stopped:    { label: 'SL',    bg: '#fdf0ee', color: '#c0392b' },
-    watch:      { label: 'İzle',  bg: '#fef8e9', color: '#9a6200' },
+    active:     { label: 'Aktif',  bg: 'var(--info-tint)', color: 'var(--info)' },
+    hit_target: { label: 'Hedef', bg: 'var(--up-tint)', color: 'var(--up)' },
+    tp1_hit:    { label: 'TP1',   bg: 'var(--up-tint)', color: 'var(--up)' },
+    tp2_hit:    { label: 'TP2',   bg: 'var(--up-tint)', color: 'var(--up)' },
+    tp3_hit:    { label: 'TP3',   bg: 'var(--up-tint)', color: 'var(--up)' },
+    review:     { label: 'İncele', bg: 'var(--warn-tint)', color: 'var(--warn)' },
+    stopped:    { label: 'SL',    bg: 'var(--down-tint)', color: 'var(--down)' },
+    watch:      { label: 'İzle',  bg: 'var(--warn-tint)', color: 'var(--warn)' },
   }
-  const cfg = map[status] ?? { label: status, bg: '#f5f4f0', color: '#9a9a94' }
+  const cfg = map[status] ?? { label: status, bg: 'var(--neutral-tint)', color: 'var(--mid)' }
   return (
     <span className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
       style={{ background: cfg.bg, color: cfg.color }}>
@@ -221,10 +221,10 @@ export function IdeasTableWidget() {
                       ? `${fmtN(idea.entryLow, 0)}–${fmtN(idea.entryHigh, 0)}`
                       : fmtN(idea.entryLow, 0)}
                   </td>
-                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#c0392b' }}>
+                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: 'var(--down)' }}>
                     {fmtN(idea.stopLoss, 0)}
                   </td>
-                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: '#1a7a5e' }}>
+                  <td className="num px-3 py-2.5 text-right text-xs whitespace-nowrap" style={{ color: 'var(--up)' }}>
                     {fmtN(idea.target1, 0)}
                   </td>
                   <td className="px-3 py-2.5">

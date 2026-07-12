@@ -42,6 +42,85 @@
   --border: var(--faint);
   --input: var(--faint);
   --ring: var(--blue);
+
+  /*
+    Semantic accent layer — the single source of truth for widget badges,
+    status chips, chart series and level lines. Inline styles reference these
+    via var(); the .dark block below re-maps them (brightened accents +
+    translucent tint fills) so every hardcoded-colour site follows the theme.
+  */
+  --up: var(--green);
+  --down: var(--red);
+  --info: var(--blue);
+  --warn: var(--amber);
+
+  /* badge tint backgrounds (pale in light) */
+  --up-tint: #edf5f2;
+  --down-tint: #fdf0ee;
+  --info-tint: #eef3fb;
+  --warn-tint: #fef8e9;
+  --neutral-tint: #f5f4f0;
+
+  /* TP ladder (trade-plan levels) */
+  --tp1: #52b08a;
+  --tp2: #2e8a65;
+  --tp3: #1a7a5e;
+  --tp1-tint: #edf5f2;
+  --tp2-tint: #e6f1ea;
+  --tp3-tint: #ddecdf;
+
+  /* frosted-glass modal + backdrop scrim (PortfolioWidget) */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --scrim: rgba(0, 0, 0, 0.2);
+
+  /* lightweight-charts */
+  --chart-grid: var(--faint2);
+  --chart-axis: #9a9a94;
+}
+
+/*
+  Dark theme — warm anthracite. Activated by the .dark class on
+  <html> (toggled by ThemeProvider; also set pre-render by the inline
+  script in index.html to avoid a flash). Overriding the raw brand vars
+  cascades through every shadcn semantic token (--background/--card/…) and
+  the accent layer above, because @theme inline resolves them at use-site.
+*/
+.dark {
+  --bg: #16130f;
+  --card: #201c17;
+  --popover: #201c17;
+  --ink: #f0ede8;
+  --mid: #a19b91;
+  --faint: #3a352e;
+  --faint2: #2a251f;
+  --primary-foreground: #16130f;
+
+  /* brightened brand accents for contrast on dark surfaces (aliases follow) */
+  --green: #3fae86;
+  --red: #e06b5d;
+  --blue: #6ba3e0;
+  --amber: #d9a441;
+
+  /* tint fills become translucent so they read on the dark card */
+  --up-tint: rgba(63, 174, 134, 0.14);
+  --down-tint: rgba(224, 107, 93, 0.14);
+  --info-tint: rgba(107, 163, 224, 0.14);
+  --warn-tint: rgba(217, 164, 65, 0.14);
+  --neutral-tint: rgba(255, 255, 255, 0.06);
+
+  --tp1: #5cc59a;
+  --tp2: #3fae86;
+  --tp3: #6fd0a6;
+  --tp1-tint: rgba(92, 197, 154, 0.12);
+  --tp2-tint: rgba(63, 174, 134, 0.14);
+  --tp3-tint: rgba(111, 208, 166, 0.16);
+
+  --glass-bg: rgba(32, 28, 23, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --scrim: rgba(0, 0, 0, 0.5);
+
+  --chart-axis: #8a847a;
 }
 
 @theme inline {
@@ -71,10 +150,15 @@
   --color-mid: var(--mid);
   --color-faint: var(--faint);
   --color-faint2: var(--faint2);
-  --color-up: var(--green);
-  --color-down: var(--red);
-  --color-info: var(--blue);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-info: var(--info);
   --color-warn: var(--amber);
+  --color-up-tint: var(--up-tint);
+  --color-down-tint: var(--down-tint);
+  --color-info-tint: var(--info-tint);
+  --color-warn-tint: var(--warn-tint);
+  --color-neutral-tint: var(--neutral-tint);
 
   /* typography */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;

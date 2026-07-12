@@ -66,8 +66,8 @@ function LevelRow({
           <span
             className="rounded px-1.5 py-0.5 text-[10px]"
             style={isUp
-              ? { background: '#edf5f2', color: '#1a7a5e' }
-              : { background: '#fdf0ee', color: '#c0392b' }}
+              ? { background: 'var(--up-tint)', color: 'var(--up)' }
+              : { background: 'var(--down-tint)', color: 'var(--down)' }}
           >
             {pct}
           </span>
@@ -153,13 +153,13 @@ function TradePlanBody({
         : plan.entryLow != null ? N2(plan.entryLow) : '—',
       rawPrice: plan.entryLow != null && plan.entryHigh != null
         ? (plan.entryLow + plan.entryHigh) / 2 : plan.entryLow ?? null,
-      dotColor: '#2563a8',
+      dotColor: 'var(--info)',
       isEntry: true,
     },
-    { label: 'TP1',     price: plan.tp1    != null ? N2(plan.tp1)    : '—', rawPrice: plan.tp1    ?? null, dotColor: '#52b08a' },
-    { label: 'TP2',     price: plan.tp2    != null ? N2(plan.tp2)    : '—', rawPrice: plan.tp2    ?? null, dotColor: '#2e8a65' },
-    { label: 'TP3',     price: plan.tp3    != null ? N2(plan.tp3)    : '—', rawPrice: plan.tp3    ?? null, dotColor: '#1a7a5e' },
-    { label: 'Hard SL', price: plan.hardSl != null ? N2(plan.hardSl) : '—', rawPrice: plan.hardSl ?? null, dotColor: '#c0392b' },
+    { label: 'TP1',     price: plan.tp1    != null ? N2(plan.tp1)    : '—', rawPrice: plan.tp1    ?? null, dotColor: 'var(--tp1)' },
+    { label: 'TP2',     price: plan.tp2    != null ? N2(plan.tp2)    : '—', rawPrice: plan.tp2    ?? null, dotColor: 'var(--tp2)' },
+    { label: 'TP3',     price: plan.tp3    != null ? N2(plan.tp3)    : '—', rawPrice: plan.tp3    ?? null, dotColor: 'var(--tp3)' },
+    { label: 'Hard SL', price: plan.hardSl != null ? N2(plan.hardSl) : '—', rawPrice: plan.hardSl ?? null, dotColor: 'var(--down)' },
   ]
 
   return (
@@ -180,16 +180,24 @@ function TradePlanBody({
           >
             <IoOpenOutline size={14} />
           </a>
-          {HISTORY_STATUSES.has(plan.status) && (
-            <span
-              className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
-              style={plan.status === 'tp3_hit'
-                ? { background: '#edf5f2', color: '#1a7a5e' }
-                : { background: '#fdf0ee', color: '#c0392b' }}
-            >
-              {plan.status === 'tp3_hit' ? 'TP3' : 'SL'}
-            </span>
-          )}
+          {HISTORY_STATUSES.has(plan.status) && (() => {
+            const isStop = plan.status === 'stopped'
+            const label = isStop
+              ? 'SL'
+              : plan.status === 'tp1_hit' ? 'TP1'
+              : plan.status === 'tp2_hit' ? 'TP2'
+              : 'TP3'
+            return (
+              <span
+                className="num rounded px-1.5 py-0.5 text-[10px] font-medium"
+                style={isStop
+                  ? { background: 'var(--down-tint)', color: 'var(--down)' }
+                  : { background: 'var(--up-tint)', color: 'var(--up)' }}
+              >
+                {label}
+              </span>
+            )
+          })()}
         </div>
         <div className="flex items-center gap-3">
           {cur != null && (
@@ -214,11 +222,11 @@ function TradePlanBody({
 
       {/* Legend chips */}
       <div className="flex flex-wrap gap-1.5">
-        {plan.entryLow  != null && <LegendChip color="#2563a8" bg="#eef3fb">Giriş Bandı</LegendChip>}
-        {plan.tp1       != null && <LegendChip color="#52b08a" bg="#edf5f2">TP1</LegendChip>}
-        {plan.tp2       != null && <LegendChip color="#2e8a65" bg="#e6f1ea">TP2</LegendChip>}
-        {plan.tp3       != null && <LegendChip color="#1a7a5e" bg="#ddecdf">TP3</LegendChip>}
-        {plan.hardSl    != null && <LegendChip color="#c0392b" bg="#fdf0ee">Hard SL</LegendChip>}
+        {plan.entryLow  != null && <LegendChip color="var(--info)" bg="var(--info-tint)">Giriş Bandı</LegendChip>}
+        {plan.tp1       != null && <LegendChip color="var(--tp1)" bg="var(--tp1-tint)">TP1</LegendChip>}
+        {plan.tp2       != null && <LegendChip color="var(--tp2)" bg="var(--tp2-tint)">TP2</LegendChip>}
+        {plan.tp3       != null && <LegendChip color="var(--tp3)" bg="var(--tp3-tint)">TP3</LegendChip>}
+        {plan.hardSl    != null && <LegendChip color="var(--down)" bg="var(--down-tint)">Hard SL</LegendChip>}
       </div>
 
       {/* Levels table */}

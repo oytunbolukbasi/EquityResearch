@@ -61,7 +61,7 @@ const TYPE_CURRENCY_PREFIX: Record<string, string> = {
 
 function TypeBadge({ type }: { type: string }) {
   return (
-    <span className="num rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: '#f5f4f0', color: '#6b6b67' }}>
+    <span className="num rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--neutral-tint)', color: 'var(--mid)' }}>
       {TYPE_LABEL[type] ?? type}
     </span>
   )
@@ -130,10 +130,10 @@ function CurrencyBlock({
 
 // ─── action badge colors ────────────────────────────────────────────────────
 const ACTION_STYLE: Record<string, { bg: string; color: string }> = {
-  'BEKLE':           { bg: '#eef3fb', color: '#2563a8' },
-  'KISMİ KÂR AL':   { bg: '#edf5f2', color: '#1a7a5e' },
-  'SAT':             { bg: '#fdf0ee', color: '#c0392b' },
-  'POZİSYON ARTIR':  { bg: '#e0f0e5', color: '#15603d' },
+  'BEKLE':           { bg: 'var(--info-tint)', color: 'var(--info)' },
+  'KISMİ KÂR AL':   { bg: 'var(--up-tint)', color: 'var(--up)' },
+  'SAT':             { bg: 'var(--down-tint)', color: 'var(--down)' },
+  'POZİSYON ARTIR':  { bg: 'var(--tp3-tint)', color: 'var(--tp3)' },
 }
 
 // ─── liquid glass modal ─────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ function ActionModal({ action, onClose }: { action: PortfolioAction; onClose: ()
     setTimeout(onClose, 180)
   }
 
-  const style = ACTION_STYLE[action.action] ?? { bg: '#f5f4f0', color: '#6b6b67' }
+  const style = ACTION_STYLE[action.action] ?? { bg: 'var(--neutral-tint)', color: 'var(--mid)' }
 
   return createPortal(
     <div
@@ -158,16 +158,16 @@ function ActionModal({ action, onClose }: { action: PortfolioAction; onClose: ()
       onClick={e => { if (e.target === backdropRef.current) handleClose() }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{
-        background: visible ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0)',
+        background: visible ? 'var(--scrim)' : 'rgba(0,0,0,0)',
         transition: 'background 180ms ease',
       }}
     >
       <div
         style={{
-          background: 'rgba(255,255,255,0.72)',
+          background: 'var(--glass-bg)',
           backdropFilter: 'blur(20px) saturate(1.4)',
           WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-          border: '1px solid rgba(255,255,255,0.35)',
+          border: '1px solid var(--glass-border)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
           borderRadius: 16,
           transform: visible ? 'scale(1)' : 'scale(0.95)',

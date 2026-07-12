@@ -406,10 +406,10 @@ const ORDER_TYPE_LABEL: Record<string, string> = {
 }
 
 const ORDER_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
-  new:              { bg: '#eef3fb', color: '#2563a8' },
-  partially_filled: { bg: '#fef8e9', color: '#9a6200' },
-  accepted:         { bg: '#eef3fb', color: '#2563a8' },
-  pending_new:      { bg: '#eef3fb', color: '#2563a8' },
+  new:              { bg: 'var(--info-tint)', color: 'var(--info)' },
+  partially_filled: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
+  accepted:         { bg: 'var(--info-tint)', color: 'var(--info)' },
+  pending_new:      { bg: 'var(--info-tint)', color: 'var(--info)' },
 }
 
 function OrdersTable({
@@ -435,7 +435,7 @@ function OrdersTable({
       </thead>
       <tbody>
         {orders.map(o => {
-          const statusStyle = ORDER_STATUS_STYLE[o.status] ?? { bg: '#f5f4f0', color: '#9a9a94' }
+          const statusStyle = ORDER_STATUS_STYLE[o.status] ?? { bg: 'var(--neutral-tint)', color: 'var(--mid)' }
           const dateRaw     = o.submitted_at ?? o.created_at
           return (
             <tr
@@ -450,8 +450,8 @@ function OrdersTable({
                 <span
                   className="num rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
                   style={o.side === 'buy'
-                    ? { background: '#edf5f2', color: '#1a7a5e' }
-                    : { background: '#fdf0ee', color: '#c0392b' }}
+                    ? { background: 'var(--up-tint)', color: 'var(--up)' }
+                    : { background: 'var(--down-tint)', color: 'var(--down)' }}
                 >
                   {o.side === 'buy' ? 'Alış' : 'Satış'}
                 </span>

@@ -8,11 +8,18 @@ import {
 } from 'lightweight-charts'
 
 import type { TradePlan } from '@/lib/api-types'
+import { useTheme } from '@/lib/theme'
 
-const GREEN = '#1a7a5e'
-const RED   = '#c0392b'
-const BLUE  = '#2563a8'
 const INTER = "'Inter', ui-sans-serif, system-ui, sans-serif"
+
+// lightweight-charts renders to canvas and can't consume CSS custom properties,
+// so we resolve the active theme's tokens to concrete colour strings at build
+// time. We read only *concrete* tokens (never the var()-aliased ones like --up)
+// because getComputedStyle returns a custom property's specified value, which
+// for `--up: var(--green)` would come back unresolved.
+function cssVar(el: Element, name: string): string {
+  return getComputedStyle(el).getPropertyValue(name).trim() || '#000'
+}
 
 function N2(n: number): string {
   return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
@@ -36,27 +43,28 @@ interface Level {
   key: string
   price: number
   label: string
-  color: string
-  bg: string
+  colorVar: string // concrete CSS token, e.g. '--tp1' — used for chart lines + DOM text
+  tintVar: string  // tint token, e.g. '--tp1-tint' — used for DOM badge background
 }
 
-// Tints matched to the legend chips / levels table in TradePlanWidget so the
+// Tokens matched to the legend chips / levels table in TradePlanWidget so the
 // off-chart badges read as the same level, not a different visual language.
 function buildLevels(plan: TradePlan): Level[] {
   const levels: Level[] = []
-  if (plan.entryHigh != null) levels.push({ key: 'entryHigh', price: plan.entryHigh, label: 'Giriş', color: BLUE, bg: '#eef3fb' })
+  if (plan.entryHigh != null) levels.push({ key: 'entryHigh', price: plan.entryHigh, label: 'Giriş', colorVar: '--blue', tintVar: '--info-tint' })
   if (plan.entryLow != null && plan.entryLow !== plan.entryHigh)
-    levels.push({ key: 'entryLow', price: plan.entryLow, label: 'Giriş', color: BLUE, bg: '#eef3fb' })
-  if (plan.tp1 != null) levels.push({ key: 'tp1', price: plan.tp1, label: 'TP1', color: '#52b08a', bg: '#edf5f2' })
-  if (plan.tp2 != null) levels.push({ key: 'tp2', price: plan.tp2, label: 'TP2', color: '#2e8a65', bg: '#e6f1ea' })
-  if (plan.tp3 != null) levels.push({ key: 'tp3', price: plan.tp3, label: 'TP3', color: GREEN, bg: '#ddecdf' })
-  if (plan.hardSl != null) levels.push({ key: 'hardSl', price: plan.hardSl, label: 'Hard SL', color: RED, bg: '#fdf0ee' })
+    levels.push({ key: 'entryLow', price: plan.entryLow, label: 'Giriş', colorVar: '--blue', tintVar: '--info-tint' })
+  if (plan.tp1 != null) levels.push({ key: 'tp1', price: plan.tp1, label: 'TP1', colorVar: '--tp1', tintVar: '--tp1-tint' })
+  if (plan.tp2 != null) levels.push({ key: 'tp2', price: plan.tp2, label: 'TP2', colorVar: '--tp2', tintVar: '--tp2-tint' })
+  if (plan.tp3 != null) levels.push({ key: 'tp3', price: plan.tp3, label: 'TP3', colorVar: '--tp3', tintVar: '--tp3-tint' })
+  if (plan.hardSl != null) levels.push({ key: 'hardSl', price: plan.hardSl, label: 'Hard SL', colorVar: '--red', tintVar: '--down-tint' })
   return levels
 }
 
 export function TradePlanChart({ plan }: { plan: TradePlan }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef     = useRef<IChartApi | null>(null)
+  const { theme }    = useTheme()
 
   // ─── Y-axis range: candle H/L only (TP/SL never stretch the axis) ──────────
   const candleHL = (plan.priceHistory ?? []).flatMap(c => [c.h, c.l])
@@ -81,16 +89,24 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
     const container = containerRef.current
     if (!container) return
 
+    // Resolve the active theme's palette from CSS custom properties. The .dark
+    // class is applied synchronously by ThemeProvider before this effect runs,
+    // so these reads reflect the current theme even right after a toggle.
+    const green = cssVar(container, '--green')
+    const red   = cssVar(container, '--red')
+    const grid  = cssVar(container, '--faint2')
+    const axis  = cssVar(container, '--chart-axis')
+
     const chart = createChart(container, {
       autoSize: true,
       layout: {
         background: { color: 'transparent' },
-        textColor: '#9a9a94',
+        textColor: axis,
         fontFamily: INTER,
       },
       grid: {
-        vertLines: { color: '#eeede9', style: LineStyle.Solid },
-        horzLines: { color: '#eeede9', style: LineStyle.Solid },
+        vertLines: { color: grid, style: LineStyle.Solid },
+        horzLines: { color: grid, style: LineStyle.Solid },
       },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
@@ -101,12 +117,12 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
 
     // ─── Candlestick series ──────────────────────────────────────────────────
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor:         GREEN,
-      downColor:       RED,
-      borderUpColor:   GREEN,
-      borderDownColor: RED,
-      wickUpColor:     GREEN,
-      wickDownColor:   RED,
+      upColor:         green,
+      downColor:       red,
+      borderUpColor:   green,
+      borderDownColor: red,
+      wickUpColor:     green,
+      wickDownColor:   red,
     })
 
     // lightweight-charts requires ascending time order and silently fails to
@@ -155,7 +171,7 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
     for (const l of inRange) {
       candleSeries.createPriceLine({
         price: l.price,
-        color: l.color,
+        color: cssVar(container, l.colorVar),
         lineWidth: 2,
         lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
@@ -167,8 +183,9 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
       chart.remove()
       chartRef.current = null
     }
+    // Rebuild on theme change so canvas colours re-resolve from the new palette.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan])
+  }, [plan, theme])
 
   return (
     <div style={{ height: 360, position: 'relative' }}>
@@ -207,7 +224,11 @@ function OffChartBadge({
   return (
     <div
       className="num flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium shadow-sm"
-      style={{ background: level.bg, color: level.color, border: `1px solid ${level.color}33` }}
+      style={{
+        background: `var(${level.tintVar})`,
+        color: `var(${level.colorVar})`,
+        border: `1px solid color-mix(in srgb, var(${level.colorVar}) 20%, transparent)`,
+      }}
     >
       <span>{isUp ? '↑' : '↓'}</span>
       <span className="font-semibold">{level.label}</span>
