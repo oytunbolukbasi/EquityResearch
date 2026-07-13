@@ -100,7 +100,21 @@ Web search: Fed/enflasyon · İran-ABD · portföy hisselerini etkileyen şirket
 ## ADIM 3 — YENİ FİKİR TARAMASI
 
 BIST/NYSE/NASDAQ/Xetra'dan 0-3 yeni long fikri. Başka borsa önerme.
-**Zorunlu R:R filtresi:** `(TP1 - giriş_orta) / (giriş_orta - stopLoss) >= 2.0`. Sağlamayanı ekleme; uygun fikir yoksa boş bırak.
+
+**Her gün GERÇEK tarama yap** — idea-generation skill'ini çalıştırıp aday üret; "uygun
+yoksa boş bırak"ı tam tarama yapmadan bir kaçış olarak kullanma. Sonucu ikiye ayır:
+
+1. **ideas dizisi (panele yazılır) — R:R barı korunur.** SADECE
+   `(TP1 - giriş_orta) / (giriş_orta - stopLoss) >= 2.0` sağlayan long'lar `ideas`'a girer.
+   Sağlamayan panele EKLENMEZ. Bu barı geçen fikir yoksa `ideas: []` göndermek **normaldir**
+   (özellikle risk-off günlerde) — zorla fikir üretme.
+
+2. **İzleme Listesi (panele YAZILMAZ, ADIM 7 loguna yazılır).** Taramadan çıkan **en iyi
+   1-3 aday**ı, R:R barını geçmese bile, ADIM 7 özet logunda "📋 İzleme Listesi" başlığı
+   altında sun: ticker + tek cümle tez + hesaplanan R:R + neden bara takıldığı (ör.
+   "R:R 1.6 — stop geniş" / "katalizör belirsiz"). Böylece 0 idea çıksa bile kullanıcı
+   sahadaki en iyi kurguları görür ve isterse manuel ekler. Bu bir JSON alanı değildir;
+   sadece rapor.
 
 Yeni fikir taramasında Equity Research Plugin'indeki /idea-generation skill'ini kullan. Ancak idea-generation çıktıları panel için tasarlanmış  json output formatında olsun. 
 
@@ -366,7 +380,8 @@ Hangi temalar güçleniyor/zayıflıyor? Her pozisyon hangi temada? Konsantrasyo
 📅 [TARİH] EQR Dashboard güncellendi
 ✅/❌ morning_note / ideas / trade_plans / portfolio_insight
 📊 Terminal'e geçenler: [TICKER: stopped/tp1_hit/... veya "yok"]
-💡 Yeni fikirler: [liste veya "yok"]
+💡 Yeni fikirler (ideas'a giren, R:R≥2.0): [liste veya "yok"]
+📋 İzleme Listesi (panele yazılmaz — en iyi 1-3 aday): [TICKER: tez · R:R · bara takılma nedeni | veya "yok"]
 📈 Portföy aksiyonları: [SEMBOL: AKSİYON listesi]
 🔄 Paper Trading: [yeni emir: TICKER listesi] / [kapatılan: TICKER listesi] / [değişiklik yok]
 ⚠️ Uyarılar: [başarısız kaynaklar, atlanan ticker'lar, eksik OHLC]
