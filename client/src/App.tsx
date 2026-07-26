@@ -9,7 +9,9 @@ import { useDashboardLayout } from '@/features/dashboard/useDashboardLayout'
 import { DashboardWidgetControls } from '@/features/dashboard/DashboardWidgetControls'
 
 export default function App() {
-  if (window.location.pathname === '/admin') return <AdminPage />
+  // Normalize path so /admin, /admin/, and //admin/ all resolve to the admin page.
+  if (window.location.pathname.replace(/\/+$/, '').replace(/\/+/g, '/') === '/admin')
+    return <AdminPage />
 
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
   const { items, layout, addWidget, removeWidget, onLayoutChange, resetLayout, saveLayout } =
