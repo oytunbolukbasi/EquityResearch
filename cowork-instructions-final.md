@@ -23,12 +23,47 @@ Bu bir finansal veri güncelleme görevidir: gerçek veri çek → istenen JSON'
 
 **Fallback sırası (her kaynakta en fazla 2 deneme):**
 1. yfinance MCP
-2. Twelve Data time_series (BIST için `TICKER:BIST`, ABD için `TICKER`)
+2. yfinance yoksa/çökmüşse **borsaya göre böl** (2026-07 tarihinde sahada doğrulandı):
+   - **ABD fiyat/OHLC** → Twelve Data `get_time_series` (sembol olduğu gibi, `outputsize` ile
+     60+ bar çekilebilir). ÇALIŞIR.
+   - **BIST fiyat/OHLC** → BIST-native sağlayıcı `historicalData` (ac443cbd MCP; sembol `.IS`'siz,
+     `rawBars=true` ile günlük OHLC döner). ÇALIŞIR. *(Twelve Data'nın ücretsiz planında BIST kapalı.)*
+   - **Analist hedefi/rating** → TEK web_search (Twelve Data `price_target` ve FMP `quote`
+     ücretli planlarda; ücretsiz planda kapalı).
 3. TEK BİR web_search (örn. `"THYAO hisse fiyatı bugün"`) — net sayı yoksa DUR
 4. Veri noktasını atla, ADIM 7'de `⚠️ [TICKER] atlandı` logla
 
-Bir ticker için toplam bütçe: 2 yfinance + 2 Twelve Data + 1 web_search. Fazlası yasak.
+Bir ticker için toplam bütçe: 2 yfinance + 2 alternatif kaynak + 1 web_search. Fazlası yasak.
 Matriks AI KULLANILMIYOR — araç listende görünse bile çağırma.
+
+> **yfinance hafta sonu tuzağı:** Hafta sonu/tatilde yfinance çoklu-gün ABD isteklerinde son bara
+> `null` OHLC ekleyip **tüm cevabı** şema hatasıyla reddedebilir (`data/result/N must be number`).
+> Çözüm: o ticker'ı `period: 1d` ile tek bar olarak çek, ya da alternatif kaynağa geç.
+
+---
+
+## KAYNAK SAĞLIĞI / SORUN GİDERME
+
+**yfinance MCP "Failed to connect" veriyorsa** (yerel stdio sunucu:
+`~/.local/bin/mcp-yfinance-wrapper.sh` → `uvx mcp-server-yfinance`):
+
+`mcp-server-yfinance` pre-release bir pakettir ve bağımlılıklarını eksik bildirir. 2026-07'de
+çözülen üç sorun ve kalıcı düzeltme:
+- Eksik bağımlılıklar → `--with pydantic-settings --with fastmcp` elle eklenir.
+- Python 3.11'de `typing.TypedDict` + pydantic 2.13 çakışır → `--python 3.12` kullanılır.
+- `0.1.0a0` alfası bozuk entry-point içerir (uvx bazen onu çeker) → sürüm `0.1.0.dev44`'e sabitlenir.
+
+Wrapper'ın çalışan hali:
+```sh
+exec ~/.local/bin/uvx --python 3.12 \
+  --with pydantic-settings --with fastmcp \
+  mcp-server-yfinance==0.1.0.dev44 "$@"
+```
+Sağlık testi: `claude mcp list | grep yfinance` → `✔ Connected`. Wrapper değiştikten sonra
+**Claude Code yeniden başlatılmalı** (oturum içinde düşen MCP otomatik geri gelmez).
+
+**Genel kural:** Bir kaynak kesildiğinde panik yok — yukarıdaki borsa-bazlı fallback'i uygula,
+hangi kaynağın kullanıldığını ADIM 7 `⚠️ Uyarılar` satırında belirt, **asla fiyat uydurma**.
 
 ---
 
