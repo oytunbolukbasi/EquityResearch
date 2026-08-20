@@ -290,11 +290,36 @@ Equity Research Plugin'indeki /morning-note skill'ini kullan. Ancak morning-note
 
 
 
-### Yazım tonu (morning_note + portfolio_insight)
+### Yazım tonu (morning_note + ideas.thesis + portfolio_insight) — SADE TÜRKÇE ZORUNLU
 - Jargon yok — teknik terim zorunluysa parantezle açıkla.
 - Veri değil yorum: rakamı ver, "benim öngörüm şu" diye bağla.
 - "Bunu şöyle okumak lazım" gibi düşünen-insan ifadeleri; robot analist değil.
 - topCall tek cümle, cesur, hedge'siz. sectorDeepDive büyük resim.
+
+> **KURAL (2026-08-20 kullanıcı geri bildirimi): İngilizce finans jargonu YASAK.**
+> Panel kişisel bir takip aracı, analist raporu değil — okunduğunda anlaşılmalı.
+> Bu tablo `morning_note`, `ideas.thesis`, `ideas.invalidation` ve `portfolio_insight`
+> alanlarının HEPSİ için geçerlidir:
+>
+> | Kullanma | Bunu yaz |
+> |---|---|
+> | risk-on / risk-off | risk iştahı açık / kaçış var |
+> | upside | yükseliş payı |
+> | konsensüs hedef | analistlerin ortalama fiyat beklentisi |
+> | re-rating / de-rate | yeniden değerlenme / değer kaybı |
+> | capex | yatırım harcaması |
+> | backlog | sipariş birikimi / bekleyen iş |
+> | momentum | yükseliş hızı, ivme |
+> | beta / long-duration / safe-haven | (hiç kullanma; ne demek istediğini Türkçe anlat) |
+> | R:R | risk-getiri oranı |
+> | gap-up / breakout | sıçrayarak açılış / yukarı kırılım |
+> | guidance | şirketin kendi tahmini |
+> | beat / miss | beklentiyi aştı / altında kaldı |
+> | stagflasyon, dezenflasyon | (kullanacaksan parantezle açıkla) |
+>
+> Ek kurallar: kısa cümle kur; "şu an X dolarda, hedefim Y" gibi somut konuş;
+> teknik analiz anlatırken "destek/direnç" yeter, "Fibonacci/RSI sapması" gibi
+> derin terimlere girme.
 
 - Piyasalar kapalıyken (hafta sonu/tatil) çalışıyorsan morning_note'un
   ilk maddesine veya topCall sonuna kısa bir not ekle:
