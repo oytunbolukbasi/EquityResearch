@@ -153,6 +153,27 @@ yoksa boş bırak"ı tam tarama yapmadan bir kaçış olarak kullanma. Sonucu ik
 
 Yeni fikir taramasında Equity Research Plugin'indeki /idea-generation skill'ini kullan. Ancak idea-generation çıktıları panel için tasarlanmış  json output formatında olsun. 
 
+> ### ⚠️ UYARI — SKILL'İ FİİLEN ÇAĞIR, EZBERDEN UYGULAMA
+> (2026-08-26'da tespit edildi ve kullanıcıyla mutabık kalındı.)
+>
+> Bu dosyanın altında idea-generation iş akışının **tam metni kopyalanmış durumda**.
+> Bu bir tuzak: metin gözünün önünde olduğu için skill'i çağırmadan "zaten biliyorum"
+> deyip devam etmek çok kolay — nitekim 20 Ağustos'a kadar tam olarak bu yapıldı.
+>
+> **Kural: her taramada `Skill(equity-research:idea-generation)` aracını GERÇEKTEN çağır.**
+> Aynısı ADIM 4 için `equity-research:morning-note` skill'inde de geçerli.
+>
+> **Neden önemli — ezberden uygulayınca atlanan adımlar:**
+> - **Elenen adayları da göster.** Sadece seçilen fikri sunmak yetmez; hangi isimlere
+>   bakıldığı ve neden elendiği ADIM 7 raporunda karşılaştırma tablosu olarak verilir.
+>   Kullanıcı böylece taramanın gerçekten yapıldığını görür.
+> - **Karşılaştırma tablosu zorunlu** (aday · fiyat · analist ortalaması · yükseliş payı ·
+>   eleme gerekçesi).
+> - **Tarama isabet oranını takip et** — hangi yaklaşımın işe yaradığını zamanla izle.
+> - Skill "taramalar aday üretir, sonuç üretmez" diyor: her aday için temel çalışma şart.
+>
+> Bu uyarı, "0 fikir çıktı" dendiği günlerde de geçerli — eleme tablosu yine sunulur.
+
 > **NOT — `/screen` = `/idea-generation` kısayolu.** `commands/screen.md`, doğrudan
 > `idea-generation` skill'ini yükler; ayrı bir metodolojisi yoktur. Bu adım zaten aynı
 > workflow'u kullanır, dolayısıyla ekstra bir "screen" talimatına gerek yok.
