@@ -419,6 +419,26 @@ GET `https://equityresearch-production.up.railway.app/api/portfolio/insight` (ö
 
 > `YKT` = TEFAS altın fonu — TP/SL üretme, altın/emtia teması olarak değerlendir.
 
+> ### ⚠️ UYARI — "FİKİR" İLE "POZİSYON"U BİRBİRİNE KARIŞTIRMA
+> (2026-08-28'de kullanıcı uyardı; daha önce de tekrarlanmıştı.)
+>
+> Panelde iki ayrı liste var ve **kesişmeleri şart değil**:
+> - **`ideas` / `trade_plans`** = araştırma fikirleri. Kullanıcı bunlara girmemiş olabilir.
+> - **`/api/portfolio/summary`** = kullanıcının GERÇEKTEN sahip olduğu pozisyonlar.
+>
+> **Kurallar:**
+> 1. `portfolio_insight.actions` **yalnızca** portfolio API'sinden dönen sembolleri içerir.
+>    Panelde fikir olup portföyde olmayan bir ticker'a aksiyon yazma.
+> 2. `morning_note` metinlerinde panel fikirlerinden bahsederken "pozisyonun",
+>    "kârın", "kâr al" gibi sahiplik ima eden ifadeler KULLANMA. Doğrusu:
+>    "panelde takip ettiğimiz fikir", "hedefe yaklaştı", "Geçmiş sekmesine düşecek".
+> 3. Bir fikre girilip girilmediğini uydurma — portfolio API'sinde sembol yoksa
+>    kullanıcı o pozisyonda DEĞİLDİR. (Ör. 2026-08 itibarıyla NVDA ve ASTOR panelde
+>    fikir, portföyde yok; AEM ve CRM hedefi vurdu ama alım bandına dönmediği için
+>    fiilen girilememişti — bunlar "kâğıt üzerinde" kazançtır, öyle raporlanır.)
+> 4. JSON'u göndermeden önce denetle: aksiyon listesindeki semboller kümesi,
+>    portfolio API'sindeki sembol kümesine **birebir eşit** olmalı.
+
 **Tematik rotasyon çerçevesi** (ADIM 2 haberlerini kullan):
 Hangi temalar güçleniyor/zayıflıyor? Her pozisyon hangi temada? Konsantrasyon riski (tek pozisyon/tema >%25)? TL-USD ve büyüme-savunma dengesi?
 
