@@ -218,6 +218,50 @@ html[data-density='compact'] {
   padding-bottom: var(--rowpad);
 }
 
+/* ── pinned table columns ───────────────────────────────────────────────── */
+
+/*
+  The portfolio table carries eight columns and lives in a panel the user can
+  narrow to 25%. Without pinning, the row actions (Düzenle / Sat / Sil) end up
+  laid out past the panel's right edge — present in the DOM, invisible on
+  screen, and a click there lands on whatever panel is painted behind. Pinning
+  keeps the identity column and the actions reachable at any width.
+
+  Backgrounds are set explicitly rather than inherited: a transparent pinned
+  cell would let the scrolling columns show through underneath it.
+*/
+.eqr-pin-l,
+.eqr-pin-r {
+  position: sticky;
+  background: var(--card);
+}
+
+.eqr-pin-l {
+  left: 0;
+  z-index: 1;
+}
+
+.eqr-pin-r {
+  right: 0;
+  z-index: 1;
+  border-left: 1px solid var(--faint2);
+}
+
+/* Header corners sit above both the pinned column and the sticky header row. */
+thead .eqr-pin-l,
+thead .eqr-pin-r {
+  z-index: 3;
+}
+
+/* Follow the row's own hover/selected fill so the pinned cells don't stay
+   card-coloured while the rest of the row lights up. */
+tr:hover .eqr-pin-l,
+tr:hover .eqr-pin-r,
+tr[data-selected='true'] .eqr-pin-l,
+tr[data-selected='true'] .eqr-pin-r {
+  background: var(--bg);
+}
+
 /* ── header logo ────────────────────────────────────────────────────────── */
 
 /* One turn on load — the EQR bot's greeting. */

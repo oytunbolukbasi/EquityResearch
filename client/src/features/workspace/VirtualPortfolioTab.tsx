@@ -664,14 +664,14 @@ export function VirtualPortfolioTab() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <SortableTh label="Varlık" sortKey="symbol" sort={openSort} onSort={sortOpen} align="left" className="pr-3 pl-[18px]" />
+                <SortableTh label="Varlık" sortKey="symbol" sort={openSort} onSort={sortOpen} align="left" className="eqr-pin-l pr-3 pl-[18px]" />
                 <SortableTh label="Adet" sortKey="quantity" sort={openSort} onSort={sortOpen} className="px-2" />
                 <SortableTh label="Alış" sortKey="buyPrice" sort={openSort} onSort={sortOpen} className="px-2" />
                 <SortableTh label="Güncel" sortKey="currentPrice" sort={openSort} onSort={sortOpen} className="px-2" />
                 <SortableTh label="Değer" sortKey="currentValue" sort={openSort} onSort={sortOpen} className="px-2" />
                 <SortableTh label="K/Z" sortKey="plAmount" sort={openSort} onSort={sortOpen} className="px-2" />
                 <SortableTh label="K/Z %" sortKey="plPercent" sort={openSort} onSort={sortOpen} className="px-2" />
-                <th className={`${TH} pr-[18px] pl-2 text-right`}>İşlem</th>
+                <th className={`${TH} eqr-pin-r pr-[18px] pl-2 text-right`}>İşlem</th>
               </tr>
             </thead>
             <tbody>
@@ -680,10 +680,11 @@ export function VirtualPortfolioTab() {
                 return (
                   <tr
                     key={p.id}
+                    data-selected={selectedId === p.id}
                     className="border-faint2 hover:bg-bg border-b"
-                    style={{ background: selectedId === p.id ? 'var(--bg)' : 'transparent' }}
+                    style={{ background: selectedId === p.id ? 'var(--bg)' : 'var(--card)' }}
                   >
-                    <td className="pr-3 pl-[18px]">
+                    <td className="eqr-pin-l pr-3 pl-[18px]">
                       <div className="text-[13px] font-semibold">{p.symbol}</div>
                       <div className="text-mid text-[11px]">
                         {TYPE_LABEL[p.type] ?? p.type}
@@ -712,7 +713,7 @@ export function VirtualPortfolioTab() {
                     >
                       {fmtPct(p.plPercent)}
                     </td>
-                    <td className="pr-[18px] pl-2">
+                    <td className="eqr-pin-r pr-[18px] pl-2">
                       <div className="flex justify-end gap-1.5 whitespace-nowrap">
                         <RowButton
                           onClick={() => {
@@ -747,22 +748,22 @@ export function VirtualPortfolioTab() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              <SortableTh label="Varlık" sortKey="symbol" sort={closedSort} onSort={sortClosed} align="left" className="pr-3 pl-[18px]" />
+              <SortableTh label="Varlık" sortKey="symbol" sort={closedSort} onSort={sortClosed} align="left" className="eqr-pin-l pr-3 pl-[18px]" />
               <SortableTh label="Adet" sortKey="quantity" sort={closedSort} onSort={sortClosed} className="px-2" />
               <SortableTh label="Alış" sortKey="buyPrice" sort={closedSort} onSort={sortClosed} className="px-2" />
               <SortableTh label="Satış" sortKey="sellPrice" sort={closedSort} onSort={sortClosed} className="px-2" />
               <SortableTh label="K/Z" sortKey="pl" sort={closedSort} onSort={sortClosed} className="px-2" />
               <SortableTh label="K/Z %" sortKey="plPercent" sort={closedSort} onSort={sortClosed} className="px-2" />
               <SortableTh label="Tarih" sortKey="sellDate" sort={closedSort} onSort={sortClosed} className="px-2" />
-              <th className={`${TH} pr-[18px] pl-2 text-right`}>İşlem</th>
+              <th className={`${TH} eqr-pin-r pr-[18px] pl-2 text-right`}>İşlem</th>
             </tr>
           </thead>
           <tbody>
             {sortedClosed.map((c) => {
               const unit = UNIT_FOR_TYPE[c.type] ?? ''
               return (
-              <tr key={c.id} className="border-faint2 hover:bg-bg border-b">
-                <td className="pr-3 pl-[18px]">
+              <tr key={c.id} className="border-faint2 hover:bg-bg border-b" style={{ background: 'var(--card)' }}>
+                <td className="eqr-pin-l pr-3 pl-[18px]">
                   <div className="text-[13px] font-semibold">{c.symbol}</div>
                   <div className="text-mid text-[11px]">
                     {TYPE_LABEL[c.type] ?? c.type}
@@ -787,7 +788,7 @@ export function VirtualPortfolioTab() {
                 <td className="num text-mid px-2 text-right whitespace-nowrap">
                   {c.sellDate.slice(0, 10)}
                 </td>
-                <td className="pr-[18px] pl-2">
+                <td className="eqr-pin-r pr-[18px] pl-2">
                   <div className="flex justify-end">
                     <RowButton onClick={() => removeClosed(c)} danger>
                       Sil
