@@ -164,7 +164,9 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 - [x] Zamanlayıcı 09:00 / 10:00 TR, hafta içi (`price-scheduler.ts` — node-cron yerine
       ~30 satırlık dakika-tick'i; bağımlılık eklenmedi)
 - [x] Elle "Fiyatları yenile" butonu (tek pozisyon + toplu) + bayatlık göstergesi
-- [ ] **Railway env: `SCRAPER_API_KEY`, `SHEETS_PRICE_URL`** ← kullanıcıda
+- [x] Railway env: `SCRAPER_API_KEY`, `SHEETS_PRICE_URL` girildi ve doğrulandı
+      (YKT fon fiyatı canlıda çekildi; yeni açılan TSKB pozisyonu sembol kaydı
+      üzerinden fiyat aldı — uçtan uca çalışıyor)
 - [ ] **Doğrulama:** iki app bir hafta paralel çalışır, fiyatlar karşılaştırılır
 
 **Faz 2 testleri**
@@ -184,6 +186,18 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 - [ ] PortfoyTakip Railway servisi durdurulur
 - [ ] Repo arşivlenir
 - [ ] EQR `CLAUDE.md` güncellenir (portföy artık salt-okunur değil)
+
+### Faz 3.5 — Tablo tamamlama (istek üzerine, tamamlandı)
+- [x] Açık pozisyonlar tablosu eski app'le birebir: Varlık · Adet · Alış · Güncel ·
+      Değer · K/Z · K/Z % · İşlem
+- [x] Kapanan tablosu da aynı derinlikte: Alış, K/Z tutarı ve tarih eklendi
+- [x] Sütun başlıklarından sıralama — sayısal sütunlar ilk tıklamada büyükten küçüğe,
+      Varlık A→Z; tekrar tıklamada yön değişir. Metin sıralaması Türkçe alfabeye göre
+      (`localeCompare(tr)`), böylece İ/ı/ş/ğ beklenen yerde
+- [x] Değeri olmayan satırlar (fiyatı çözülmemiş) her iki yönde de dibe iner —
+      eksik veri, en küçük değer değil
+- [x] `virtual` sekmesinin varsayılan bölünmesi %75 (tablo sekiz sütun, form tek kolon)
+- [x] Fon birimi düzeltildi: TEFAS fonları da TL, artık ₺ ile gösteriliyor
 
 ### Faz 4 — İsteğe bağlı
 - [ ] BIST sembol otomatik tamamlama (`bist_symbols` tablosu zaten dolu)

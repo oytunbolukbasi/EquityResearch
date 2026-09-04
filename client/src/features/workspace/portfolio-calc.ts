@@ -106,8 +106,13 @@ export function plColor(n: number | null | undefined): string {
   return n >= 0 ? 'var(--up)' : 'var(--down)'
 }
 
+/**
+ * Turkish funds are priced in lira just like BIST shares, so they carry the
+ * same symbol — leaving them bare made a fund's value read as unitless next to
+ * ₺ and $ rows.
+ */
 export const UNIT_FOR_TYPE: Record<string, '₺' | '$' | ''> = {
   stock: '₺',
-  fund: '',
+  fund: '₺',
   us_stock: '$',
 }

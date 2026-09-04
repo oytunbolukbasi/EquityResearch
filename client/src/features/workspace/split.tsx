@@ -18,7 +18,14 @@ const MAX_FRAC = 85
 /** Below this the split collapses to one column and every drag interaction is off. */
 export const STACK_QUERY = '(max-width: 800px)'
 
-const DEFAULT_SPLITS: Record<SplitKey, number> = { overview: 50, reader: 25, ideas: 50 }
+// `virtual` opens wide: its table carries eight columns, while the form beside
+// it is a single narrow column.
+const DEFAULT_SPLITS: Record<SplitKey, number> = {
+  overview: 50,
+  reader: 25,
+  ideas: 50,
+  virtual: 75,
+}
 const DEFAULT_SWAPPED: Record<SwapKey, boolean> = { overview: false, ideas: false }
 
 function readStore<T extends object>(key: string, fallback: T): T {

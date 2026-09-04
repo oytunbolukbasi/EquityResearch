@@ -5,7 +5,15 @@ import { useSession } from '@/lib/session'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
-import { fmtMoney, fmtN, fmtPct, fmtQty, plColor, UNIT_FOR_TYPE } from './portfolio-calc'
+import {
+  fmtMoney,
+  fmtN,
+  fmtPct,
+  fmtQty,
+  fmtSignedMoney,
+  plColor,
+  UNIT_FOR_TYPE,
+} from './portfolio-calc'
 
 type ListTab = 'open' | 'closed'
 
@@ -22,6 +30,86 @@ const TYPE_LABEL: Record<string, string> = {
 
 const TH =
   'bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 text-left font-medium whitespace-nowrap'
+
+// ─── sorting ─────────────────────────────────────────────────────────────────
+
+type SortDir = 'asc' | 'desc'
+
+type OpenSortKey =
+  | 'symbol'
+  | 'quantity'
+  | 'buyPrice'
+  | 'currentPrice'
+  | 'currentValue'
+  | 'plAmount'
+  | 'plPercent'
+
+type ClosedSortKey = 'symbol' | 'quantity' | 'buyPrice' | 'sellPrice' | 'pl' | 'plPercent' | 'sellDate'
+
+interface SortState<K extends string> {
+  key: K
+  dir: SortDir
+}
+
+/**
+ * Sorts by the value `pick` returns. Text sorts with Turkish collation, so
+ * İ/ı/ş/ğ land where a Turkish reader expects rather than after z.
+ */
+function sortRows<T, K extends string>(
+  rows: T[],
+  sort: SortState<K>,
+  pick: (row: T, key: K) => string | number | null,
+): T[] {
+  const factor = sort.dir === 'asc' ? 1 : -1
+  return [...rows].sort((a, b) => {
+    const va = pick(a, sort.key)
+    const vb = pick(b, sort.key)
+    // Rows with no value (a price that never resolved) sink to the bottom in
+    // both directions — they are missing data, not the smallest value.
+    if (va == null && vb == null) return 0
+    if (va == null) return 1
+    if (vb == null) return -1
+    if (typeof va === 'string' || typeof vb === 'string') {
+      return String(va).localeCompare(String(vb), 'tr') * factor
+    }
+    return (va - vb) * factor
+  })
+}
+
+function SortableTh<K extends string>({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  align = 'right',
+  className = '',
+}: {
+  label: string
+  sortKey: K
+  sort: SortState<K>
+  onSort: (key: K) => void
+  align?: 'left' | 'right'
+  className?: string
+}) {
+  const active = sort.key === sortKey
+  return (
+    <th className={`${TH} ${className}`}>
+      <button
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex w-full cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-medium transition-colors ${
+          align === 'right' ? 'justify-end' : 'justify-start'
+        }`}
+        style={{ color: active ? 'var(--ink)' : 'inherit', font: 'inherit' }}
+        title={`${label} sütununa göre sırala`}
+      >
+        {label}
+        <span aria-hidden className={active ? '' : 'opacity-0'}>
+          {sort.dir === 'asc' ? '▲' : '▼'}
+        </span>
+      </button>
+    </th>
+  )
+}
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -413,6 +501,32 @@ export function VirtualPortfolioTab() {
   const [refreshing, setRefreshing] = useState(false)
   const [refreshNote, setRefreshNote] = useState<string | null>(null)
 
+  const [openSort, setOpenSort] = useState<SortState<OpenSortKey>>({ key: 'symbol', dir: 'asc' })
+  const [closedSort, setClosedSort] = useState<SortState<ClosedSortKey>>({
+    key: 'sellDate',
+    dir: 'desc',
+  })
+
+  /**
+   * Same column toggles direction; a new column starts in the direction that is
+   * useful for its type — names A→Z, numbers biggest first.
+   */
+  function sortOpen(key: OpenSortKey) {
+    setOpenSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'symbol' ? 'asc' : 'desc' },
+    )
+  }
+
+  function sortClosed(key: ClosedSortKey) {
+    setClosedSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'symbol' ? 'asc' : 'desc' },
+    )
+  }
+
   const reload = useCallback(() => setVersion((v) => v + 1), [])
 
   useEffect(() => {
@@ -450,6 +564,13 @@ export function VirtualPortfolioTab() {
   const positions = summary?.positions ?? []
   const selected = positions.find((p) => p.id === selectedId) ?? null
   const freshness = freshnessLabel(positions)
+
+  const sortedPositions = sortRows(positions, openSort, (p, k) =>
+    k === 'symbol' ? p.symbol : (p[k] as number | null),
+  )
+  const sortedClosed = sortRows(closed ?? [], closedSort, (c, k) =>
+    k === 'symbol' || k === 'sellDate' ? c[k] : (c[k] as number | null),
+  )
 
   async function refreshPrices() {
     setRefreshing(true)
@@ -522,15 +643,18 @@ export function VirtualPortfolioTab() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className={`${TH} pr-3 pl-[18px]`}>Varlık</th>
-                <th className={`${TH} px-3 text-right`}>Adet</th>
-                <th className={`${TH} px-3 text-right`}>Maliyet</th>
-                <th className={`${TH} px-3 text-right`}>K/Z %</th>
-                <th className={`${TH} pr-[18px] pl-3 text-right`}>İşlem</th>
+                <SortableTh label="Varlık" sortKey="symbol" sort={openSort} onSort={sortOpen} align="left" className="pr-3 pl-[18px]" />
+                <SortableTh label="Adet" sortKey="quantity" sort={openSort} onSort={sortOpen} className="px-2" />
+                <SortableTh label="Alış" sortKey="buyPrice" sort={openSort} onSort={sortOpen} className="px-2" />
+                <SortableTh label="Güncel" sortKey="currentPrice" sort={openSort} onSort={sortOpen} className="px-2" />
+                <SortableTh label="Değer" sortKey="currentValue" sort={openSort} onSort={sortOpen} className="px-2" />
+                <SortableTh label="K/Z" sortKey="plAmount" sort={openSort} onSort={sortOpen} className="px-2" />
+                <SortableTh label="K/Z %" sortKey="plPercent" sort={openSort} onSort={sortOpen} className="px-2" />
+                <th className={`${TH} pr-[18px] pl-2 text-right`}>İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {positions.map((p) => {
+              {sortedPositions.map((p) => {
                 const unit = UNIT_FOR_TYPE[p.type] ?? ''
                 return (
                   <tr
@@ -545,17 +669,29 @@ export function VirtualPortfolioTab() {
                         {p.name ? ` · ${p.name}` : ''}
                       </div>
                     </td>
-                    <td className="num px-3 text-right whitespace-nowrap">{fmtQty(p.quantity)}</td>
-                    <td className="num px-3 text-right whitespace-nowrap">
+                    <td className="num px-2 text-right whitespace-nowrap">{fmtQty(p.quantity)}</td>
+                    <td className="num px-2 text-right whitespace-nowrap">
                       {fmtMoney(p.buyPrice, unit)}
                     </td>
+                    <td className="num px-2 text-right whitespace-nowrap">
+                      {fmtMoney(p.currentPrice, unit)}
+                    </td>
+                    <td className="num px-2 text-right whitespace-nowrap">
+                      {fmtMoney(p.currentValue, unit, 0)}
+                    </td>
                     <td
-                      className="num px-3 text-right whitespace-nowrap"
+                      className="num px-2 text-right font-medium whitespace-nowrap"
+                      style={{ color: plColor(p.plAmount) }}
+                    >
+                      {fmtSignedMoney(p.plAmount, unit)}
+                    </td>
+                    <td
+                      className="num px-2 text-right whitespace-nowrap"
                       style={{ color: plColor(p.plPercent) }}
                     >
                       {fmtPct(p.plPercent)}
                     </td>
-                    <td className="pr-[18px] pl-3">
+                    <td className="pr-[18px] pl-2">
                       <div className="flex justify-end gap-1.5 whitespace-nowrap">
                         <RowButton
                           onClick={() => {
@@ -590,29 +726,47 @@ export function VirtualPortfolioTab() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th className={`${TH} pr-3 pl-[18px]`}>Varlık</th>
-              <th className={`${TH} px-3 text-right`}>Adet</th>
-              <th className={`${TH} px-3 text-right`}>Satış</th>
-              <th className={`${TH} px-3 text-right`}>K/Z %</th>
-              <th className={`${TH} pr-[18px] pl-3 text-right`}>İşlem</th>
+              <SortableTh label="Varlık" sortKey="symbol" sort={closedSort} onSort={sortClosed} align="left" className="pr-3 pl-[18px]" />
+              <SortableTh label="Adet" sortKey="quantity" sort={closedSort} onSort={sortClosed} className="px-2" />
+              <SortableTh label="Alış" sortKey="buyPrice" sort={closedSort} onSort={sortClosed} className="px-2" />
+              <SortableTh label="Satış" sortKey="sellPrice" sort={closedSort} onSort={sortClosed} className="px-2" />
+              <SortableTh label="K/Z" sortKey="pl" sort={closedSort} onSort={sortClosed} className="px-2" />
+              <SortableTh label="K/Z %" sortKey="plPercent" sort={closedSort} onSort={sortClosed} className="px-2" />
+              <SortableTh label="Tarih" sortKey="sellDate" sort={closedSort} onSort={sortClosed} className="px-2" />
+              <th className={`${TH} pr-[18px] pl-2 text-right`}>İşlem</th>
             </tr>
           </thead>
           <tbody>
-            {closed.map((c) => (
-              <tr key={`${c.symbol}-${c.sellDate}-${c.sellPrice}`} className="border-faint2 hover:bg-bg border-b">
+            {sortedClosed.map((c) => {
+              const unit = UNIT_FOR_TYPE[c.type] ?? ''
+              return (
+              <tr key={c.id} className="border-faint2 hover:bg-bg border-b">
                 <td className="pr-3 pl-[18px]">
                   <div className="text-[13px] font-semibold">{c.symbol}</div>
-                  <div className="num text-mid text-[11px]">{c.sellDate.slice(0, 10)}</div>
+                  <div className="text-mid text-[11px]">
+                    {TYPE_LABEL[c.type] ?? c.type}
+                    {c.name ? ` · ${c.name}` : ''}
+                  </div>
                 </td>
-                <td className="num px-3 text-right whitespace-nowrap">{fmtQty(c.quantity)}</td>
-                <td className="num px-3 text-right whitespace-nowrap">{fmtN(c.sellPrice, 2)}</td>
+                <td className="num px-2 text-right whitespace-nowrap">{fmtQty(c.quantity)}</td>
+                <td className="num px-2 text-right whitespace-nowrap">{fmtMoney(c.buyPrice, unit)}</td>
+                <td className="num px-2 text-right whitespace-nowrap">{fmtMoney(c.sellPrice, unit)}</td>
                 <td
-                  className="num px-3 text-right whitespace-nowrap"
+                  className="num px-2 text-right font-medium whitespace-nowrap"
+                  style={{ color: plColor(c.pl) }}
+                >
+                  {fmtSignedMoney(c.pl, unit)}
+                </td>
+                <td
+                  className="num px-2 text-right whitespace-nowrap"
                   style={{ color: plColor(c.pl) }}
                 >
                   {fmtPct(c.plPercent)}
                 </td>
-                <td className="pr-[18px] pl-3">
+                <td className="num text-mid px-2 text-right whitespace-nowrap">
+                  {c.sellDate.slice(0, 10)}
+                </td>
+                <td className="pr-[18px] pl-2">
                   <div className="flex justify-end">
                     <RowButton onClick={() => removeClosed(c)} danger>
                       Sil
@@ -620,7 +774,8 @@ export function VirtualPortfolioTab() {
                   </div>
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       )}
