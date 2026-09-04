@@ -5,6 +5,7 @@ import { db } from '../db/client'
 import { portfolioInsights } from '../db/schema'
 import { portfolioRepo } from '../db/portfolio-client'
 import { getExchangeRate } from '../services/exchange-rate'
+import { fetchSharePrices } from '../services/price-source'
 
 export const portfolioRouter = Router()
 
@@ -54,6 +55,43 @@ portfolioRouter.get('/summary', async (_req, res) => {
   })
 
   res.json({ positions: enriched, usdTryRate, usdTryRateIsFallback })
+})
+
+/**
+ * GET /api/portfolio/price-source — can this server actually reach the price sheet?
+ *
+ * Exists because a refresh that returns "0 updated, 17 skipped" looks identical
+ * whether the sheet is empty, the URL is unset, or the host can't reach Google —
+ * and the same code path worked locally while failing in production, which is
+ * exactly the case that needs an answer from the deployed server itself.
+ *
+ * Public on purpose so it can be checked without a session, and deliberately
+ * says nothing sensitive: no URL, no prices, just reachability and a count.
+ */
+portfolioRouter.get('/price-source', async (_req, res) => {
+  const configured = Boolean(process.env.SHEETS_PRICE_URL)
+  if (!configured) {
+    res.json({ configured: false, ok: false, symbolCount: 0, error: 'SHEETS_PRICE_URL yok' })
+    return
+  }
+  const started = Date.now()
+  try {
+    const prices = await fetchSharePrices(true)
+    res.json({
+      configured: true,
+      ok: Object.keys(prices).length > 0,
+      symbolCount: Object.keys(prices).length,
+      ms: Date.now() - started,
+    })
+  } catch (e) {
+    res.json({
+      configured: true,
+      ok: false,
+      symbolCount: 0,
+      ms: Date.now() - started,
+      error: e instanceof Error ? e.message : String(e),
+    })
+  }
 })
 
 // GET /api/portfolio/closed — closed positions, newest sell first.

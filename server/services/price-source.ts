@@ -54,7 +54,9 @@ export async function fetchSharePrices(force = false): Promise<Record<string, nu
     cache = { at: Date.now(), prices }
     return prices
   } catch (e) {
-    console.warn('fetchSharePrices failed —', e)
+    // Loud, because the symptom downstream is a silent "0 updated": every
+    // symbol gets skipped and nothing says why.
+    console.error('[price] hisse fiyatları alınamadı —', e)
     return cache?.prices ?? {}
   }
 }
