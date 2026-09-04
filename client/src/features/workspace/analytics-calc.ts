@@ -52,6 +52,13 @@ export interface Analytics {
   openCount: number
   closedCountLifetime: number
   closedCountPeriod: number
+  /**
+   * Positions OPENED inside the range — still-open ones plus any already sold
+   * again. A position bought and closed in the same month was still opened that
+   * month, so counting only the open ones would under-report the activity the
+   * period strip is there to summarise.
+   */
+  openedCountPeriod: number
   winners: number
   losers: number
   /** Winners as a share of decided trades, null until at least one is closed. */
@@ -114,12 +121,19 @@ export function computeAnalytics(
   const realizedOf = (rows: PortfolioClosedPosition[]) =>
     rows.reduce((sum, c) => sum + (c.type === 'us_stock' ? c.pl * liveRate : c.pl), 0)
 
-  const inRange = closed.filter((c) => {
-    const day = c.sellDate.slice(0, 10)
+  // Dates arrive as 'YYYY-MM-DD...' strings; comparing the day part as text is
+  // exact and avoids a timezone round-trip through Date.
+  const dayInRange = (stamp: string) => {
+    const day = stamp.slice(0, 10)
     if (range.from && day < range.from) return false
     if (range.to && day > range.to) return false
     return true
-  })
+  }
+
+  const inRange = closed.filter((c) => dayInRange(c.sellDate))
+  const openedCountPeriod =
+    positions.filter((p) => dayInRange(p.buyDate)).length +
+    closed.filter((c) => dayInRange(c.buyDate)).length
 
   const realizedLifetime = realizedOf(closed)
   const realizedPeriod = realizedOf(inRange)
@@ -180,6 +194,7 @@ export function computeAnalytics(
     openCount: positions.length,
     closedCountLifetime: closed.length,
     closedCountPeriod: inRange.length,
+    openedCountPeriod,
     winners,
     losers,
     // Break-even trades are excluded from the denominator: they decided

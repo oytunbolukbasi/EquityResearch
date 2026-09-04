@@ -57,7 +57,7 @@ export function Panel({
 export function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="num shrink-0 rounded-[5px] px-[7px] py-[3px] text-[11px]"
+      className="num shrink-0 rounded-[5px] px-[7px] py-[3px] text-[12px]"
       style={{ background: 'var(--neutral-tint)', color: 'var(--mid)' }}
     >
       {children}
@@ -70,18 +70,24 @@ export function TabHeading({
   title,
   subtitle,
   right,
+  below,
 }: {
   title: string
   subtitle?: string
   right?: React.ReactNode
+  /** Full-width strip under the title row, inside the heading's own spacing. */
+  below?: React.ReactNode
 }) {
   return (
-    <div className="mb-5 flex items-end justify-between gap-3">
-      <div>
-        <h1 className="m-0 text-[26px] leading-[1.25] font-medium tracking-[-1px]">{title}</h1>
-        {subtitle && <p className="text-mid mt-[5px] mb-0 text-xs">{subtitle}</p>}
+    <div className="mb-5">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="m-0 text-[26px] leading-[1.25] font-medium tracking-[-1px]">{title}</h1>
+          {subtitle && <p className="text-mid mt-[5px] mb-0 text-xs">{subtitle}</p>}
+        </div>
+        {right}
       </div>
-      {right}
+      {below && <div className="mt-3">{below}</div>}
     </div>
   )
 }

@@ -94,7 +94,7 @@ export function PillTabs<T extends string>({
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
-            className="cursor-pointer rounded-full border px-3 py-1 text-[11px] font-medium transition-colors"
+            className="cursor-pointer rounded-full border px-3 py-1 text-[12px] font-medium transition-colors"
             style={{
               borderColor: on ? 'var(--info)' : 'var(--faint)',
               background: on ? 'var(--info-tint)' : 'transparent',

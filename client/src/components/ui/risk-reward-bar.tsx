@@ -42,7 +42,7 @@ export function RiskRewardBar({
     <div className={`group flex flex-col items-center gap-1 shrink-0 ${className}`} title={tooltip}>
       {/* R:R badge */}
       {rr != null && (
-        <span className="num rounded-full bg-faint2 px-1.5 py-px text-[9px] font-semibold leading-tight text-mid">
+        <span className="num rounded-full bg-faint2 px-1.5 py-px text-[11px] font-semibold leading-tight text-mid">
           1:{rr.toFixed(1)}
         </span>
       )}

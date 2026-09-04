@@ -67,7 +67,7 @@ export function PulseTab({
           className="text-mid hover:text-info block w-full cursor-pointer border-0 bg-transparent py-2.5 text-left text-xs leading-[1.6] transition-colors"
         >
           {s.kicker && (
-            <small className="text-mid mb-[3px] block text-[11px]">{s.kicker}</small>
+            <small className="text-mid mb-[3px] block text-[12px]">{s.kicker}</small>
           )}
           {s.label}
         </button>
@@ -83,7 +83,7 @@ export function PulseTab({
     >
       <header className="mb-7">
         <span
-          className="text-[11px] font-medium tracking-[0.7px]"
+          className="text-[12px] font-medium tracking-[0.7px]"
           style={{ color: 'var(--warn)' }}
         >
           EQR / GÜNLÜK ARAŞTIRMA
@@ -91,7 +91,7 @@ export function PulseTab({
         <h1 className="mt-[11px] mb-2.5 text-[29px] leading-[1.25] font-medium tracking-[-1px]">
           Piyasa Nabzı
         </h1>
-        <div className="text-mid num flex flex-wrap gap-3.5 text-[11px]">
+        <div className="text-mid num flex flex-wrap gap-3.5 text-[12px]">
           <span>{fmtNoteDate(note?.date)}</span>
           <span>{note ? `${readMinutes(note)} dk okuma` : ''}</span>
         </div>
@@ -100,7 +100,7 @@ export function PulseTab({
       {sections.map((s, i) => (
         <section key={s.id} data-sec={s.id} className="my-[18px] mb-[26px]">
           {s.id !== 'main' && (
-            <span className="text-mid num text-[11px]">
+            <span className="text-mid num text-[12px]">
               {s.id === 'sector' ? 'Sektör odağı' : String(i).padStart(2, '0')}
             </span>
           )}
@@ -141,7 +141,7 @@ export function PulseTab({
           >
             ›
           </StepButton>
-          <span className="text-mid num ml-1.5 text-[11px]">
+          <span className="text-mid num ml-1.5 text-[12px]">
             {safeIndex + 1}/{notes.length}
           </span>
         </div>

@@ -94,7 +94,7 @@ function KpiBar({ items }: { items: KpiItem[] }) {
     <div className="mb-3 flex overflow-hidden rounded-lg border border-faint2 divide-x divide-faint2">
       {items.map(({ label, value, colorClass = 'text-ink' }, i) => (
         <div key={i} className="flex-1 px-4 py-2.5 min-w-0">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-mid leading-none truncate">
+          <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.06em] text-mid leading-none truncate">
             {label}
           </p>
           <p className={`num text-base font-semibold leading-none ${colorClass}`}>{value}</p>
@@ -267,7 +267,7 @@ function Th({ children, align = 'right' }: { children?: React.ReactNode; align?:
   return (
     <th
       className={[
-        'px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-mid whitespace-nowrap',
+        'px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-mid whitespace-nowrap',
         align === 'left' ? 'text-left' : 'text-right',
       ].join(' ')}
     >
@@ -313,7 +313,7 @@ function ActivePositionsTable({
             >
               <td className="py-3 pl-3 pr-3">
                 <div className="text-sm font-semibold text-ink">{p.symbol}</div>
-                <div className="num text-[10px] text-mid">{p.exchange}</div>
+                <div className="num text-[12px] text-mid">{p.exchange}</div>
               </td>
               <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">{p.qty}</td>
               <td className="num px-3 py-3 text-right text-xs whitespace-nowrap">${fmtUsd(parseFloat(p.avg_entry_price))}</td>

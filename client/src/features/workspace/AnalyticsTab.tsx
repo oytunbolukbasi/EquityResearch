@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import { CalendarDays } from 'lucide-react'
 
 import type { PortfolioClosedPosition, PortfolioSummary } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice } from './shared'
-import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
+import {
+  DateRangePicker,
+  formatRange,
+  rangePreset,
+  type DateRange,
+} from '@/components/ui/date-range-picker'
 import { computeAnalytics, type Analytics } from './analytics-calc'
 import { fmtMoney, fmtPct, fmtSignedMoney, plColor } from './portfolio-calc'
 
@@ -14,6 +20,13 @@ const TYPE_COLOR: Record<string, string> = {
   stock: 'var(--info)',
   us_stock: 'var(--up)',
   fund: 'var(--warn)',
+}
+
+/** The legend wants a word, not a phrase — the full label is in the rows below. */
+const TYPE_SHORT: Record<string, string> = {
+  stock: 'BİST',
+  us_stock: 'ABD',
+  fund: 'Fon',
 }
 
 function Row({
@@ -33,7 +46,7 @@ function Row({
     <div className="border-faint2 flex items-baseline justify-between gap-3 border-b py-2.5 last:border-b-0">
       <div>
         <span className={strong ? 'text-[13px] font-medium' : 'text-mid text-[13px]'}>{label}</span>
-        {hint && <span className="text-mid ml-1.5 text-[11px]">{hint}</span>}
+        {hint && <span className="text-mid ml-1.5 text-[12px]">{hint}</span>}
       </div>
       <span
         className={`num shrink-0 whitespace-nowrap ${strong ? 'text-[17px] font-semibold' : 'text-[14px] font-medium'}`}
@@ -46,40 +59,102 @@ function Row({
 }
 
 /**
- * Half-circle allocation arc. Each slice is drawn as the same path with a
- * dash offset, so the segments meet exactly without gap-filling maths.
+ * Allocation as one stacked bar.
+ *
+ * Replaced a half-donut arc, whose height scaled with the panel's WIDTH rather
+ * than with the data: at 50–75% it grew past 400px to carry three numbers. A
+ * bar costs ~45px at any width, and its legend gives the share percentages a
+ * place of their own instead of the grey sub-line they were buried in.
  */
-function AllocationArc({ byType }: { byType: Analytics['byType'] }) {
-  const LENGTH = 251.3 // path length of the semicircle below
-  let offset = 0
+function AllocationBar({ byType }: { byType: Analytics['byType'] }) {
   return (
-    <svg viewBox="0 0 200 115" className="w-full" role="img" aria-label="Tür dağılımı">
-      <path
-        d="M 20 100 A 80 80 0 0 1 180 100"
-        fill="none"
-        stroke="var(--faint2)"
-        strokeWidth="16"
-        strokeLinecap="butt"
-      />
-      {byType.map((t) => {
-        const len = (t.share / 100) * LENGTH
-        const dash = `${len} ${LENGTH}`
-        const el = (
-          <path
+    <div className="mt-2">
+      <div
+        className="flex h-2 w-full gap-[3px]"
+        role="img"
+        aria-label={byType.map((t) => `${t.label} %${t.share.toFixed(1)}`).join(', ')}
+      >
+        {byType.map((t) => (
+          // Percentage widths overflow once the gaps are added, so the segments
+          // shrink to fit — proportionally, which keeps the shares honest.
+          // min-width keeps a sliver of a 1% holding visible in a narrow panel.
+          <div
             key={t.key}
-            d="M 20 100 A 80 80 0 0 1 180 100"
-            fill="none"
-            stroke={TYPE_COLOR[t.key] ?? 'var(--mid)'}
-            strokeWidth="16"
-            strokeLinecap="butt"
-            strokeDasharray={dash}
-            strokeDashoffset={-offset}
+            className="min-w-[3px] rounded-full"
+            style={{ width: `${t.share}%`, background: TYPE_COLOR[t.key] ?? 'var(--mid)' }}
           />
-        )
-        offset += len
-        return el
-      })}
-    </svg>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+        {byType.map((t) => (
+          <span key={t.key} className="flex items-center gap-1.5 text-[12px] whitespace-nowrap">
+            <span
+              className="size-2 shrink-0 rounded-full"
+              style={{ background: TYPE_COLOR[t.key] ?? 'var(--mid)' }}
+            />
+            <span className="text-mid">{TYPE_SHORT[t.key] ?? t.label}</span>
+            <span className="num font-medium">%{t.share.toFixed(1)}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Dot() {
+  return (
+    <span className="text-faint text-[12px]" aria-hidden="true">
+      ·
+    </span>
+  )
+}
+
+function Count({ value, noun }: { value: number; noun: string }) {
+  return (
+    <span className="text-mid text-[12px] whitespace-nowrap">
+      <span className="num text-ink mr-0.5 text-[13px] font-semibold">{value}</span>
+      {noun}
+    </span>
+  )
+}
+
+/**
+ * The one line the date picker implies but doesn't show: how much actually
+ * happened in the selected period.
+ *
+ * Over all time the counts are worded as STATE, not events — "17 açık pozisyon"
+ * rather than "17 pozisyon açıldı" — because across all time those describe the
+ * portfolio as it stands. Deliberately uncoloured: opening and closing are
+ * events, and green here would read as profit.
+ */
+function PeriodBand({ range, a }: { range: DateRange; a: Analytics }) {
+  const preset = rangePreset(range)
+  const allTime = preset === 'all'
+  const label = preset === 'today' ? 'Bugün' : preset === 'month' ? 'Bu ay' : formatRange(range)
+  const idle = !allTime && a.openedCountPeriod === 0 && a.closedCountPeriod === 0
+
+  return (
+    <div className="bg-card border-faint flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border px-3.5 py-2.5">
+      <CalendarDays size={14} className="text-mid shrink-0" />
+      <span className="text-[13px] font-medium">{allTime ? 'Tüm zamanlar' : label}</span>
+      <Dot />
+      {allTime ? (
+        <>
+          <Count value={a.openCount} noun="açık pozisyon" />
+          <Dot />
+          <Count value={a.closedCountLifetime} noun="kapanmış pozisyon" />
+        </>
+      ) : idle ? (
+        // Two zeroes say less than the sentence does.
+        <span className="text-mid text-[12px]">işlem yapılmadı</span>
+      ) : (
+        <>
+          <Count value={a.openedCountPeriod} noun="pozisyon açıldı" />
+          <Dot />
+          <Count value={a.closedCountPeriod} noun="pozisyon kapatıldı" />
+        </>
+      )}
+    </div>
   )
 }
 
@@ -88,7 +163,7 @@ function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: st
   return (
     <div className="border-faint mt-5 mb-1 flex items-baseline justify-between gap-2 border-t pt-4">
       <h3 className="m-0 text-[13px] font-medium">{children}</h3>
-      {hint && <span className="text-mid text-[11px]">{hint}</span>}
+      {hint && <span className="text-mid text-[12px]">{hint}</span>}
     </div>
   )
 }
@@ -97,7 +172,7 @@ function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: st
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div className="text-mid text-[11px]">{label}</div>
+      <div className="text-mid text-[12px]">{label}</div>
       <div className="num text-[20px] font-semibold" style={color ? { color } : undefined}>
         {value}
       </div>
@@ -167,7 +242,7 @@ export function AnalyticsTab() {
       right={<Chip>{summary?.positions.length ?? 0} açık pozisyon</Chip>}
     >
       <div className="mb-1">
-        <div className="text-mid text-[11px]">Toplam değer</div>
+        <div className="text-mid text-[12px]">Toplam değer</div>
         <div className="num my-1 text-[28px] font-medium tracking-[-1px]">
           {fmtMoney(a.totalValue, '₺', 0)}
         </div>
@@ -257,13 +332,13 @@ export function AnalyticsTab() {
         <Stat label="Kaybeden işlem" value={String(a.losers)} color="var(--down)" />
       </div>
       {a.winRate != null && (
-        <p className="text-mid mt-3 text-[11px]">
+        <p className="text-mid mt-3 text-[12px]">
           İsabet oranı %{a.winRate.toFixed(0)}
           {rangeActive && ` · toplam ${a.closedCountLifetime} kapanış`}
         </p>
       )}
 
-      <p className="text-mid mt-4 text-[11px] leading-[1.6]">
+      <p className="text-mid mt-4 text-[12px] leading-[1.6]">
         ABD pozisyonlarının maliyeti alış günündeki kurla, güncel değeri bugünkü kurla
         hesaplanır. Kapanan ABD pozisyonlarında satış günü kuru saklanmadığı için bugünkü
         kur kullanılır.
@@ -274,7 +349,7 @@ export function AnalyticsTab() {
   const allocationPanel = (
     <Panel
       side="b"
-      title="Tür dağılımı"
+      title="Dağılım"
       right={
         summary ? <Chip>USD/TRY {summary.usdTryRate.toFixed(2)}</Chip> : undefined
       }
@@ -283,27 +358,23 @@ export function AnalyticsTab() {
         <PanelEmpty>Açık pozisyon yok.</PanelEmpty>
       ) : (
         <>
-          <AllocationArc byType={a.byType} />
-          <div className="mt-2">
+          <AllocationBar byType={a.byType} />
+          {/* The bar's legend owns the colour key and the share, so the rows
+              below carry neither — each fact is stated once. */}
+          <div className="mt-4">
             {a.byType.map((t) => (
               <div key={t.key} className="border-faint2 border-b py-2.5 last:border-b-0">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-2 text-[13px] font-medium">
-                    <span
-                      className="size-2.5 shrink-0 rounded-full"
-                      style={{ background: TYPE_COLOR[t.key] ?? 'var(--mid)' }}
-                    />
-                    <span className="truncate">{t.label}</span>
-                  </span>
+                  <span className="min-w-0 truncate text-[13px] font-medium">{t.label}</span>
                   <span className="num shrink-0 text-[14px] font-medium whitespace-nowrap">
                     {fmtMoney(t.bucket.value, '₺', 0)}
                   </span>
                 </div>
                 {/* Wraps as whole values, never mid-number: a narrowed panel
                     used to split "−₺29.978 · −%11,21" across two lines. */}
-                <div className="text-mid num mt-1 flex flex-wrap justify-between gap-x-3 gap-y-0.5 pl-[18px] text-[11px]">
+                <div className="text-mid num mt-1 flex flex-wrap justify-between gap-x-3 gap-y-0.5 text-[12px]">
                   <span className="whitespace-nowrap">
-                    %{t.share.toFixed(1)} pay · maliyet {fmtMoney(t.bucket.cost, '₺', 0)}
+                    maliyet {fmtMoney(t.bucket.cost, '₺', 0)}
                   </span>
                   <span className="whitespace-nowrap" style={{ color: plColor(t.bucket.pl) }}>
                     {fmtSignedMoney(t.bucket.pl, '₺')} · {fmtPct(t.bucket.plPercent)}
@@ -326,6 +397,7 @@ export function AnalyticsTab() {
         title="Analiz"
         subtitle="Portföyün bütünü: değer, kâr-zarar ve dağılım."
         right={<DateRangePicker value={range} onChange={setRange} />}
+        below={<PeriodBand range={range} a={a} />}
       />
       <SplitPane splitKey="analytics" a={summaryPanel} b={allocationPanel} />
     </div>

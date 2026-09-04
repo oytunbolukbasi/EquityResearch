@@ -47,14 +47,14 @@ function KpiCard({
 }) {
   return (
     <article className="bg-card border-faint rounded-xl border px-[18px] py-4">
-      <div className="text-mid flex justify-between gap-2 text-[11px]">
+      <div className="text-mid flex justify-between gap-2 text-[12px]">
         <span>{label}</span>
         <span>{hint}</span>
       </div>
       <div className="num my-2 text-[26px] font-medium tracking-[-1px]">
         {fmtMoney(bucket.value, '₺', 0)}
       </div>
-      <div className="flex items-center justify-between gap-2 text-[11px]">
+      <div className="flex items-center justify-between gap-2 text-[12px]">
         <span className="num" style={{ color: plColor(bucket.pl) }}>
           {fmtSignedMoney(bucket.pl, '₺')} · {fmtPct(bucket.plPercent)}
         </span>
@@ -108,7 +108,7 @@ function PositionsTable({
             >
               <td className="pr-3 pl-[18px]">
                 <div className="text-[13px] font-semibold">{p.symbol}</div>
-                {p.name && <div className="text-mid text-[11px]">{p.name}</div>}
+                {p.name && <div className="text-mid text-[12px]">{p.name}</div>}
               </td>
               <td className="num px-3 text-right whitespace-nowrap">
                 {fmtMoney(p.currentPrice, unit)}
@@ -123,7 +123,7 @@ function PositionsTable({
                 {action ? (
                   <ActionBadge action={action.action} />
                 ) : (
-                  <span className="text-mid text-[11px]">—</span>
+                  <span className="text-mid text-[12px]">—</span>
                 )}
               </td>
             </tr>
@@ -158,7 +158,7 @@ function ClosedTable({ closed }: { closed: PortfolioClosedPosition[] }) {
           <tr key={`${c.symbol}-${c.sellDate}-${i}`} className="border-faint2 hover:bg-bg border-b">
             <td className="pr-3 pl-[18px]">
               <div className="text-[13px] font-semibold">{c.symbol}</div>
-              <div className="num text-mid text-[11px]">{c.sellDate.slice(0, 10)}</div>
+              <div className="num text-mid text-[12px]">{c.sellDate.slice(0, 10)}</div>
             </td>
             <td className="num px-3 text-right whitespace-nowrap">{fmtN(c.buyPrice)}</td>
             <td className="num px-3 text-right whitespace-nowrap">{fmtN(c.sellPrice)}</td>
@@ -197,7 +197,7 @@ function DetailPanel({
       <header className="flex shrink-0 items-start justify-between gap-2 px-[18px] pt-3.5">
         <div>
           <h2 className="m-0 text-[15px] font-medium tracking-[-0.25px]">{position.symbol}</h2>
-          {position.name && <span className="text-mid text-[11px]">{position.name}</span>}
+          {position.name && <span className="text-mid text-[12px]">{position.name}</span>}
         </div>
         <button
           onClick={onClose}
@@ -244,7 +244,7 @@ function DetailPanel({
 function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <small className="text-mid mb-1 block text-[11px]">{label}</small>
+      <small className="text-mid mb-1 block text-[12px]">{label}</small>
       <b className="num text-sm font-medium" style={color ? { color } : undefined}>
         {value}
       </b>
@@ -257,7 +257,7 @@ function Metric({ label, value, color }: { label: string; value: string; color?:
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="text-[11px] font-medium tracking-[0.7px]"
+      className="text-[12px] font-medium tracking-[0.7px]"
       style={{ color: 'var(--warn)' }}
     >
       {children}
@@ -281,7 +281,7 @@ function PulseBrief({
       side="b"
       title="Piyasa Nabzı"
       right={
-        <span className="text-mid shrink-0 text-[11px]">
+        <span className="text-mid shrink-0 text-[12px]">
           {note ? `${readMinutes(note)} dk okuma` : ''}
         </span>
       }
@@ -298,7 +298,7 @@ function PulseBrief({
             <>
               <div className="flex items-center justify-between">
                 <h3 className="m-0 text-[13px] font-medium">Makro gündem</h3>
-                <span className="text-mid text-[11px]">{macro.length} başlık</span>
+                <span className="text-mid text-[12px]">{macro.length} başlık</span>
               </div>
               <div className="border-faint mt-3 mb-4 border-t">
                 {macro.map((s, i) => (
@@ -308,7 +308,7 @@ function PulseBrief({
                     className="border-faint hover:text-info flex w-full cursor-pointer items-center justify-between gap-3 border-0 border-b bg-transparent py-3 text-left text-xs leading-[1.65] transition-colors"
                   >
                     <span className="flex-1">{s.label}</span>
-                    <span className="text-mid num shrink-0 text-[11px]">
+                    <span className="text-mid num shrink-0 text-[12px]">
                       {String(i + 1).padStart(2, '0')}
                     </span>
                   </button>
@@ -397,7 +397,7 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
         <div className="border-faint2 border-t px-[18px] pt-1.5 pb-[18px]">
           <div className="flex items-center justify-between pt-3 pb-2">
             <h3 className="m-0 text-[13px] font-medium">Günlük portföy analizi</h3>
-            <span className="text-mid num text-[11px]">{fmtNoteDate(insight?.date)}</span>
+            <span className="text-mid num text-[12px]">{fmtNoteDate(insight?.date)}</span>
           </div>
           {/* pre-line so a multi-paragraph analysis keeps its breaks, matching
               how the bulletin article renders its sections. */}

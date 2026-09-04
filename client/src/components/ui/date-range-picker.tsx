@@ -35,6 +35,24 @@ export function presetRange(preset: RangePreset): DateRange {
   return { from: null, to: null }
 }
 
+/**
+ * Which preset a range corresponds to, or 'custom' for a hand-picked one.
+ *
+ * Shared with the Analiz tab: its period strip words itself as "Bugün" or "Bu
+ * ay" rather than repeating the dates the picker already shows, so it needs the
+ * same answer the picker highlights.
+ */
+export function rangePreset(value: DateRange): RangePreset {
+  if (!value.from && !value.to) return 'all'
+  const now = new Date()
+  const today = iso(now)
+  if (value.from === today && value.to === today) return 'today'
+  if (value.from === iso(new Date(now.getFullYear(), now.getMonth(), 1)) && value.to === today) {
+    return 'month'
+  }
+  return 'custom'
+}
+
 export function formatRange(range: DateRange): string {
   if (!range.from && !range.to) return 'Tüm zamanlar'
   const from = range.from ? DAY_FMT.format(parse(range.from)) : '…'
@@ -134,15 +152,7 @@ export function DateRangePicker({
   }
 
   const today = iso(new Date())
-  const activePreset: RangePreset =
-    !value.from && !value.to
-      ? 'all'
-      : value.from === today && value.to === today
-        ? 'today'
-        : value.from === iso(new Date(new Date().getFullYear(), new Date().getMonth(), 1)) &&
-            value.to === today
-          ? 'month'
-          : 'custom'
+  const activePreset = rangePreset(value)
 
   return (
     <>
@@ -172,7 +182,7 @@ export function DateRangePicker({
                   <button
                     key={p.id}
                     onClick={() => pickPreset(p.id)}
-                    className="flex-1 cursor-pointer rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors"
+                    className="flex-1 cursor-pointer rounded-lg border px-2 py-1 text-[12px] font-medium transition-colors"
                     style={{
                       borderColor: on ? 'var(--info)' : 'var(--faint)',
                       background: on ? 'var(--info-tint)' : 'transparent',
@@ -203,7 +213,7 @@ export function DateRangePicker({
 
             <div className="grid grid-cols-7 gap-y-0.5">
               {WEEKDAYS.map((w) => (
-                <div key={w} className="text-mid pb-1 text-center text-[10px]">
+                <div key={w} className="text-mid pb-1 text-center text-[12px]">
                   {w}
                 </div>
               ))}
@@ -220,7 +230,7 @@ export function DateRangePicker({
                     key={day}
                     disabled={future}
                     onClick={() => pickDay(d)}
-                    className="num h-7 cursor-pointer rounded-md border-0 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-25"
+                    className="num h-7 cursor-pointer rounded-md border-0 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-25"
                     style={{
                       background: isEdge
                         ? 'var(--info)'
@@ -238,7 +248,7 @@ export function DateRangePicker({
             </div>
 
             {anchor && (
-              <p className="text-mid mt-2 text-center text-[11px]">Bitiş tarihini seçin</p>
+              <p className="text-mid mt-2 text-center text-[12px]">Bitiş tarihini seçin</p>
             )}
           </div>,
           document.body,

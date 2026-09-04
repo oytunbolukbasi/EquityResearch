@@ -219,7 +219,7 @@ export function Workspace() {
 
       <footer className="border-faint border-t">
         <div className="mx-auto max-w-[1280px] px-6 py-3">
-          <p className="num text-mid text-[10px]">
+          <p className="num text-mid text-[12px]">
             Charts powered by{" "}
             <a
               href="https://tradingview.com"

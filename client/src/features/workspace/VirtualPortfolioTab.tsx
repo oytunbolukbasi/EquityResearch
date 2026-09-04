@@ -215,7 +215,7 @@ const primaryButtonClass =
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="mb-3 block">
-      <span className="text-mid mb-1 block text-[11px]">{label}</span>
+      <span className="text-mid mb-1 block text-[12px]">{label}</span>
       {children}
     </label>
   )
@@ -374,7 +374,7 @@ function PositionForm({
       </Field>
 
       {form.type === 'us_stock' && !position && (
-        <p className="text-mid mb-3 text-[11px] leading-[1.6]">
+        <p className="text-mid mb-3 text-[12px] leading-[1.6]">
           USD/TRY kuru alış tarihine göre otomatik alınır.
         </p>
       )}
@@ -480,14 +480,14 @@ function CloseForm({
       </Field>
 
       {partial && (
-        <p className="text-mid mb-3 text-[11px] leading-[1.6]">
+        <p className="text-mid mb-3 text-[12px] leading-[1.6]">
           Kısmi satış: {fmtQty(held - sold)} adet açık kalacak.
         </p>
       )}
 
       {preview && (
         <div className="border-faint2 mb-3 flex items-center justify-between rounded-lg border px-3 py-2">
-          <span className="text-mid text-[11px]">Gerçekleşecek K/Z</span>
+          <span className="text-mid text-[12px]">Gerçekleşecek K/Z</span>
           <span className="num text-[13px] font-semibold" style={{ color: plColor(preview.pl) }}>
             {fmtMoney(preview.pl, unit)} · {fmtPct(preview.pct)}
           </span>
@@ -719,7 +719,7 @@ export function VirtualPortfolioTab() {
                   >
                     <td className="eqr-pin-l pr-3 pl-[18px]">
                       <div className="text-[13px] font-semibold">{p.symbol}</div>
-                      <div className="text-mid text-[11px]">
+                      <div className="text-mid text-[12px]">
                         {TYPE_LABEL[p.type] ?? p.type}
                         {p.name ? ` · ${p.name}` : ''}
                       </div>
@@ -798,7 +798,7 @@ export function VirtualPortfolioTab() {
               <tr key={c.id} className="border-faint2 hover:bg-bg border-b" style={{ background: 'var(--card)' }}>
                 <td className="eqr-pin-l pr-3 pl-[18px]">
                   <div className="text-[13px] font-semibold">{c.symbol}</div>
-                  <div className="text-mid text-[11px]">
+                  <div className="text-mid text-[12px]">
                     {TYPE_LABEL[c.type] ?? c.type}
                     {c.name ? ` · ${c.name}` : ''}
                   </div>
@@ -879,7 +879,7 @@ export function VirtualPortfolioTab() {
           <div className="flex items-center gap-2.5">
             {freshness && (
               <span
-                className="num text-[11px]"
+                className="num text-[12px]"
                 style={{ color: freshness.stale ? 'var(--warn)' : 'var(--mid)' }}
                 title="Hisseler 15 dakikada bir, fonlar hafta içi 09:00 ve 10:00'da yenilenir"
               >
@@ -891,7 +891,7 @@ export function VirtualPortfolioTab() {
               onClick={refreshPrices}
               disabled={refreshing}
               title="Fon fiyatı günde bir değişir; sabah otomatik çekilir, burada yenilenmez."
-              className="border-faint hover:bg-faint2 text-mid cursor-pointer rounded-lg border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-50"
+              className="border-faint hover:bg-faint2 text-mid cursor-pointer rounded-lg border px-2.5 py-1 text-[12px] transition-colors disabled:opacity-50"
             >
               {refreshing ? 'Yenileniyor…' : 'Hisse fiyatlarını yenile'}
             </button>
@@ -922,7 +922,7 @@ function RowButton({
   return (
     <button
       onClick={onClick}
-      className="border-faint hover:bg-faint2 cursor-pointer rounded-md border px-2 py-1 text-[11px] transition-colors"
+      className="border-faint hover:bg-faint2 cursor-pointer rounded-md border px-2 py-1 text-[12px] transition-colors"
       style={{ color: danger ? 'var(--down)' : 'var(--mid)' }}
     >
       {children}

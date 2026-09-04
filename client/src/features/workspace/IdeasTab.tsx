@@ -122,13 +122,13 @@ function RiskRewardTooltip() {
             className="border-faint bg-card rounded-lg border p-3 shadow-lg"
           >
             <p className="text-ink mb-1 text-xs font-semibold">Risk/Getiri Oranı</p>
-            <p className="text-mid text-[11px] leading-relaxed">
+            <p className="text-mid text-[12px] leading-relaxed">
               Potansiyel kazancın potansiyel kayba oranı:
             </p>
-            <p className="num text-ink mt-1 text-[11px] font-medium">
+            <p className="num text-ink mt-1 text-[12px] font-medium">
               (TP1 − Giriş) ÷ (Giriş − Stop)
             </p>
-            <p className="text-mid mt-1.5 text-[11px] leading-relaxed">
+            <p className="text-mid mt-1.5 text-[12px] leading-relaxed">
               Giriş için bant ortalaması (Low + High) / 2 kullanılır. Örnek: Giriş 100, Stop 90, TP1
               130 → R/R = 3,0×
             </p>
@@ -230,7 +230,7 @@ export function IdeasTab() {
                 >
                   <td className="pr-3 pl-[18px]">
                     <div className="text-[13px] font-semibold">{idea.ticker}</div>
-                    {idea.exchange && <div className="num text-mid text-[11px]">{idea.exchange}</div>}
+                    {idea.exchange && <div className="num text-mid text-[12px]">{idea.exchange}</div>}
                   </td>
                   <td className="px-2.5">
                     <DirectionBadge direction={idea.direction} />
