@@ -36,7 +36,7 @@ function Row({
         {hint && <span className="text-mid ml-1.5 text-[11px]">{hint}</span>}
       </div>
       <span
-        className={`num shrink-0 ${strong ? 'text-[17px] font-semibold' : 'text-[14px] font-medium'}`}
+        className={`num shrink-0 whitespace-nowrap ${strong ? 'text-[17px] font-semibold' : 'text-[14px] font-medium'}`}
         style={color ? { color } : undefined}
       >
         {value}
@@ -118,10 +118,10 @@ function PlDistribution({ byType }: { byType: Analytics['byType'] }) {
         const up = t.bucket.pl >= 0
         return (
           <div key={t.key} className="py-2">
-            <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className="text-[12px]">{t.label}</span>
+            <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3">
+              <span className="truncate text-[12px]">{t.label}</span>
               <span
-                className="num text-[13px] font-medium"
+                className="num text-[13px] font-medium whitespace-nowrap"
                 style={{ color: plColor(t.bucket.pl) }}
               >
                 {fmtSignedMoney(t.bucket.pl, '₺')} · {fmtPct(t.bucket.plPercent)}
@@ -288,20 +288,24 @@ export function AnalyticsTab() {
             {a.byType.map((t) => (
               <div key={t.key} className="border-faint2 border-b py-2.5 last:border-b-0">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="flex items-center gap-2 text-[13px] font-medium">
+                  <span className="flex min-w-0 items-center gap-2 text-[13px] font-medium">
                     <span
                       className="size-2.5 shrink-0 rounded-full"
                       style={{ background: TYPE_COLOR[t.key] ?? 'var(--mid)' }}
                     />
-                    {t.label}
+                    <span className="truncate">{t.label}</span>
                   </span>
-                  <span className="num text-[14px] font-medium">
+                  <span className="num shrink-0 text-[14px] font-medium whitespace-nowrap">
                     {fmtMoney(t.bucket.value, '₺', 0)}
                   </span>
                 </div>
-                <div className="text-mid num mt-1 flex justify-between gap-3 pl-[18px] text-[11px]">
-                  <span>%{t.share.toFixed(1)} pay · maliyet {fmtMoney(t.bucket.cost, '₺', 0)}</span>
-                  <span style={{ color: plColor(t.bucket.pl) }}>
+                {/* Wraps as whole values, never mid-number: a narrowed panel
+                    used to split "−₺29.978 · −%11,21" across two lines. */}
+                <div className="text-mid num mt-1 flex flex-wrap justify-between gap-x-3 gap-y-0.5 pl-[18px] text-[11px]">
+                  <span className="whitespace-nowrap">
+                    %{t.share.toFixed(1)} pay · maliyet {fmtMoney(t.bucket.cost, '₺', 0)}
+                  </span>
+                  <span className="whitespace-nowrap" style={{ color: plColor(t.bucket.pl) }}>
                     {fmtSignedMoney(t.bucket.pl, '₺')} · {fmtPct(t.bucket.plPercent)}
                   </span>
                 </div>

@@ -13,7 +13,6 @@ import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { ActionBadge, Loading, Notice, PillTabs } from './shared'
 import {
-  computeTotals,
   fmtMoney,
   fmtN,
   fmtPct,
@@ -21,8 +20,8 @@ import {
   fmtSignedMoney,
   plColor,
   UNIT_FOR_TYPE,
-  type Bucket,
 } from './portfolio-calc'
+import { computeAnalytics, type Bucket } from './analytics-calc'
 import { fmtNoteDate, noteSections, readMinutes } from './note-sections'
 
 type PortSub = 'notes' | 'analysis' | 'history'
@@ -53,11 +52,11 @@ function KpiCard({
         <span>{hint}</span>
       </div>
       <div className="num my-2 text-[26px] font-medium tracking-[-1px]">
-        {fmtMoney(bucket.currentValue, '₺', 0)}
+        {fmtMoney(bucket.value, '₺', 0)}
       </div>
       <div className="flex items-center justify-between gap-2 text-[11px]">
-        <span className="num" style={{ color: plColor(bucket.plAmount) }}>
-          {fmtSignedMoney(bucket.plAmount, '₺')} · {fmtPct(bucket.plPercent)}
+        <span className="num" style={{ color: plColor(bucket.pl) }}>
+          {fmtSignedMoney(bucket.pl, '₺')} · {fmtPct(bucket.plPercent)}
         </span>
         <span className="text-mid num shrink-0">{footer}</span>
       </div>
@@ -349,9 +348,16 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
   const { data: insight } = useApi<PortfolioInsight | null>('/api/portfolio/insight')
   const { data: notes } = useApi<MorningNote[]>('/api/morning-notes/history')
 
-  const totals = computeTotals(summary)
   const positions = summary?.positions ?? []
   const note = notes?.[0] ?? null
+
+  // Genel Bakış ve Analiz aynı hesaptan besleniyor. Ayrı iki uygulama
+  // (computeTotals) vardı; aynı etiketin altında farklı rakamlar çıkabildiği
+  // için kaldırıldı — tek kaynak kalsın.
+  const totals = computeAnalytics(positions, closed ?? [], summary?.usdTryRate ?? 1, {
+    from: null,
+    to: null,
+  })
 
   const actions = new Map<string, PortfolioAction>()
   for (const a of insight?.actions ?? []) actions.set(a.ticker, a)
@@ -431,15 +437,25 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
         <KpiCard
           label="Toplam portföy değeri"
           hint="TL bazında"
-          bucket={totals.total}
-          footer="Maliyete göre K/Z"
+          bucket={{
+            value: totals.totalValue,
+            cost: totals.totalCost,
+            pl: totals.unrealized,
+            plPercent: totals.unrealizedPercent,
+          }}
+          footer="Açık pozisyon K/Z"
         />
-        <KpiCard label="TL varlıklar" hint="Hisse + fon" bucket={totals.tl} footer="Maliyete göre" />
+        <KpiCard
+          label="TL varlıklar"
+          hint="Hisse + fon"
+          bucket={totals.tryAssets}
+          footer="Maliyete göre"
+        />
         <KpiCard
           label="ABD hisseleri"
           hint="TL karşılığı"
-          bucket={totals.usd}
-          footer={totals.rateLabel ?? ''}
+          bucket={totals.usdAssets}
+          footer={totals.rateLabel}
         />
       </div>
 

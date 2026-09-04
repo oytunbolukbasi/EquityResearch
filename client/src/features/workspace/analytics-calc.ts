@@ -58,6 +58,12 @@ export interface Analytics {
   winRate: number | null
 
   byType: { key: string; label: string; bucket: Bucket; share: number }[]
+
+  /** Genel Bakış'ın KPI kartları: TL varlıklar (hisse + fon) ve ABD hisseleri. */
+  tryAssets: Bucket
+  usdAssets: Bucket
+  /** "Kur: 48,32" — kartın alt satırı. */
+  rateLabel: string
 }
 
 const TYPE_LABELS: [string, string][] = [
@@ -147,7 +153,19 @@ export function computeAnalytics(
   const losers = inRange.filter((c) => c.pl < 0).length
   const decided = winners + losers
 
+  const tryAssets = bucketOf(
+    positions.filter((p) => p.type !== 'us_stock'),
+    liveRate,
+  )
+  const usdAssets = bucketOf(
+    positions.filter((p) => p.type === 'us_stock'),
+    liveRate,
+  )
+
   return {
+    tryAssets,
+    usdAssets,
+    rateLabel: `Kur: ${liveRate.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     totalValue: open.value,
     totalCost: open.cost,
     unrealized: open.pl,

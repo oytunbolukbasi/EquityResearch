@@ -278,6 +278,33 @@ tr[data-selected='true'] .eqr-pin-r {
   animation: eqr-logo-spin 900ms ease-in-out;
 }
 
+/* ── sticky header ──────────────────────────────────────────────────────── */
+
+/*
+  Scrolled state folds the identity row (logo, date, controls) away and leaves
+  the tab names, so the nav stays reachable without the header eating a fifth
+  of a laptop screen. grid-rows 0fr→1fr animates to the row's natural height —
+  no magic max-height to keep in sync with the content.
+*/
+.eqr-header-top {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms ease, opacity 200ms ease;
+}
+
+[data-collapsed] .eqr-header-top {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.eqr-header-nav {
+  padding-top: 18px;
+  transition: padding-top 200ms ease;
+}
+
+[data-collapsed] .eqr-header-nav {
+  padding-top: 10px;
+}
+
 /* ── toast ──────────────────────────────────────────────────────────────── */
 
 @keyframes eqr-toast-in {
@@ -372,5 +399,10 @@ body.eqr-dragging * {
   .eqr-logo-spin,
   .eqr-toast {
     animation: none;
+  }
+
+  .eqr-header-top,
+  .eqr-header-nav {
+    transition: none;
   }
 }
