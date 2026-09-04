@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { PortfolioClosedPosition, PortfolioPosition, PortfolioSummary } from '@/lib/api-types'
 import { useSession } from '@/lib/session'
+import { useToast } from '@/lib/toast'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
@@ -251,6 +252,7 @@ function PositionForm({
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     setError(null)
@@ -298,9 +300,14 @@ function PositionForm({
     setBusy(false)
     if (!res.ok) {
       const d = (await res.json().catch(() => ({}))) as { issues?: { message?: string }[] }
-      setError(d.issues?.[0]?.message ?? 'Kaydedilemedi.')
+      const message = d.issues?.[0]?.message ?? 'Kaydedilemedi.'
+      setError(message)
+      toast.error(message)
       return
     }
+    toast.success(
+      editing ? `${form.symbol} güncellendi` : `${form.symbol} portföye eklendi`,
+    )
     onDone()
   }
 
@@ -390,6 +397,7 @@ function CloseForm({
   const [sellDate, setSellDate] = useState(today())
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     setQuantity(String(position.quantity))
@@ -424,9 +432,16 @@ function CloseForm({
         message?: string
         issues?: { message?: string }[]
       }
-      setError(d.message ?? d.issues?.[0]?.message ?? 'Satış kaydedilemedi.')
+      const message = d.message ?? d.issues?.[0]?.message ?? 'Satış kaydedilemedi.'
+      setError(message)
+      toast.error(message)
       return
     }
+    toast.success(
+      partial
+        ? `${position.symbol}: ${fmtQty(sold)} adet satıldı, ${fmtQty(held - sold)} açık kaldı`
+        : `${position.symbol} pozisyonu kapatıldı`,
+    )
     onDone()
   }
 
@@ -489,6 +504,7 @@ type RightMode = 'new' | 'edit' | 'close'
 
 export function VirtualPortfolioTab() {
   const { authenticated, loading: sessionLoading, username, logout } = useSession()
+  const toast = useToast()
 
   const [tab, setTab] = useState<ListTab>('open')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -499,7 +515,6 @@ export function VirtualPortfolioTab() {
   const [closed, setClosed] = useState<PortfolioClosedPosition[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
-  const [refreshNote, setRefreshNote] = useState<string | null>(null)
 
   const [openSort, setOpenSort] = useState<SortState<OpenSortKey>>({ key: 'symbol', dir: 'asc' })
   const [closedSort, setClosedSort] = useState<SortState<ClosedSortKey>>({
@@ -574,7 +589,6 @@ export function VirtualPortfolioTab() {
 
   async function refreshPrices() {
     setRefreshing(true)
-    setRefreshNote(null)
     try {
       const res = await fetch('/api/portfolio/manage/prices/refresh', { method: 'POST' })
       if (!res.ok) throw new Error()
@@ -582,17 +596,16 @@ export function VirtualPortfolioTab() {
         updated: { symbol: string }[]
         skipped: { symbol: string; reason: string }[]
       }
+      toast.success(`${r.updated.length} fiyat güncellendi`)
       // Name the symbols that failed rather than just counting them — a silently
-      // skipped price is the failure mode that matters here.
-      setRefreshNote(
-        `${r.updated.length} fiyat güncellendi` +
-          (r.skipped.length
-            ? ` · alınamadı: ${r.skipped.map((s) => `${s.symbol} (${s.reason})`).join(', ')}`
-            : ''),
-      )
+      // skipped price is the failure mode that matters here. Separate toast so
+      // it stays on screen as its own line.
+      if (r.skipped.length) {
+        toast.error(`Alınamadı: ${r.skipped.map((s) => s.symbol).join(', ')}`)
+      }
       reload()
     } catch {
-      setRefreshNote('Fiyatlar yenilenemedi.')
+      toast.error('Fiyatlar yenilenemedi.')
     } finally {
       setRefreshing(false)
     }
@@ -613,16 +626,24 @@ export function VirtualPortfolioTab() {
     )
       return
     const res = await fetch(`/api/portfolio/manage/positions/${p.id}`, { method: 'DELETE' })
-    if (res.ok) afterWrite()
-    else setError('Pozisyon silinemedi.')
+    if (res.ok) {
+      toast.success(`${p.symbol} portföyden silindi`)
+      afterWrite()
+    } else {
+      toast.error(`${p.symbol} silinemedi.`)
+    }
   }
 
   async function removeClosed(c: PortfolioClosedPosition & { id?: string }) {
     if (!c.id) return
     if (!window.confirm(`${c.symbol} satış kaydı silinecek. Geri alınamaz.`)) return
     const res = await fetch(`/api/portfolio/manage/closed-positions/${c.id}`, { method: 'DELETE' })
-    if (res.ok) reload()
-    else setError('Kayıt silinemedi.')
+    if (res.ok) {
+      toast.success(`${c.symbol} satış kaydı silindi`)
+      reload()
+    } else {
+      toast.error(`${c.symbol} kaydı silinemedi.`)
+    }
   }
 
   const listPanel = (
@@ -849,9 +870,6 @@ export function VirtualPortfolioTab() {
           </div>
         }
       />
-      {refreshNote && (
-        <p className="text-mid mb-3 text-[11px] leading-[1.6]">{refreshNote}</p>
-      )}
       <SplitPane splitKey="virtual" a={listPanel} b={formPanel} />
     </div>
   )

@@ -234,6 +234,23 @@ html[data-density='compact'] {
   animation: eqr-logo-spin 900ms ease-in-out;
 }
 
+/* ── toast ──────────────────────────────────────────────────────────────── */
+
+@keyframes eqr-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.eqr-toast {
+  animation: eqr-toast-in 160ms ease-out;
+}
+
 /* ── split pane ─────────────────────────────────────────────────────────── */
 
 /*
@@ -308,7 +325,8 @@ body.eqr-dragging * {
     transition: none;
   }
 
-  .eqr-logo-spin {
+  .eqr-logo-spin,
+  .eqr-toast {
     animation: none;
   }
 }

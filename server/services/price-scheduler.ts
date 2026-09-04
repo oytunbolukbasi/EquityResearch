@@ -20,18 +20,27 @@ function turkishNow(): Date {
   return new Date(Date.now() + 3 * 60 * 60 * 1000)
 }
 
+/**
+ * The schedule decision, split out and pure so it can be checked against known
+ * timestamps rather than by waiting for 09:00 to come around. Returns the slot
+ * id to run, or null to stay idle.
+ *
+ * `now` must already be shifted to Turkish time.
+ */
+export function dueSlot(now: Date): string | null {
+  const day = now.getUTCDay() // 0 Sunday … 6 Saturday
+  if (day === 0 || day === 6) return null
+  if (!RUN_HOURS_TR.includes(now.getUTCHours())) return null
+  if (now.getUTCMinutes() !== 0) return null
+  return `${now.toISOString().slice(0, 10)}:${now.getUTCHours()}`
+}
+
 /** Marks the slot already handled, so a restart can't re-run the same hour. */
 let lastRunSlot: string | null = null
 
 async function tick() {
-  const tr = turkishNow()
-  const day = tr.getUTCDay() // 0 Sunday … 6 Saturday
-  if (day === 0 || day === 6) return
-  if (!RUN_HOURS_TR.includes(tr.getUTCHours())) return
-  if (tr.getUTCMinutes() !== 0) return
-
-  const slot = `${tr.toISOString().slice(0, 10)}:${tr.getUTCHours()}`
-  if (slot === lastRunSlot) return
+  const slot = dueSlot(turkishNow())
+  if (!slot || slot === lastRunSlot) return
   lastRunSlot = slot
 
   console.log(`[price-scheduler] ${slot} — refreshing prices`)
