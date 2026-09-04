@@ -183,9 +183,20 @@ maliyeti çok farklı:
   yeniden okumak için kota harcanmaz.
 - **Fiyatı alınamayan sembol ATLANIR, sıfırlanmaz.** Ulaşılamayan bir kaynağın panelin
   dayandığı bir rakamı silebilmesi kabul edilemez.
-- Yeni bir pozisyon açılınca sembol Apps Script'e **await ile** kaydedilir (satır
-  oluşmadan fiyat sormak boş döner). Yine de gelmezse `ensurePriceSoon` arka planda
-  4/12/30 sn'de tekrar dener.
+- **Fiyatlandırma bir YAZMAYI asla bloklamaz.** Pozisyon kaydedilir kaydedilmez
+  yanıt döner (`pricePending: true`); sembol kaydı ve ilk fiyat okuması arka
+  plandaki `ensurePriceSoon`'a bırakılır (3/20/60/120 sn). Sıra korunur — önce
+  `registerSymbol`, sonra okuma — ama kimse beklemez. *Bir ara bu ikisi istek
+  işleyicisinde await ediliyordu ve "Pozisyon ekle" ~110 sn sürüyordu; satır ilk
+  saniyede kaydedilmiş oluyordu. (GÖREV 31)*
+- **Sheet okuması 60 sn timeout.** Aynı uç ölçüldüğünde bir okuma 3,2 sn, diğeri
+  36,9 sn sürdü — ~40 GOOGLEFINANCE hücresi yeniden hesaplanıyor. 30 sn tavan
+  sağlıklı bir sayfayı bile timeout'a düşürüyordu.
+- **Deneme sayısı ve timeout çağıranın kararı** (`FetchOptions`): arka plan
+  taraması 3 deneme, tek sembol okuması 1 deneme.
+- **Eş zamanlı okumalar tek isteği paylaşır.** Apps Script script başına aynı
+  anda tek istek işler; üst üste binen okumalar hızlanmaz, kuyruğa girip
+  birbirini timeout'a düşürür.
 - Arayüzde bayatlık göstergesi ("az önce / 3 saat önce / 2 gün önce"); iki günü aşarsa
   uyarı rengine döner. Fiyat akışı durursa panel sessizce yanlış göstermesin diye.
 
@@ -214,7 +225,8 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > tablo silindi). Çelişki görürsen **en yüksek numaralı GÖREV** geçerlidir. GÖREV 27 pek çok erken
 > kararı geçersiz kıldı: react-grid-layout, widget ekle/kaldır menüsü ve Framer Motion
 > artık yok. GÖREV 29 Analiz'deki yarım daire donut'ı kaldırdı ve panele 12px punto
-> tabanı koydu. GÖREV 30 Sanal Portföy'e telefon için ayrı bir render dalı ekledi.
+> tabanı koydu. GÖREV 30 Sanal Portföy'e telefon için ayrı bir render dalı ekledi;
+> GÖREV 31 fiyat okumasını yazma yolundan çıkardı.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -715,3 +727,35 @@ Aynı ekranın sıkışmaları (yan iş):
   sayfayı zoomluyor. Masaüstünde 13px.
 
 Masaüstü tablosu, sıralama ve form paneli değişmedi.
+
+GÖREV 31 — Pozisyon ekleme fiyat sayfasını beklemiyor
+
+Telefondan bir pozisyon eklemek ~2 dakika sürdü. Satır aslında ilk saniyede
+kaydedilmişti; bekleyen şey bir Google E-Tablosuydu.
+
+`POST /manage/positions` şu sırayı **await** ediyordu:
+
+| Adım | Süre |
+|---|---|
+| `registerSymbol` | 15 sn timeout |
+| `refreshOnePrice` → `fetchSharePrices` | 3 deneme × 30 sn + backoff |
+
+Toplam en kötü ihtimalle ~110 sn — hepsi de zaten commit edilmiş bir satır için.
+
+**Kök sebep bir regresyon, kaynak arızası değil.** Yeniden deneme (3×30 sn) ve
+`await registerSymbol`, GÖREV 28 sonrası fiyat yenileme yolunu düzeltirken
+eklenmişti; ikisinin de bir istek işleyicisinin içinde oturduğu gözden kaçtı.
+Kural: **yavaş ve oynak bir dış bağımlılık bir yazmanın kritik yolunda olamaz.**
+
+- Fiyatlandırma yazıyı hiç bloklamıyor; sembol kaydı + okuma arka plana taşındı.
+- `readSheet` timeout 30 → 60 sn. Ölçüm: aynı uç bir okumada 3,2 sn, diğerinde
+  36,9 sn. Değişkenlik ~10 kat.
+- Deneme/timeout artık çağıranın kararı (`FetchOptions`).
+- Eş zamanlı okumalar tek isteği paylaşıyor (`inFlight`). Üç eş zamanlı çağrı
+  ölçüldü: tek okuma, aynı sonuç nesnesi.
+- Arka plan denemeleri 4/12/30 → 3/20/60/120 sn; istemci yoklaması
+  6/18/35 → 8/25/60/120/200 sn. Eskiler ilk başarılı okumadan önce bitiyordu.
+
+Ölçüm: `POST /manage/positions` **~110 sn → 200 ms** (uçtan uca, oturum açık
+tarayıcıdan; test satırı hemen silindi, portföy 18 açık / 23 kapalı olarak
+doğrulandı).
