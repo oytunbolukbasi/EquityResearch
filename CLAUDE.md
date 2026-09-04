@@ -10,8 +10,11 @@ Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u
 ## Tech Stack
 - **Frontend:** React 19 + Vite + TypeScript
 - **Styling:** Tailwind CSS v4 + shadcn/ui (Radix tabanlı)
-- **Canvas / widget sistemi:** react-grid-layout — sürükle, yeniden boyutlandır, grid'e snap, layout JSON olarak saklanır
-- **Animasyon:** Framer Motion (widget ekleme/taşıma geçişleri için, abartısız)
+- **Yerleşim:** 6 sekmeli çalışma alanı, her sekmede en fazla iki panel. Kütüphane
+  yok — `features/workspace/split.tsx` (~340 satır) divider'ı, %25/50/75 snap'ini ve
+  panel takasını kendisi yönetir. *(react-grid-layout GÖREV 27'de kaldırıldı.)*
+- **Animasyon:** Saf CSS keyframe. *(Framer Motion GÖREV 27'de kaldırıldı — tek bir
+  0,9 sn logo dönüşü için ~120 kB'a değmiyordu.)*
 - **Backend:** Node.js + Express — tek servis, build edilmiş React static dosyalarını da serve eder
 - **ORM:** Drizzle ORM (Neon serverless driver ile birlikte)
 - **Veritabanı:** Neon Postgres (mevcut hesap) — pooled connection string kullan
@@ -80,21 +83,98 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 
 - Ana DB tabloları: `morning_notes`, `ideas`, `trade_plans`, `portfolio_insights`,
   `layouts` (+ arayüzde kullanılmayan ama korunan `heatmaps`).
-- Portföy pozisyonları AYRI, salt-okunur bir DB'de (`PORTFOLIO_DATABASE_URL`):
-  `positions`, `closed_positions` (o app'in sahibi; buradan sadece SELECT edilir).
+- Portföy pozisyonları AYRI bir DB'de (`PORTFOLIO_DATABASE_URL`): `positions`,
+  `closed_positions`, `users`, `bist_symbols`.
+  **Bu DB artık salt-okunur DEĞİL** — GÖREV 28 ile yazma yolu açıldı:
+  - Okuma → `server/db/portfolio-client.ts` (yalnız SELECT, yazma metodu **eklenmez**)
+  - Yazma → `server/db/portfolio-write.ts` (ayrı modül, her ifade elle yazılmış ve
+    parametreli, hepsi `user_id` ile sınırlı; jenerik `query()` kaçamağı yok)
+  - Tek sahip: `user_id = 'demo-user'`. Yeni satırlar da bu id ile yazılır.
+  - Para ve adet Postgres'e **string** gider; kolonlar `decimal` ve float
+    round-trip'i kesirli adetlerde hassasiyet kaybediyor (portföyde 0,809883524
+    adetlik bir pozisyon var).
 - İçerik JSON şeması ve alan isimleri: bu klasördeki cowork-instructions-final.md.
+- Sanal Portföy taşıma planı ve fazları: bu klasördeki **SANAL-PORTFOY-PLAN.md**.
 
-## Widget'lar (5 aktif)
-1. **Piyasa Nabzı** (route/tablo adı `morning_notes`, `/api/morning-notes`) — Top Call + Makro madde listesi + Sektör Odağı. Widget içi ◀ ▶ navigasyonuyla geçmiş notlara erişim.
-2. **Pozisyon Fikirleri** — `ideas` tablosu, Aktif/Geçmiş sekmeli. Aktif: her ticker'ın kendi en son kaydı (`selectDistinctOn`, status `active`/`review`). Geçmiş: terminal statüler (`stopped`, `tp1_hit`, `tp2_hit`, `tp3_hit`) doğru TP/SL rozetiyle. Öneri/Bitiş tarihi kolonları + Risk/Getiri mini-bar ve formül tooltip'i. Satıra tıklayınca Trade Planı o ticker'a geçer.
-3. **Trade Planı** — `trade_plans` tablosu. TradingView Lightweight Charts (CandlestickSeries) gerçek OHLC grafiği; Y-ekseni sadece fiyat geçmişine kilitli, dışarıda kalan seviyeler off-chart rozet. Seviyeler grafiğin altında tek pill satırında (etiket + fiyat + %). **Varsayılan açılış = en güncel tarihli aktif idea** (statü `/api/ideas`'ten türetilir; senkron olmayan `trade_plans.status`'a güvenilmez). Aktif/Geçmiş sekmeli.
-4. **Portföy Durumu** — Ayrı salt-okunur Neon DB'den (`PORTFOLIO_DATABASE_URL`) açık/kapalı pozisyonlar. TL ve USD blokları ayrı özet kutularında; K/Z değer↔yüzde toggle; canlı USD/TRY kuru (Frankfurter API, hata durumunda fallback + `isFallback` flag); Günlük Analiz (`portfolio_insights`); Geçmiş sekmesinde kapatılan pozisyonlar. **Varsayılan kompakt mod** (yalnız K/Z + tek satır analiz), "Daha Fazla Göster" ile Maliyet/Güncel Değer ve tam analiz genişler.
-5. **Paper Trading** — Alpaca Paper Trading API. Agent'ın ideas/trade planlarını kullanarak otomatik pozisyon açıyor/kapatıyor (**sadece NYSE/NASDAQ; BIST hariç**). 3 sekme: Açık Pozisyonlar / Kapatılan (FIFO realized P&L) / Emirler.
+## Sekmeler (6 aktif)
 
-> **Kaldırılan widget'lar:** BIST Heatmap + ABD Heatmap (GÖREV 17). DB'deki `heatmaps` tablosu veri kaybı önlemek için korundu ama arayüzde yok.
+Serbest canvas yok. Her sekmede **en fazla iki panel** yan yana durur; aralarındaki
+divider sürüklenince genişlik imleci serbest takip eder ve bırakınca **tam olarak
+%25/50/75**'ten birine oturur. Panel başlığı sürükleme tutamacıdır: imleç divider'ın
+öbür tarafına geçtiği an iki panel **anında** yer değiştirir (geçiş süresi 0, DOM
+sırası sabit — yalnız `flex order` değişir, dolayısıyla panel remount olmaz, grafik
+ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır.
 
-Tüm widget'lar react-grid-layout canvas'ında bağımsız öğeler; kullanıcı ekleyebilir, taşıyabilir, boyutlandırabilir, kaldırabilir. Layout `localStorage`'da + `layouts` tablosunda saklanır (cihaz/tarayıcı bazında; header'daki Kaydet butonuyla yazılır, o cihazda açılışta otomatik geri yüklenir).
+1. **Genel bakış** — 3 KPI kartı (Toplam / TL varlıklar / ABD hisseleri) + Portföy
+   paneli (Hisse notları / Günlük analiz / Geçmiş) ↔ Piyasa Nabzı özeti. Portföy
+   satırına tıklayınca sağ panel o varlığın detayına döner; makro başlığına tıklamak
+   bültenin **tam o bölümüne** atlar.
+2. **Piyasa Nabzı** — İçindekiler ↔ tam metin makale. Üstte ‹ tarih › adımlayıcı;
+   yalnızca kaydı olan bültenler arasında gezer (datepicker yok).
+3. **Pozisyon Fikirleri** — fikir tablosu (Aktif/Geçmiş, Risk/Getiri mini-bar, tarih
+   kolonları) ↔ seçili trade planı. TradingView Lightweight Charts **aynen korundu**.
+   Varsayılan açılış = en güncel tarihli aktif idea (statü `/api/ideas`'ten türetilir;
+   senkron olmayan `trade_plans.status`'a güvenilmez).
+4. **Paper Trading** — tek panel, split yok. Alpaca kâğıt hesabı; 4 özet kart +
+   Açık/Kapatılan (FIFO)/Emirler. **Sadece NYSE/NASDAQ, BİST hariç.**
+5. **Sanal Portföy** — pozisyon ekle / düzenle / sat / sil. **Giriş ister**
+   (bkz. Kimlik Doğrulama). Kısmi satış destekli. Sütunlar sıralanabilir; Varlık ve
+   İşlem sütunları sabitlenmiştir (panel daraldığında butonlar kaybolmasın diye).
+6. **Analiz** — portföy özeti, kâr/zarar özeti, performans metrikleri, tür dağılımı
+   (yarım daire) ve kâr/zarar dağılımı. Günlük/Aylık/Tümü preset'li takvim seçici.
 
+> **Kaldırılanlar:** BIST + ABD Heatmap (GÖREV 17; `heatmaps` tablosu korundu),
+> widget ekle/kaldır menüsü, serbest sürükle-bırak canvas (GÖREV 27).
+
+**Yerleşim kalıcılığı:** split ve swap değerleri sürükleme bırakılınca localStorage'a
+yazılır (`eqr2:splits:v2`, `eqr2:swapped`). Header'daki **Kaydet** ayrıca `layouts`
+tablosuna cihaz bazında yazar (`workspace-v1` etiketiyle; tablodaki eski
+react-grid-layout satırları geri yüklemede yok sayılır). **Sıfırla** varsayılanlara
+döner. Son açık sekme de hatırlanır (`eqr2:tab`).
+
+**Header:** scroll'da kimlik satırı katlanır, yalnızca sekme adları kalır (102→46px).
+Kontroller: Sıfırla · Kaydet · satır aralığı (yoğunluk) · tema.
+
+## Kimlik Doğrulama
+
+Panelin geri kalanı açıktır; **yalnızca Sanal Portföy sekmesi giriş ister** ve portföyü
+DEĞİŞTİREN her route oturum zorunlu kılar.
+
+- Yeni bağımlılık yok: `node:crypto` ile scrypt hash + HMAC imzalı çerez.
+- Parola **asla koda yazılmaz**. `PORTFOLIO_AUTH_HASH` env'de tutulur; hash'i sahibi
+  `node scripts/hash-password.mjs` ile kendi terminalinde üretir (parola ekrana
+  basılmaz, diske yazılmaz, argüman olarak geçilmez).
+- Env: `PORTFOLIO_AUTH_USER`, `PORTFOLIO_AUTH_HASH`, `SESSION_SECRET`.
+- Çerez `httpOnly` + `sameSite=strict` + production'da `secure`, 30 gün.
+- Giriş 15 dakikada 8 denemeyle sınırlı. Yanlış kullanıcı adı da hash karşılaştırması
+  çalıştırır, böylece cevap süresi bilgi sızdırmaz.
+- `x-admin-key` YALNIZCA agent'ın `bulk-import`'unda kalır — iki mekanizma
+  karıştırılmaz.
+
+## Fiyat Boru Hattı
+
+PortfoyTakip uygulamasının yaptığı iş devralındı. **İki ayrı ritim**, çünkü iki kaynağın
+maliyeti çok farklı:
+
+| Varlık | Kaynak | Ritim |
+|---|---|---|
+| BİST + ABD hisseleri | Google Apps Script + Sheet (GOOGLEFINANCE, ~15 dk gecikmeli) | **15 dakikada bir** + açılışta |
+| TEFAS fonları | fintables.com kazıma (ScraperAPI, kotalı) | **Hafta içi 09:00 / 10:00 (TR)** — açılışta ÇEKİLMEZ |
+| USD/TRY | Frankfurter | İstek anında |
+
+- Env: `SHEETS_PRICE_URL`, `SCRAPER_API_KEY`.
+- Zamanlayıcı `node-cron` kullanmaz; `price-scheduler.ts` içinde bir dakika-tick'i.
+  `dueSlot()` saf fonksiyondur, 09:00'ı beklemeden test edilebilir.
+- **Elle "Hisse fiyatlarını yenile" butonu yalnızca hisseleri yeniler.** Fon fiyatı
+  günde bir değişir ve kazıma kotalıdır; her tıklamada değişmesi imkânsız bir sayıyı
+  yeniden okumak için kota harcanmaz.
+- **Fiyatı alınamayan sembol ATLANIR, sıfırlanmaz.** Ulaşılamayan bir kaynağın panelin
+  dayandığı bir rakamı silebilmesi kabul edilemez.
+- Yeni bir pozisyon açılınca sembol Apps Script'e **await ile** kaydedilir (satır
+  oluşmadan fiyat sormak boş döner). Yine de gelmezse `ensurePriceSoon` arka planda
+  4/12/30 sn'de tekrar dener.
+- Arayüzde bayatlık göstergesi ("az önce / 3 saat önce / 2 gün önce"); iki günü aşarsa
+  uyarı rengine döner. Fiyat akışı durursa panel sessizce yanlış göstermesin diye.
 
 ## İçerik Besleme Akışı
 Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek web_search) günlük içeriği (morning_note / ideas / trade_plans / portfolio_insight) üretip şemaya uygun JSON döner. JSON, `/admin` sayfasındaki **"Toplu İçerik Girişi"** textarea'sına yapıştırılıp `POST /api/admin/bulk-import` ile kaydedilir (`x-admin-key` korumalı; her tablo bağımsız hata izolasyonlu upsert). ABD (NYSE/NASDAQ) fikirleri için bulk-import ayrıca otomatik Alpaca Paper Trading emri yönetir.
@@ -118,7 +198,9 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > bir kısmı sonraki görevlerle değiştirilmiştir — ör. **Open Sans/JetBrains Mono → Inter**
 > (GÖREV 14), **BIST/ABD Heatmap widget'ları kaldırıldı** (GÖREV 17), **seviye tablosu tek
 > pill satırına birleşti** (GÖREV 24), **portfolio_snapshots bağımlılığı kaldırıldı** (kaynak
-> tablo silindi). Çelişki görürsen **en yüksek numaralı GÖREV** geçerlidir.
+> tablo silindi). Çelişki görürsen **en yüksek numaralı GÖREV** geçerlidir. GÖREV 27 pek çok erken
+> kararı geçersiz kıldı: react-grid-layout, widget ekle/kaldır menüsü ve Framer Motion
+> artık yok.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -471,4 +553,70 @@ ResponsiveGridLayout'u yerine kalıcılığa dokunmayan "stacked fallback" terci
 - Mobilde sürükle/boyutlandır ve onLayoutChange YOK → kayıtlı layout (localStorage +
   layouts DB) hiç değişmiyor; pencere genişleyince grid aynı düzenle geri dönüyor.
 Yan fayda: mobilde tam genişlik sayesinde Pozisyon Fikirleri'nin "Durum" kolonu artık
-görünür (masaüstündeki tablo taşması sorunu mobilde ortadan kalkıyor). 
+görünür (masaüstündeki tablo taşması sorunu mobilde ortadan kalkıyor).
+
+
+GÖREV 27 — react-grid-layout yerine 6 sekmeli çalışma alanı
+
+Serbest sürükle-bırak canvas kaldırıldı. Yerine her sekmede en fazla iki panelin yan
+yana durduğu sekmeli yapı geldi. Widget içerikleri, API'ler ve veri modeli değişmedi —
+değişen kabuk.
+
+- SplitPane: sürüklerken genişlik imleci serbest takip eder ve 25/50/75 kılavuz
+  çizgileri görünür; bırakınca EN YAKIN preset'e oturur, ara değerde kalmak imkânsız.
+- Panel başlığı sürükleme tutamacı. İmleç divider'ın öbür tarafına geçtiği AN takas
+  olur, geçiş süresi 0. DOM sırası sabit, yalnız `flex order` değişir → remount yok,
+  grafik ve scroll korunur.
+- **Pointer capture kullanılıyor.** Capture olmadan tarayıcı başlığın üstünde kendi
+  metin-seçme hareketini başlatıp `pointermove`'ları yutuyor ve sürükleme sessizce
+  hiçbir şey yapmıyordu. Sentetik olaylarla test etseydik gözden kaçardı.
+- ≤800px tek kolon; divider gizli, sürükleme kapalı.
+- Kaldırılanlar: react-grid-layout + @types + process-shim + tüm `.react-grid-*` CSS'i,
+  Framer Motion, widget ekle/kaldır menüsü, WidgetFrame, widget-registry, date-filter.
+  Paket 586 → 464 kB.
+- Header: Sıfırla/Kaydet geri geldi (`layouts` tablosuna `workspace-v1` etiketiyle;
+  eski RGL satırları geri yüklemede yok sayılır), satır aralığı toggle'ı eklendi, son
+  açık sekme hatırlanıyor, logo dönüşü CSS keyframe'e taşındı.
+- Scroll'da header daralıyor (102→46px), yalnız sekme adları kalıyor. Sentinel +
+  IntersectionObserver; `grid-rows: 0fr→1fr` ile doğal yüksekliğe animasyon.
+- `useMediaQuery` `useSyncExternalStore`'a geçirildi. Bayat kalıp geniş ekranda
+  yığılmış düzen render edebiliyordu; o durumda sağ panel tablonun çok altına düşüyor
+  ve butonlar ölü görünüyordu.
+
+
+GÖREV 28 — Sanal Portföy: PortfoyTakip uygulamasının içeri alınması
+
+Ayrı bir mobil portföy uygulaması (`oytunbolukbasi/PortfoyTakip`) emekliye ayrılıyor.
+İki uygulama zaten aynı veritabanını paylaşıyordu, dolayısıyla veri taşıma işi yoktu;
+yapılan iş bir yazma yolu açmak ve fiyat boru hattını devralmaktı. Faz planı ve
+kalan adımlar: **SANAL-PORTFOY-PLAN.md**.
+
+- `portfolio-write.ts` ayrı modül olarak açıldı (`portfolio-client.ts`'teki "yeni bir
+  yazma ihtiyacı çıkarsa ayrı ve açıkça adlandırılmış bir modülden geçmeli" notuna
+  uyularak). Okuma istemcisi hâlâ yalnızca SELECT içeriyor.
+- Kimlik doğrulama: scrypt + imzalı çerez, yeni bağımlılık yok. Parola koda yazılmaz.
+- **Kısmi satış** eklendi — eski uygulamada yoktu, pozisyon ancak tamamen kapatılabiliyordu.
+  Şema değişikliği gerekmedi; `closed_positions.quantity` zaten vardı.
+- Fiyat boru hattı devralındı: hisseler 15 dk (Apps Script), fonlar hafta içi
+  09:00/10:00 (Fintables + ScraperAPI, açılışta çekilmez — kota koruması).
+- Analiz sekmesi: eski uygulamanın analytics sayfasındaki her metrik taşındı (yapay
+  zeka görüşü hariç — cowork agent zaten daha iyisini yapıyor).
+- **Kur yöntemi farkı:** eski uygulama ABD maliyetini bugünkü kurla, EQR alış anındaki
+  kurla hesaplıyor; fark 23.480 TL / 1,70 puandı. Birini seçip diğerini gizlemek
+  yerine toplam EQR'nin yöntemiyle verilip ikiye ayrılıyor (hisse hareketi + kur
+  etkisi), çünkü tam ayrışıyor. "Hisse hareketi" satırı eski uygulamanın rakamını
+  birebir verir.
+- Genel Bakış ve Analiz **tek hesaptan** besleniyor (`computeAnalytics`). Ayrı bir
+  `computeTotals` vardı; aynı etiketin altında farklı rakam çıkması an meselesiydi,
+  kaldırıldı. `portfolio-calc.ts` artık yalnızca biçimlendirme.
+- Doğrulama: `scripts/verify-analytics.ts` aynı metrikleri **doğrudan SQL** ile üretip
+  karşılaştırıyor (on metrik, fark 0,0000). `scripts/compare-tabs.ts` iki sekmenin
+  aynı sayıyı verdiğini kontrol ediyor.
+- `window.confirm` yerine kendi modalımız. Tarayıcıya "başka iletişim kutusu gösterme"
+  denmişse `confirm()` hiçbir şey göstermeden `false` döner; silme o zaman hiç
+  denenmiyor ve buton ölü görünüyordu.
+- Hap bildirimler (sağ üst, 3 sn, × ile kapanır) — yazma aksiyonları sessizce
+  tamamlanıyordu.
+- Pozisyon tablosunda Varlık ve İşlem sütunları sabitlendi. Sekiz sütun panel
+  daraldığında satır aksiyonlarını sağ kenarın dışına itiyordu: DOM'da var, ekranda
+  yok, tıklama arkadaki panele gidiyordu.
