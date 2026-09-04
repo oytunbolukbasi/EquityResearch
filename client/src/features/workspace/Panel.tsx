@@ -80,7 +80,7 @@ export function TabHeading({
 }) {
   return (
     <div className="mb-5">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
           <h1 className="m-0 text-[26px] leading-[1.25] font-medium tracking-[-1px]">{title}</h1>
           {subtitle && <p className="text-mid mt-[5px] mb-0 text-xs">{subtitle}</p>}

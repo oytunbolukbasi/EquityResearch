@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ChevronRight, Plus } from 'lucide-react'
 
 import type { PortfolioClosedPosition, PortfolioPosition, PortfolioSummary } from '@/lib/api-types'
 import { useSession } from '@/lib/session'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
+import { useMediaQuery } from '@/lib/use-media-query'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
@@ -16,6 +19,29 @@ import {
   plColor,
   UNIT_FOR_TYPE,
 } from './portfolio-calc'
+
+/**
+ * Below this width the eight-column table is replaced by cards.
+ *
+ * A phone showed Varlık, half of Adet and İşlem — Değer, K/Z and K/Z %, the
+ * reason for opening the tab at all, were off-screen behind a horizontal
+ * scroll, and the clipped Adet read as a wrong number (0,8099 shown as "0,8").
+ */
+const CARD_QUERY = '(max-width: 640px)'
+
+const DAY_FMT = new Intl.DateTimeFormat('tr-TR', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+
+/** 'YYYY-MM-DD...' → '4 Eyl 2026'. Text-sliced, so no timezone round-trip. */
+function fmtDay(stamp: string | null | undefined): string {
+  if (!stamp) return '—'
+  const [y, m, d] = stamp.slice(0, 10).split('-').map(Number)
+  if (!y || !m || !d) return '—'
+  return DAY_FMT.format(new Date(y, m - 1, d))
+}
 
 type ListTab = 'open' | 'closed'
 
@@ -207,10 +233,10 @@ function LoginForm() {
 // ─── shared form bits ────────────────────────────────────────────────────────
 
 const inputClass =
-  'num border-faint bg-card text-ink focus:border-info w-full rounded-lg border px-2.5 py-1.5 text-[13px] outline-none'
+  'num border-faint bg-card text-ink focus:border-info w-full rounded-lg border px-2.5 py-1.5 text-[16px] outline-none sm:text-[13px]'
 
 const primaryButtonClass =
-  'w-full cursor-pointer rounded-lg border-0 px-3 py-2 text-[13px] font-medium transition-opacity hover:opacity-85 disabled:opacity-50 bg-[var(--ink)] text-[var(--card)]'
+  'w-full cursor-pointer rounded-lg border-0 px-3 py-3 text-[15px] font-medium transition-opacity hover:opacity-85 disabled:opacity-50 bg-[var(--ink)] text-[var(--card)] sm:py-2 sm:text-[13px]'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -509,12 +535,181 @@ function CloseForm({
 
 // ─── tab ─────────────────────────────────────────────────────────────────────
 
+/** One label/value line in a sheet's detail list. */
+function DetailRow({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="border-faint2 flex items-baseline justify-between gap-4 border-b py-2.5 last:border-b-0">
+      <span className="text-mid text-[12px]">{label}</span>
+      <span
+        className="num text-[14px] font-medium whitespace-nowrap"
+        style={color ? { color } : undefined}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * A position as a tappable card — the phone's replacement for a table row.
+ *
+ * Carries exactly what "checking the portfolio" needs (value and P/L); the
+ * other six figures live one tap away, where there is room for them.
+ */
+function PositionCard({ p, onOpen }: { p: PortfolioPosition; onOpen: () => void }) {
+  const unit = UNIT_FOR_TYPE[p.type] ?? ''
+  return (
+    <button
+      onClick={onOpen}
+      className="border-faint2 hover:bg-bg flex w-full cursor-pointer items-start justify-between gap-3 border-0 border-b bg-transparent px-4 py-3 text-left last:border-b-0"
+    >
+      <span className="min-w-0">
+        <span className="block text-[15px] font-semibold">{p.symbol}</span>
+        <span className="text-mid mt-0.5 block text-[12px]">
+          {TYPE_LABEL[p.type] ?? p.type}
+          {p.name ? ` · ${p.name}` : ''}
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <span className="text-right">
+          <span className="num block text-[15px] font-medium whitespace-nowrap">
+            {fmtMoney(p.currentValue, unit, 0)}
+          </span>
+          <span
+            className="num mt-0.5 block text-[12px] whitespace-nowrap"
+            style={{ color: plColor(p.plAmount) }}
+          >
+            {fmtSignedMoney(p.plAmount, unit)} · {fmtPct(p.plPercent)}
+          </span>
+        </span>
+        <ChevronRight className="text-faint size-4 shrink-0" aria-hidden="true" />
+      </span>
+    </button>
+  )
+}
+
+function ClosedCard({
+  c,
+  onOpen,
+}: {
+  c: PortfolioClosedPosition
+  onOpen: () => void
+}) {
+  const unit = UNIT_FOR_TYPE[c.type] ?? ''
+  return (
+    <button
+      onClick={onOpen}
+      className="border-faint2 hover:bg-bg flex w-full cursor-pointer items-start justify-between gap-3 border-0 border-b bg-transparent px-4 py-3 text-left last:border-b-0"
+    >
+      <span className="min-w-0">
+        <span className="block text-[15px] font-semibold">{c.symbol}</span>
+        <span className="text-mid mt-0.5 block text-[12px]">
+          {TYPE_LABEL[c.type] ?? c.type}
+          {c.name ? ` · ${c.name}` : ''} · {fmtDay(c.sellDate)}
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <span className="text-right">
+          <span className="num block text-[15px] font-medium whitespace-nowrap">
+            {fmtMoney(c.sellPrice * c.quantity, unit, 0)}
+          </span>
+          <span
+            className="num mt-0.5 block text-[12px] whitespace-nowrap"
+            style={{ color: plColor(c.pl) }}
+          >
+            {fmtSignedMoney(c.pl, unit)} · {fmtPct(c.plPercent)}
+          </span>
+        </span>
+        <ChevronRight className="text-faint size-4 shrink-0" aria-hidden="true" />
+      </span>
+    </button>
+  )
+}
+
+/** Pill segments — the phone stand-in for the panel's underline tabs. */
+function SegTabs<T extends string>({
+  value,
+  onChange,
+  items,
+}: {
+  value: T
+  onChange: (id: T) => void
+  items: { id: T; label: string }[]
+}) {
+  return (
+    <div className="bg-faint2 flex min-w-0 gap-1 rounded-full p-[3px]">
+      {items.map((i) => {
+        const on = i.id === value
+        return (
+          <button
+            key={i.id}
+            onClick={() => onChange(i.id)}
+            className="cursor-pointer truncate rounded-full border-0 px-3.5 py-1.5 text-[13px] transition-colors"
+            style={{
+              background: on ? 'var(--card)' : 'transparent',
+              color: on ? 'var(--ink)' : 'var(--mid)',
+              fontWeight: on ? 500 : 400,
+            }}
+          >
+            {i.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Full-width action button inside a sheet footer — 48px, thumb-sized. */
+function SheetAction({
+  children,
+  onClick,
+  variant = 'ghost',
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  variant?: 'primary' | 'ghost' | 'danger'
+}) {
+  const style: React.CSSProperties =
+    variant === 'primary'
+      ? { background: 'var(--ink)', color: 'var(--card)', border: '1px solid var(--ink)' }
+      : variant === 'danger'
+        ? { border: '1px solid var(--down)', color: 'var(--down)' }
+        : { border: '1px solid var(--faint)', color: 'var(--ink)' }
+  return (
+    <button
+      onClick={onClick}
+      className="h-12 w-full cursor-pointer rounded-[14px] bg-transparent text-[15px] font-medium transition-opacity hover:opacity-85"
+      style={style}
+    >
+      {children}
+    </button>
+  )
+}
+
 type RightMode = 'new' | 'edit' | 'close'
+
+/**
+ * What the phone's bottom sheet is showing, or null for none.
+ *
+ * Deliberately separate from the desktop `mode`/`selectedId` pair: the two
+ * layouts have different lifecycles (the desktop form panel is always on
+ * screen, a sheet is not), and sharing one state made the sheet spring open on
+ * load.
+ */
+type Sheet =
+  | { kind: 'detail'; id: string }
+  | { kind: 'edit'; id: string }
+  | { kind: 'close'; id: string }
+  | { kind: 'closed'; row: PortfolioClosedPosition }
+  | { kind: 'new' }
 
 export function VirtualPortfolioTab() {
   const { authenticated, loading: sessionLoading, username, logout } = useSession()
   const toast = useToast()
   const confirm = useConfirm()
+
+  const cards = useMediaQuery(CARD_QUERY)
+  const [sheet, setSheet] = useState<Sheet | null>(null)
 
   const [tab, setTab] = useState<ListTab>('open')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -551,6 +746,12 @@ export function VirtualPortfolioTab() {
         : { key, dir: key === 'symbol' ? 'asc' : 'desc' },
     )
   }
+
+  // Rotating to landscape swaps the card list for the table; a sheet left open
+  // would then hover over a layout it does not belong to.
+  useEffect(() => {
+    if (!cards) setSheet(null)
+  }, [cards])
 
   const reload = useCallback(() => setVersion((v) => v + 1), [])
 
@@ -629,6 +830,7 @@ export function VirtualPortfolioTab() {
   function afterWrite(pricePending?: boolean) {
     setSelectedId(null)
     setMode('new')
+    setSheet(null)
     reload()
     // The server keeps retrying a new ticker's price in the background; poll a
     // couple of times so it appears without the user pressing anything.
@@ -870,13 +1072,156 @@ export function VirtualPortfolioTab() {
     </Panel>
   )
 
+  // ── phone layout ────────────────────────────────────────────────────────
+  const sheetPos =
+    sheet && sheet.kind !== 'new' && sheet.kind !== 'closed'
+      ? (positions.find((p) => p.id === sheet.id) ?? null)
+      : null
+
+  const sheetTitle =
+    sheet?.kind === 'new'
+      ? 'Yeni pozisyon'
+      : sheet?.kind === 'closed'
+        ? `${sheet.row.symbol} — satış`
+        : sheetPos
+          ? sheet?.kind === 'edit'
+            ? `${sheetPos.symbol} — düzenle`
+            : sheet?.kind === 'close'
+              ? `${sheetPos.symbol} — sat`
+              : sheetPos.symbol
+          : ''
+
+  let sheetBody: React.ReactNode = null
+  let sheetFooter: React.ReactNode = undefined
+
+  if (sheet?.kind === 'new' || sheet?.kind === 'edit') {
+    sheetBody = (
+      <PositionForm position={sheet.kind === 'edit' ? sheetPos : null} onDone={afterWrite} />
+    )
+  } else if (sheet?.kind === 'close' && sheetPos) {
+    sheetBody = <CloseForm position={sheetPos} onDone={afterWrite} />
+  } else if (sheet?.kind === 'detail' && sheetPos) {
+    const unit = UNIT_FOR_TYPE[sheetPos.type] ?? ''
+    sheetBody = (
+      <>
+        <p className="text-mid mt-0 mb-2 text-[12px]">
+          {TYPE_LABEL[sheetPos.type] ?? sheetPos.type}
+          {sheetPos.name ? ` · ${sheetPos.name}` : ''}
+        </p>
+        <DetailRow label="Adet" value={fmtQty(sheetPos.quantity)} />
+        <DetailRow label="Değer" value={fmtMoney(sheetPos.currentValue, unit, 0)} />
+        <DetailRow label="Alış fiyatı" value={fmtMoney(sheetPos.buyPrice, unit)} />
+        <DetailRow label="Güncel fiyat" value={fmtMoney(sheetPos.currentPrice, unit)} />
+        <DetailRow
+          label="K/Z"
+          value={fmtSignedMoney(sheetPos.plAmount, unit)}
+          color={plColor(sheetPos.plAmount)}
+        />
+        <DetailRow
+          label="K/Z %"
+          value={fmtPct(sheetPos.plPercent)}
+          color={plColor(sheetPos.plPercent)}
+        />
+        <DetailRow label="Alış tarihi" value={fmtDay(sheetPos.buyDate)} />
+        {sheetPos.buyRate != null && (
+          <DetailRow label="Alış kuru" value={fmtN(sheetPos.buyRate)} />
+        )}
+      </>
+    )
+    sheetFooter = (
+      <div className="flex flex-col gap-2">
+        <SheetAction variant="primary" onClick={() => setSheet({ kind: 'close', id: sheetPos.id })}>
+          Sat
+        </SheetAction>
+        <SheetAction onClick={() => setSheet({ kind: 'edit', id: sheetPos.id })}>
+          Düzenle
+        </SheetAction>
+        <SheetAction variant="danger" onClick={() => remove(sheetPos)}>
+          Sil
+        </SheetAction>
+      </div>
+    )
+  } else if (sheet?.kind === 'closed') {
+    const c = sheet.row
+    const unit = UNIT_FOR_TYPE[c.type] ?? ''
+    sheetBody = (
+      <>
+        <p className="text-mid mt-0 mb-2 text-[12px]">
+          {TYPE_LABEL[c.type] ?? c.type}
+          {c.name ? ` · ${c.name}` : ''}
+        </p>
+        <DetailRow label="Adet" value={fmtQty(c.quantity)} />
+        <DetailRow label="Alış fiyatı" value={fmtMoney(c.buyPrice, unit)} />
+        <DetailRow label="Satış fiyatı" value={fmtMoney(c.sellPrice, unit)} />
+        <DetailRow label="K/Z" value={fmtSignedMoney(c.pl, unit)} color={plColor(c.pl)} />
+        <DetailRow label="K/Z %" value={fmtPct(c.plPercent)} color={plColor(c.pl)} />
+        <DetailRow label="Alış tarihi" value={fmtDay(c.buyDate)} />
+        <DetailRow label="Satış tarihi" value={fmtDay(c.sellDate)} />
+      </>
+    )
+    sheetFooter = (
+      <SheetAction variant="danger" onClick={() => removeClosed(c)}>
+        Satış kaydını sil
+      </SheetAction>
+    )
+  }
+
+  const mobileBody = (
+    <>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <SegTabs
+          value={tab}
+          onChange={setTab}
+          items={[
+            { id: 'open' as const, label: `Açık ${positions.length}` },
+            { id: 'closed' as const, label: `Kapanan ${closed?.length ?? 0}` },
+          ]}
+        />
+        <button
+          onClick={() => setSheet({ kind: 'new' })}
+          aria-label="Pozisyon ekle"
+          className="flex h-[38px] w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0"
+          style={{ background: 'var(--ink)', color: 'var(--card)' }}
+        >
+          <Plus className="size-[18px]" />
+        </button>
+      </div>
+
+      <div className="bg-card border-faint overflow-hidden rounded-xl border">
+        {!summary ? (
+          <Loading />
+        ) : tab === 'open' ? (
+          positions.length === 0 ? (
+            <PanelEmpty>Açık pozisyon yok. Yukarıdaki + ile ekleyin.</PanelEmpty>
+          ) : (
+            sortedPositions.map((p) => (
+              <PositionCard key={p.id} p={p} onOpen={() => setSheet({ kind: 'detail', id: p.id })} />
+            ))
+          )
+        ) : !closed?.length ? (
+          <PanelEmpty>Kapanan pozisyon yok.</PanelEmpty>
+        ) : (
+          sortedClosed.map((c) => (
+            <ClosedCard key={c.id} c={c} onOpen={() => setSheet({ kind: 'closed', row: c })} />
+          ))
+        )}
+      </div>
+
+      <BottomSheet open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)} footer={sheetFooter}>
+        {sheetBody}
+      </BottomSheet>
+    </>
+  )
+
   return (
     <div>
       <TabHeading
         title="Sanal Portföy"
         subtitle="Pozisyonlarını buradan ekle, düzenle ve kapat."
         right={
-          <div className="flex items-center gap-2.5">
+          // Full width on a phone so freshness and the refresh button read as
+          // one row rather than a ragged right-aligned block under the title.
+          <div className="flex w-full items-center justify-between gap-2.5 sm:w-auto sm:justify-end">
             {freshness && (
               <span
                 className="num text-[12px]"
@@ -895,17 +1240,30 @@ export function VirtualPortfolioTab() {
             >
               {refreshing ? 'Yenileniyor…' : 'Hisse fiyatlarını yenile'}
             </button>
-            <Chip>{username}</Chip>
-            <button
-              onClick={logout}
-              className="text-mid hover:text-ink cursor-pointer border-0 bg-transparent p-0 text-xs"
-            >
-              Çıkış
-            </button>
+            <span className="hidden items-center gap-2.5 sm:flex">
+              <Chip>{username}</Chip>
+              <button
+                onClick={logout}
+                className="text-mid hover:text-ink cursor-pointer border-0 bg-transparent p-0 text-xs"
+              >
+                Çıkış
+              </button>
+            </span>
           </div>
         }
       />
-      <SplitPane splitKey="virtual" a={listPanel} b={formPanel} />
+      {cards ? mobileBody : <SplitPane splitKey="virtual" a={listPanel} b={formPanel} />}
+
+      {/* Same pair, parked at the foot of the page where a phone has room. */}
+      <div className="text-mid mt-5 flex items-center justify-between text-[12px] sm:hidden">
+        <span>{username}</span>
+        <button
+          onClick={logout}
+          className="text-mid hover:text-ink cursor-pointer border-0 bg-transparent p-0 text-[12px]"
+        >
+          Çıkış
+        </button>
+      </div>
     </div>
   )
 }

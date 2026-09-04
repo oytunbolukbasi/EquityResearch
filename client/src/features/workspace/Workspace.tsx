@@ -23,13 +23,17 @@ import { useLayoutPersistence } from "./useLayoutPersistence";
 type TabId =
   "overview" | "reader" | "ideas" | "paper" | "virtual" | "analytics";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "overview", label: "Genel bakış" },
-  { id: "reader", label: "Piyasa Nabzı" },
-  { id: "ideas", label: "Pozisyon Fikirleri" },
-  { id: "paper", label: "Paper Trading" },
-  { id: "virtual", label: "Sanal Portföy" },
-  { id: "analytics", label: "Analiz" },
+/**
+ * `short` is what a phone shows: six full labels need 580px of strip, so on a
+ * 375px screen four of the six sat off-screen behind a scroll nobody can see.
+ */
+const TABS: { id: TabId; label: string; short: string }[] = [
+  { id: "overview", label: "Genel bakış", short: "Genel" },
+  { id: "reader", label: "Piyasa Nabzı", short: "Nabız" },
+  { id: "ideas", label: "Pozisyon Fikirleri", short: "Fikirler" },
+  { id: "paper", label: "Paper Trading", short: "Paper" },
+  { id: "virtual", label: "Sanal Portföy", short: "Portföy" },
+  { id: "analytics", label: "Analiz", short: "Analiz" },
 ];
 
 const TAB_KEY = "eqr2:tab";
@@ -181,7 +185,7 @@ export function Workspace() {
             </div>
           </div>
 
-          <nav className="eqr-header-nav flex items-center gap-6 overflow-x-auto">
+          <nav className="eqr-header-nav flex items-center gap-3.5 overflow-x-auto pr-6 sm:gap-6">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -195,7 +199,8 @@ export function Workspace() {
                   fontWeight: tab === t.id ? 500 : 400,
                 }}
               >
-                {t.label}
+                <span className="sm:hidden">{t.short}</span>
+                <span className="hidden sm:inline">{t.label}</span>
               </button>
             ))}
           </nav>
