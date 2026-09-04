@@ -161,9 +161,12 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 ### Faz 2 — Fiyat boru hattı
 - [x] `server/services/price-source.ts` (Google Apps Script: BIST + ABD) + yeni sembol kaydı
 - [x] `server/services/fund-price.ts` (Fintables + ScraperAPI, günlük önbellekli)
-- [x] Zamanlayıcı 09:00 / 10:00 TR, hafta içi (`price-scheduler.ts` — node-cron yerine
-      ~30 satırlık dakika-tick'i; bağımlılık eklenmedi)
+- [x] Zamanlayıcı — **iki ayrı ritim** (`price-scheduler.ts`, node-cron'suz):
+      hisseler 15 dk arayla + açılışta; fonlar hafta içi 09:00/10:00, açılışta ÇEKİLMEZ
+      (ScraperAPI kota koruması). İlk sürümde ikisi tek zamanlamaya konmuştu — bu,
+      hisseleri 15 dakikadan günde iki keze düşüren bir gerilemeydi, düzeltildi.
 - [x] Elle "Fiyatları yenile" butonu (tek pozisyon + toplu) + bayatlık göstergesi
+- [x] Yazma aksiyonları için hap bildirimler (sağ üst, 3 sn, × ile kapanır)
 - [x] Railway env: `SCRAPER_API_KEY`, `SHEETS_PRICE_URL` girildi ve doğrulandı
       (YKT fon fiyatı canlıda çekildi; yeni açılan TSKB pozisyonu sembol kaydı
       üzerinden fiyat aldı — uçtan uca çalışıyor)
@@ -199,9 +202,47 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 - [x] `virtual` sekmesinin varsayılan bölünmesi %75 (tablo sekiz sütun, form tek kolon)
 - [x] Fon birimi düzeltildi: TEFAS fonları da TL, artık ₺ ile gösteriliyor
 
-### Faz 4 — İsteğe bağlı
+### Faz 4 — Analytics raporlaması (yapılacak)
+
+Eski app'in `analytics` sayfası envanteri çıkarıldı. Yapay zeka görüşü **hariç**,
+geri kalan her şey taşınacak:
+
+| Metrik | Hesap |
+|---|---|
+| Toplam Değer | Açık pozisyonların TL karşılığı toplamı |
+| Aktif Pozisyonlar K/Z | Değer − maliyet (gerçekleşmemiş) + yüzde |
+| Toplam Gerçekleşen K/Z | Kapanan pozisyonların tümü (lifetime) |
+| Dönem K/Z | Seçili tarih aralığındaki kapanışlar |
+| Net Portföy K/Z | Gerçekleşen + gerçekleşmemiş, lifetime maliyete oranla |
+| Tür dağılımı | BİST / ABD / Fon — her biri için değer, maliyet, K/Z |
+| Dağılım grafiği | Yarım daire, tür başına pay |
+| Tarih aralığı | Başlangıç-bitiş seçici + LIFETIME |
+
+**🟠 Önce karar verilmesi gereken: ABD maliyetinde hangi kur?**
+
+İki uygulama farklı hesaplıyor ve fark küçük değil (4 Eylül 2026 ölçümü):
+
+| Yöntem | Maliyet | K/Z | K/Z % |
+|---|---|---|---|
+| EQR — alış anındaki kur (`buyRate`) | 1.325.119 | −31.480 | −%2,38 |
+| Eski app — bugünkü kur | 1.348.599 | −54.960 | −%4,08 |
+
+**Fark: 23.480 TL / 1,70 puan.**
+
+- **Alış anı kuru (EQR)**: TL maliyetiniz alışta sabitlendi, dolayısıyla getiriniz
+  kur hareketini de içerir. "Param gerçekte ne yaptı" sorusunun cevabı.
+- **Bugünkü kur (eski app)**: kur etkisini dışarıda bırakır, yalnızca hissenin
+  kendi hareketini ölçer. "Hisse seçimlerim nasıldı" sorusunun cevabı.
+
+İkisi de geçerli; farklı soruları yanıtlıyorlar. Analytics yazılmadan önce hangisinin
+esas alınacağına karar verilmeli — ya da ikisi birden gösterilmeli.
+
+**Not:** Paralel doğrulama haftasında iki app farklı toplam gösterecek. Bu bir hata
+değil, yukarıdaki yöntem farkı. Fiyat karşılaştırması yaparken **pozisyon bazında
+`currentPrice`** karşılaştırın, toplamları değil.
+
+### Faz 5 — İsteğe bağlı
 - [ ] BIST sembol otomatik tamamlama (`bist_symbols` tablosu zaten dolu)
-- [ ] Dönem K/Z ve tür dağılımı görünümü
 - [ ] Mobil form iyileştirmesi (gerekirse; şimdilik web-only kabul edildi)
 
 ---
