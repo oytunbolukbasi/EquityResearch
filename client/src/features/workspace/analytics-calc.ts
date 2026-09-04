@@ -48,6 +48,15 @@ export interface Analytics {
   net: number
   netPercent: number
 
+  /** Counts — trade record rather than money. */
+  openCount: number
+  closedCountLifetime: number
+  closedCountPeriod: number
+  winners: number
+  losers: number
+  /** Winners as a share of decided trades, null until at least one is closed. */
+  winRate: number | null
+
   byType: { key: string; label: string; bucket: Bucket; share: number }[]
 }
 
@@ -132,6 +141,12 @@ export function computeAnalytics(
     t.share = open.value > 0 ? (t.bucket.value / open.value) * 100 : 0
   }
 
+  // Win/loss is counted over the selected range so the record can be read for
+  // a period, not only for all time.
+  const winners = inRange.filter((c) => c.pl > 0).length
+  const losers = inRange.filter((c) => c.pl < 0).length
+  const decided = winners + losers
+
   return {
     totalValue: open.value,
     totalCost: open.cost,
@@ -144,6 +159,14 @@ export function computeAnalytics(
     periodCount: inRange.length,
     net,
     netPercent: lifetimeCost > 0 ? (net / lifetimeCost) * 100 : 0,
+    openCount: positions.length,
+    closedCountLifetime: closed.length,
+    closedCountPeriod: inRange.length,
+    winners,
+    losers,
+    // Break-even trades are excluded from the denominator: they decided
+    // nothing either way.
+    winRate: decided > 0 ? (winners / decided) * 100 : null,
     byType,
   }
 }

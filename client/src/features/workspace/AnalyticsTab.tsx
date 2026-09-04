@@ -82,6 +82,71 @@ function AllocationArc({ byType }: { byType: Analytics['byType'] }) {
   )
 }
 
+/** Section heading inside a panel. */
+function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="border-faint mt-5 mb-1 flex items-baseline justify-between gap-2 border-t pt-4">
+      <h3 className="m-0 text-[13px] font-medium">{children}</h3>
+      {hint && <span className="text-mid text-[11px]">{hint}</span>}
+    </div>
+  )
+}
+
+/** One counter in the performance grid. */
+function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div>
+      <div className="text-mid text-[11px]">{label}</div>
+      <div className="num text-[20px] font-semibold" style={color ? { color } : undefined}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Per-type P/L, drawn as bars scaled to the largest absolute contribution so a
+ * small loss next to a big gain stays visible rather than collapsing to a line.
+ */
+function PlDistribution({ byType }: { byType: Analytics['byType'] }) {
+  const peak = Math.max(...byType.map((t) => Math.abs(t.bucket.pl)), 1)
+  return (
+    <div className="mt-1">
+      {byType.map((t) => {
+        const width = (Math.abs(t.bucket.pl) / peak) * 100
+        const up = t.bucket.pl >= 0
+        return (
+          <div key={t.key} className="py-2">
+            <div className="mb-1.5 flex items-baseline justify-between gap-3">
+              <span className="text-[12px]">{t.label}</span>
+              <span
+                className="num text-[13px] font-medium"
+                style={{ color: plColor(t.bucket.pl) }}
+              >
+                {fmtSignedMoney(t.bucket.pl, '₺')} · {fmtPct(t.bucket.plPercent)}
+              </span>
+            </div>
+            {/* Centre line: gains grow right, losses grow left. */}
+            <div className="relative h-1.5 w-full">
+              <div className="bg-faint2 absolute inset-0 rounded-full" />
+              <div
+                className="absolute top-0 h-1.5 rounded-full"
+                style={{
+                  width: `${width / 2}%`,
+                  left: up ? '50%' : undefined,
+                  right: up ? undefined : '50%',
+                  background: up ? 'var(--up)' : 'var(--down)',
+                }}
+              />
+              <div className="bg-faint absolute top-[-2px] bottom-[-2px] left-1/2 w-px" />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function AnalyticsTab() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -153,6 +218,54 @@ export function AnalyticsTab() {
         )}
       </div>
 
+      <SectionTitle hint={rangeActive ? 'seçili dönem' : 'tüm zamanlar'}>
+        Kâr/Zarar özeti
+      </SectionTitle>
+      <div>
+        <Row
+          label="Gerçekleşmemiş K/Z"
+          value={fmtSignedMoney(a.unrealized, '₺')}
+          color={plColor(a.unrealized)}
+          hint="açık pozisyonlar"
+        />
+        <Row
+          label={rangeActive ? 'Gerçekleşen K/Z (dönem)' : 'Gerçekleşen K/Z'}
+          value={fmtSignedMoney(rangeActive ? a.realizedPeriod : a.realizedLifetime, '₺')}
+          color={plColor(rangeActive ? a.realizedPeriod : a.realizedLifetime)}
+        />
+        {rangeActive && (
+          <Row
+            label="Toplam gerçekleşen K/Z"
+            value={fmtSignedMoney(a.realizedLifetime, '₺')}
+            color={plColor(a.realizedLifetime)}
+            hint="tüm zamanlar"
+          />
+        )}
+        <Row
+          label="Net K/Z"
+          value={`${fmtSignedMoney(a.net, '₺')} · ${fmtPct(a.netPercent)}`}
+          color={plColor(a.net)}
+          strong
+        />
+      </div>
+
+      <SectionTitle>Performans metrikleri</SectionTitle>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-2">
+        <Stat label="Açık pozisyon" value={String(a.openCount)} />
+        <Stat
+          label={rangeActive ? 'Kapatılan (dönem)' : 'Kapatılan pozisyon'}
+          value={String(rangeActive ? a.closedCountPeriod : a.closedCountLifetime)}
+        />
+        <Stat label="Kazanan işlem" value={String(a.winners)} color="var(--up)" />
+        <Stat label="Kaybeden işlem" value={String(a.losers)} color="var(--down)" />
+      </div>
+      {a.winRate != null && (
+        <p className="text-mid mt-3 text-[11px]">
+          İsabet oranı %{a.winRate.toFixed(0)}
+          {rangeActive && ` · toplam ${a.closedCountLifetime} kapanış`}
+        </p>
+      )}
+
       <p className="text-mid mt-4 text-[11px] leading-[1.6]">
         ABD pozisyonlarının maliyeti alış günündeki kurla, güncel değeri bugünkü kurla
         hesaplanır. Kapanan ABD pozisyonlarında satış günü kuru saklanmadığı için bugünkü
@@ -198,6 +311,9 @@ export function AnalyticsTab() {
               </div>
             ))}
           </div>
+
+          <SectionTitle hint="açık pozisyonlar">Kâr/Zarar dağılımı</SectionTitle>
+          <PlDistribution byType={a.byType} />
         </>
       )}
     </Panel>
