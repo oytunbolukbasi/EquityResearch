@@ -19,6 +19,10 @@ Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u
 - **ORM:** Drizzle ORM (Neon serverless driver ile birlikte)
 - **Veritabanı:** Neon Postgres (mevcut hesap) — pooled connection string kullan
 - **Deployment:** Railway (sadece uygulama; DB Neon'da kalıyor), GitHub'a push ile otomatik deploy
+- **Kod stili:** `.prettierrc` — tek tırnak, noktalı virgül yok, 100 karakter. Prettier
+  bağımlılık olarak kurulu DEĞİL; dosya, ayarsız çalıştırılan bir `npx prettier`'ın kendi
+  varsayılanlarına (çift tırnak + noktalı virgül) düşüp kod tabanını yeniden biçimlendirmesini
+  önlemek için var. (GÖREV 29)
 
 ## Tasarım Dili
 Renk paleti mevcut PDF bültenlerden ve trade plan HTML'inden taşındı; üzerine tam bir
@@ -73,6 +77,10 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 **Tipografi:**
 - Tek font: **Inter** (400/500/600/700, latin + latin-ext — Türkçe karakter tam desteği).
 - Sayısal değerlerde (fiyat, yüzde, miktar) mono font YOK; bunun yerine `font-variant-numeric: tabular-nums` ile sütun hizalaması korunuyor. CSS utility class: `.num` ve `.tnum`.
+- **Taban punto 12px.** Okunacak her metin — kart etiketleri, K/Z satırları, tablo alt
+  satırları, form etiketleri, takvim hücreleri — en az 12px. 12px altı yalnızca *işaret*
+  içindir, metin için değil: durum rozetleri (10px), grafik seviye etiketleri (10px),
+  Risk/Getiri rozeti (11px) ve tablo `<th>` başlıkları (11px). (GÖREV 29)
 - Widget eyebrow başlıkları: 14px / weight 600 / uppercase / tracking 0.01em.
 - Tablo başlıkları `<th>`: 11px / weight 500 / uppercase / tracking 0.04em.
 - Tablo hücreleri `<td>`: minimum 13px (CSS override, unlayered).
@@ -120,8 +128,10 @@ ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır
 5. **Sanal Portföy** — pozisyon ekle / düzenle / sat / sil. **Giriş ister**
    (bkz. Kimlik Doğrulama). Kısmi satış destekli. Sütunlar sıralanabilir; Varlık ve
    İşlem sütunları sabitlenmiştir (panel daraldığında butonlar kaybolmasın diye).
-6. **Analiz** — portföy özeti, kâr/zarar özeti, performans metrikleri, tür dağılımı
-   (yarım daire) ve kâr/zarar dağılımı. Günlük/Aylık/Tümü preset'li takvim seçici.
+6. **Analiz** — portföy özeti, kâr/zarar özeti, performans metrikleri, **Dağılım**
+   (yığılmış şerit + pay lejantı) ve kâr/zarar dağılımı. Günlük/Aylık/Tümü preset'li
+   takvim seçici; başlığın hemen altında **dönem özeti şeridi** — seçili dönemde kaç
+   pozisyon açıldı, kaç tanesi kapatıldı. *(Yarım daire donut GÖREV 29'da kaldırıldı.)*
 
 > **Kaldırılanlar:** BIST + ABD Heatmap (GÖREV 17; `heatmaps` tablosu korundu),
 > widget ekle/kaldır menüsü, serbest sürükle-bırak canvas (GÖREV 27).
@@ -200,7 +210,8 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > pill satırına birleşti** (GÖREV 24), **portfolio_snapshots bağımlılığı kaldırıldı** (kaynak
 > tablo silindi). Çelişki görürsen **en yüksek numaralı GÖREV** geçerlidir. GÖREV 27 pek çok erken
 > kararı geçersiz kıldı: react-grid-layout, widget ekle/kaldır menüsü ve Framer Motion
-> artık yok.
+> artık yok. GÖREV 29 Analiz'deki yarım daire donut'ı kaldırdı ve panele 12px punto
+> tabanı koydu.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -620,3 +631,45 @@ kalan adımlar: **SANAL-PORTFOY-PLAN.md**.
 - Pozisyon tablosunda Varlık ve İşlem sütunları sabitlendi. Sekiz sütun panel
   daraldığında satır aksiyonlarını sağ kenarın dışına itiyordu: DOM'da var, ekranda
   yok, tıklama arkadaki panele gidiyordu.
+
+GÖREV 29 — Analiz: dönem özeti şeridi, dağılım grafiği, 12px punto tabanı
+
+Üç iş; üçü de Analiz sekmesinde buluşuyor. Tasarım turu için `/design` canvas'ı
+kullanıldı (üç yerleşim seçeneği yan yana çizilip biri seçildi).
+
+A — Dönem özeti şeridi (`PeriodBand`, AnalyticsTab.tsx):
+Tarih seçicinin ima ettiği ama göstermediği satır: seçili dönemde kaç pozisyon
+açıldı, kaç tanesi kapatıldı. PortfoyTakip'te vardı, GÖREV 28'de taşınırken atlanmış.
+- "Tümü"nde sayım olay değil DURUM olarak okunur ("17 açık pozisyon", "23 kapanmış
+  pozisyon") — tüm zamanlar için açılma/kapanma bir dönem hareketi değil, portföyün hâli.
+- Boş dönemde iki sıfır yazmak yerine "işlem yapılmadı".
+- Renk yok: açılış/kapanış bir olay, yeşil burada kâr okunurdu.
+- `analytics-calc.ts` → `openedCountPeriod`: açık pozisyonlara EK OLARAK o aralıkta
+  alınıp yine o aralıkta satılanları da sayar. Eski uygulama yalnızca hâlâ açık olanlara
+  bakıyor, aynı ay içinde kapanan pozisyonu hiç saymıyordu.
+- `rangePreset()` date-range-picker'dan export edildi (şerit "Bugün"/"Bu ay" diyebilsin,
+  seçicinin zaten gösterdiği tarihleri tekrarlamasın diye). `TabHeading`'e `below` slot'u.
+- Sayımlar doğrudan SQL ile karşılaştırıldı: 17/23, bu ay 1/1, bugün 1/1, 2-3 Haz 0/1.
+
+B — Tür dağılımı: yarım daire donut → yığılmış şerit (`AllocationBar`):
+Donut'un yüksekliği veriye değil panelin GENİŞLİĞİNE bağlıydı; %75'te üç sayı
+göstermek için 400px'i aşıyordu. Şerit her genişlikte ~45px. Pay yüzdeleri artık
+lejantta; altındaki satırlar nokta ve yüzdeyi tekrarlamıyor (her bilgi bir kez).
+Kart başlığı "Tür dağılımı" → **"Dağılım"**. Yeni tür eklenirse üç yer: `TYPE_LABELS`
+(analytics-calc), `TYPE_COLOR` + `TYPE_SHORT` (AnalyticsTab) — şerit N segment çalışır.
+
+C — 12px punto tabanı:
+Panelde 12px altındaki 65 noktanın 48'i büyütüldü (kart etiketleri, K/Z satırları,
+tablo alt satırları, form etiketleri, takvim hücreleri, sayfalama butonları).
+Risk/Getiri rozeti 9 → 11px (12 mini-bar satırını taşırıyordu), Paper Trading tablo
+başlıkları 10 → 11px (diğer tablolarla aynı). Durum rozetleri, grafik seviye etiketleri
+ve `<th>` başlıkları bilerek bırakıldı — okunacak metin değil, işaret. Kural artık
+Tipografi bölümünde yazılı.
+
+Yan iş: `.prettierrc` eklendi ve `split.tsx`'teki `DEFAULT_SWAPPED` tamamlandı — Sanal
+Portföy ve Analiz sekmeleri eklendiğinde güncellenmemiş, `npm run typecheck` kırıktı.
+
+Ders (kendi hatam): prettier'ı ayar dosyası olmadan çalıştırdım, dört dosyayı repo'nun
+kullanmadığı stile çevirdi ve 60 satırlık diff 800 satır oldu. Dosyalar HEAD'den geri
+alınıp değişiklikler yeniden uygulandı. Bir biçimlendiriciyi ayarını doğrulamadan
+çalıştırma.
