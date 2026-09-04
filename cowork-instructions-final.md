@@ -409,6 +409,15 @@ Equity Research Plugin'indeki /morning-note skill'ini kullan. Ancak morning-note
 **Yeni fikir için trade_plan:** tam plan gönder — `ticker, exchange, currentPrice, entryLow, entryHigh, tp1, tp2, tp3, hardSl, thesis, invalidation, status: "active"` + `priceHistory` (yfinance'ten son 60 günlük OHLC; alınamazsa `[]` + log).
 
 > **KRİTİK:** priceHistory/appendPriceHistory TARİHE GÖRE ARTAN sırada. Bar formatı `{"t","o","h","l","c"}` — `date/open/high/low/close` adları API tarafından REDDEDİLİR.
+>
+> **`appendPriceHistory` bir BAYRAK DEĞİL, barların KENDİSİDİR.** Zod şeması `z.array(ohlc)`
+> bekler; `"appendPriceHistory": true` gönderirsen tüm trade_plans tablosu tek hatayla düşer:
+> `appendPriceHistory: Invalid input: expected array, received boolean`.
+> ✅ `{"ticker":"CVX","currentPrice":211.32,"appendPriceHistory":[{"t":"2026-09-03",...}]}`
+> ❌ `{"ticker":"CVX","currentPrice":211.32,"priceHistory":[{...}],"appendPriceHistory":true}`
+> Mevcut plana bar EKLERKEN `appendPriceHistory` kullan (tarih bazında merge eder);
+> `priceHistory` yalnızca YENİ plan açarken (tam geçmiş) gönderilir. İkisini aynı anda gönderme.
+> (4 Eylül 2026'da bu hata yaşandı; diğer üç tablo kaydedildi, sadece trade_plans reddedildi.)
 
 ---
 
