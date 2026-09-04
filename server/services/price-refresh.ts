@@ -1,11 +1,13 @@
 import { portfolioRepo } from '../db/portfolio-client'
 import { portfolioWriteRepo } from '../db/portfolio-write'
 import { fetchFundPrice } from './fund-price'
-import { fetchSharePrices } from './price-source'
+import { fetchSharePrices, PriceSourceUnavailable } from './price-source'
 
 export interface RefreshResult {
   updated: { symbol: string; price: number }[]
   skipped: { symbol: string; reason: string }[]
+  /** Set when the price source itself was unreachable — not the symbols' fault. */
+  sourceError?: string
 }
 
 /**
@@ -22,7 +24,16 @@ export async function refreshSharePrices(force = false): Promise<RefreshResult> 
   const result: RefreshResult = { updated: [], skipped: [] }
   if (shares.length === 0) return result
 
-  const sheet = await fetchSharePrices(force)
+  let sheet: Record<string, number>
+  try {
+    sheet = await fetchSharePrices(force)
+  } catch (e) {
+    // Report the source failing as exactly that. Listing every position as
+    // "not in the price source" would be false and points at the wrong thing.
+    if (e instanceof PriceSourceUnavailable) return { ...result, sourceError: e.message }
+    throw e
+  }
+
   for (const p of shares) {
     const price = sheet[p.symbol.toUpperCase()]
     if (price == null) {
@@ -75,7 +86,9 @@ export async function refreshOnePrice(id: string, force = true): Promise<number 
   const price =
     position.type === 'fund'
       ? await fetchFundPrice(position.symbol, force)
-      : (await fetchSharePrices(force))[position.symbol.toUpperCase()]
+      : (await fetchSharePrices(force).catch(() => ({}) as Record<string, number>))[
+          position.symbol.toUpperCase()
+        ]
 
   if (price == null) return null
   await writePrice(id, price)

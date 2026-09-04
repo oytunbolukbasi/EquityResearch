@@ -605,13 +605,18 @@ export function VirtualPortfolioTab() {
       const r = (await res.json()) as {
         updated: { symbol: string }[]
         skipped: { symbol: string; reason: string }[]
+        sourceError?: string
+      }
+      // The source being down is a different failure from a symbol missing from
+      // the sheet. Listing 17 tickers when Google is unreachable blames the
+      // wrong thing and sends you looking in the wrong place.
+      if (r.sourceError) {
+        toast.error('Fiyat kaynağına ulaşılamadı — mevcut fiyatlar korundu.')
+        return
       }
       toast.success(`${r.updated.length} hisse fiyatı güncellendi`)
-      // Name the symbols that failed rather than just counting them — a silently
-      // skipped price is the failure mode that matters here. Separate toast so
-      // it stays on screen as its own line.
       if (r.skipped.length) {
-        toast.error(`Alınamadı: ${r.skipped.map((s) => s.symbol).join(', ')}`)
+        toast.error(`Sheet'te bulunamadı: ${r.skipped.map((s) => s.symbol).join(', ')}`)
       }
       reload()
     } catch {

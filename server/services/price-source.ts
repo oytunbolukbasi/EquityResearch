@@ -29,36 +29,68 @@ function sheetsUrl(): string | null {
  * unreachable. Callers must treat "missing symbol" as "leave the stored price
  * alone" — writing null would blank a price the panel depends on.
  */
+/** Thrown when the sheet could not be read at all and no cache can stand in. */
+export class PriceSourceUnavailable extends Error {
+  constructor(cause: unknown) {
+    super(`Fiyat kaynağına ulaşılamadı: ${cause instanceof Error ? cause.message : String(cause)}`)
+    this.name = 'PriceSourceUnavailable'
+  }
+}
+
+async function readSheet(url: string): Promise<Record<string, number>> {
+  const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(30_000) })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const raw = (await res.json()) as Record<string, unknown>
+
+  const prices: Record<string, number> = {}
+  for (const [symbol, value] of Object.entries(raw)) {
+    const n = typeof value === 'number' ? value : Number(value)
+    // A symbol the sheet hasn't resolved yet comes back as 0 or a string like
+    // "#N/A"; both must be dropped rather than stored as a price.
+    if (Number.isFinite(n) && n > 0) prices[symbol.toUpperCase()] = n
+  }
+  if (Object.keys(prices).length === 0) throw new Error('sheet boş döndü')
+  return prices
+}
+
+/**
+ * Throws `PriceSourceUnavailable` rather than returning an empty map.
+ *
+ * Returning `{}` made a dead source indistinguishable from "none of your
+ * symbols are tracked": every position got skipped with "fiyat kaynağında yok",
+ * which blames the symbols for the source being down. Callers need to be able
+ * to tell those apart to say anything true about it.
+ *
+ * Apps Script serves one request at a time per script, so a burst — registering
+ * a new symbol while a refresh is in flight — can fail transiently. Retried
+ * twice with a short backoff before giving up.
+ */
 export async function fetchSharePrices(force = false): Promise<Record<string, number>> {
   if (!force && cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.prices
 
   const url = sheetsUrl()
-  if (!url) return {}
+  if (!url) throw new PriceSourceUnavailable('SHEETS_PRICE_URL tanımlı değil')
 
-  try {
-    const res = await fetch(url, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(30_000),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const raw = (await res.json()) as Record<string, unknown>
-
-    const prices: Record<string, number> = {}
-    for (const [symbol, value] of Object.entries(raw)) {
-      const n = typeof value === 'number' ? value : Number(value)
-      // A symbol the sheet hasn't resolved yet comes back as 0 or a string
-      // like "#N/A"; both must be dropped rather than stored as a price.
-      if (Number.isFinite(n) && n > 0) prices[symbol.toUpperCase()] = n
+  let last: unknown
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const prices = await readSheet(url)
+      cache = { at: Date.now(), prices }
+      return prices
+    } catch (e) {
+      last = e
+      console.warn(`[price] sheet okunamadı (deneme ${attempt}/3) —`, e)
+      if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1_500))
     }
-
-    cache = { at: Date.now(), prices }
-    return prices
-  } catch (e) {
-    // Loud, because the symptom downstream is a silent "0 updated": every
-    // symbol gets skipped and nothing says why.
-    console.error('[price] hisse fiyatları alınamadı —', e)
-    return cache?.prices ?? {}
   }
+
+  // A stale cache still beats failing outright — those prices were real.
+  if (cache) {
+    console.warn('[price] kaynak yanıt vermedi, önbellekteki fiyatlar kullanılıyor')
+    return cache.prices
+  }
+  console.error('[price] hisse fiyatları alınamadı —', last)
+  throw new PriceSourceUnavailable(last)
 }
 
 /**
