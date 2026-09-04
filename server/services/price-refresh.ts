@@ -1,7 +1,7 @@
 import { portfolioRepo } from '../db/portfolio-client'
 import { portfolioWriteRepo } from '../db/portfolio-write'
 import { fetchFundPrice } from './fund-price'
-import { fetchSharePrices, PriceSourceUnavailable } from './price-source'
+import { fetchSharePrices, PriceSourceUnavailable, registerSymbol } from './price-source'
 
 export interface RefreshResult {
   updated: { symbol: string; price: number }[]
@@ -86,9 +86,11 @@ export async function refreshOnePrice(id: string, force = true): Promise<number 
   const price =
     position.type === 'fund'
       ? await fetchFundPrice(position.symbol, force)
-      : (await fetchSharePrices(force).catch(() => ({}) as Record<string, number>))[
-          position.symbol.toUpperCase()
-        ]
+      : (
+          await fetchSharePrices(force, { attempts: 1 }).catch(
+            () => ({}) as Record<string, number>,
+          )
+        )[position.symbol.toUpperCase()]
 
   if (price == null) return null
   await writePrice(id, price)
@@ -96,20 +98,28 @@ export async function refreshOnePrice(id: string, force = true): Promise<number 
 }
 
 /**
- * Keeps trying to price a freshly opened position, in the background.
+ * Registers a freshly opened position's symbol and then keeps trying to price
+ * it — all of it in the background.
  *
- * A brand-new ticker isn't in the sheet yet: registerSymbol adds the row, and
- * only then does GOOGLEFINANCE start resolving it — which takes a few seconds.
- * A single fetch at creation time therefore comes back empty, and without this
- * the position sits blank until the next 15-minute sweep, so adding a position
- * looked like it silently failed to price.
+ * The registration lives HERE rather than in the route on purpose. It has to
+ * happen before the first price read (the sheet only knows the tickers it has
+ * rows for), but that ordering is not a reason to make a person wait: the row
+ * is already saved, and the sheet answers in ~35s on a good day. Awaiting this
+ * pair inside the request handler is exactly what made "Pozisyon ekle" hang for
+ * two minutes.
  *
- * Fire-and-forget: the caller has already saved the position and must not wait
- * on a spreadsheet. Stops at the first success, and stops quietly if the
+ * Fire-and-forget. Stops at the first success, and stops quietly if the
  * position was deleted meanwhile (refreshOnePrice returns null for a missing id).
  */
-export function ensurePriceSoon(id: string, delaysMs: number[] = [4_000, 12_000, 30_000]) {
+export function ensurePriceSoon(
+  id: string,
+  register?: { symbol: string; type: string },
+  // Spaced for a sheet that needs tens of seconds per read and a moment to
+  // recalculate a row it was just given — 4/12/30s never once caught it.
+  delaysMs: number[] = [3_000, 20_000, 60_000, 120_000],
+) {
   void (async () => {
+    if (register) await registerSymbol(register.symbol, register.type)
     for (const delay of delaysMs) {
       await new Promise((r) => setTimeout(r, delay))
       const price = await refreshOnePrice(id, true).catch(() => null)

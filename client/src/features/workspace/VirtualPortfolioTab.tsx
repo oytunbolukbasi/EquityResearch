@@ -832,12 +832,14 @@ export function VirtualPortfolioTab() {
     setMode('new')
     setSheet(null)
     reload()
-    // The server keeps retrying a new ticker's price in the background; poll a
-    // couple of times so it appears without the user pressing anything.
+    // The server keeps retrying a new ticker's price in the background; poll so
+    // it appears without the user pressing anything. Spaced for a sheet that
+    // needs tens of seconds per read — the old 6/18/35s all fired before the
+    // first successful read could possibly have happened.
     if (pricePending) {
-      window.setTimeout(reload, 6_000)
-      window.setTimeout(reload, 18_000)
-      window.setTimeout(reload, 35_000)
+      for (const ms of [8_000, 25_000, 60_000, 120_000, 200_000]) {
+        window.setTimeout(reload, ms)
+      }
     }
   }
 

@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { portfolioWriteRepo } from '../db/portfolio-write'
 import { requireSession } from '../lib/auth'
 import { getHistoricalExchangeRate } from '../services/exchange-rate'
-import { registerSymbol } from '../services/price-source'
 import { ensurePriceSoon, refreshOnePrice, refreshSharePrices } from '../services/price-refresh'
 
 export const portfolioManageRouter = Router()
@@ -94,24 +93,20 @@ portfolioManageRouter.post('/positions', async (req, res) => {
     buyDate: new Date(d.buyDate).toISOString(),
   })
 
-  // The price sheet only knows the tickers it has rows for, so a brand-new
-  // symbol has to be registered first — awaited, because asking for the price
-  // before the row exists is guaranteed to come back empty. A failure here
-  // must not undo the save, so it is swallowed and left to the retry below.
-  if (d.type !== 'fund') await registerSymbol(d.symbol, d.type).catch(() => {})
-
-  const price = await refreshOnePrice(created.id).catch(() => null)
-
-  // GOOGLEFINANCE needs a few seconds to resolve a row it has just been given,
-  // so the first read usually misses. Keep trying in the background rather than
-  // leaving the position blank until the next sweep.
-  if (price == null) ensurePriceSoon(created.id)
+  // Pricing NEVER blocks the write.
+  //
+  // Registering the symbol and reading the price both talk to a third-party
+  // spreadsheet that recalculates ~40 GOOGLEFINANCE cells before answering —
+  // measured at ~35s, and it retries when it fails. Awaiting that pair here put
+  // roughly a hundred seconds between "Pozisyon ekle" and a response for a row
+  // that was already committed, so the button sat on a spinner and the save
+  // looked broken. The position is saved; the price catches up on its own.
+  ensurePriceSoon(created.id, d.type !== 'fund' ? { symbol: d.symbol, type: d.type } : undefined)
 
   res.status(201).json({
     ...created,
-    currentPrice: price?.toFixed(6) ?? created.currentPrice,
     /** Tells the client to re-poll instead of showing a blank price. */
-    pricePending: price == null,
+    pricePending: true,
   })
 })
 
