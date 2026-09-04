@@ -5,6 +5,7 @@ import { useApi } from '@/lib/use-api'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice } from './shared'
+import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 import { computeAnalytics, type Analytics } from './analytics-calc'
 import { fmtMoney, fmtPct, fmtSignedMoney, plColor } from './portfolio-calc'
 
@@ -148,8 +149,7 @@ function PlDistribution({ byType }: { byType: Analytics['byType'] }) {
 }
 
 export function AnalyticsTab() {
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [range, setRange] = useState<DateRange>({ from: null, to: null })
 
   const { data: summary, loading, error } = useApi<PortfolioSummary>('/api/portfolio/summary')
   const { data: closed } = useApi<PortfolioClosedPosition[]>('/api/portfolio/closed')
@@ -157,11 +157,8 @@ export function AnalyticsTab() {
   if (loading) return <Loading />
   if (error) return <Notice>Portföy verisi alınamadı.</Notice>
 
-  const a = computeAnalytics(summary?.positions ?? [], closed ?? [], summary?.usdTryRate ?? 1, {
-    from: from || null,
-    to: to || null,
-  })
-  const rangeActive = Boolean(from || to)
+  const a = computeAnalytics(summary?.positions ?? [], closed ?? [], summary?.usdTryRate ?? 1, range)
+  const rangeActive = Boolean(range.from || range.to)
 
   const summaryPanel = (
     <Panel
@@ -324,35 +321,7 @@ export function AnalyticsTab() {
       <TabHeading
         title="Analiz"
         subtitle="Portföyün bütünü: değer, kâr-zarar ve dağılım."
-        right={
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              aria-label="Başlangıç tarihi"
-              className="num border-faint bg-card text-ink rounded-lg border px-2 py-1 text-[12px]"
-            />
-            <span className="text-mid text-[12px]">–</span>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              aria-label="Bitiş tarihi"
-              className="num border-faint bg-card text-ink rounded-lg border px-2 py-1 text-[12px]"
-            />
-            <button
-              onClick={() => {
-                setFrom('')
-                setTo('')
-              }}
-              disabled={!rangeActive}
-              className="border-faint hover:bg-faint2 text-mid cursor-pointer rounded-lg border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-40"
-            >
-              Tümü
-            </button>
-          </div>
-        }
+        right={<DateRangePicker value={range} onChange={setRange} />}
       />
       <SplitPane splitKey="analytics" a={summaryPanel} b={allocationPanel} />
     </div>

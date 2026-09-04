@@ -216,7 +216,7 @@ geri kalan her şey taşınacak:
 | Net Portföy K/Z | Gerçekleşen + gerçekleşmemiş, lifetime maliyete oranla |
 | Tür dağılımı | BİST / ABD / Fon — her biri için değer, maliyet, K/Z |
 | Dağılım grafiği | Yarım daire, tür başına pay |
-| Tarih aralığı | Başlangıç-bitiş seçici + LIFETIME |
+| Tarih aralığı | **Günlük · Aylık · Tümü** preset'leri + takvimden özel aralık |
 | **Kâr/Zarar Özeti** | Gerçekleşmemiş · gerçekleşen (dönem + tüm zamanlar) · net, bir arada |
 | **Performans Metrikleri** | Açık pozisyon · kapatılan pozisyon · kazanan · kaybeden işlem + isabet oranı |
 | **Kâr/Zarar Dağılımı** | Tür bazında K/Z, merkezden iki yöne bar (zarar sol, kâr sağ) |
