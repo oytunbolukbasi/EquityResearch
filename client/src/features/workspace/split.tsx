@@ -27,7 +27,12 @@ const DEFAULT_SPLITS: Record<SplitKey, number> = {
   virtual: 75,
   analytics: 50,
 }
-const DEFAULT_SWAPPED: Record<SwapKey, boolean> = { overview: false, ideas: false }
+const DEFAULT_SWAPPED: Record<SwapKey, boolean> = {
+  overview: false,
+  ideas: false,
+  virtual: false,
+  analytics: false,
+}
 
 function readStore<T extends object>(key: string, fallback: T): T {
   try {
