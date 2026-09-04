@@ -1,0 +1,244 @@
+import { useState } from 'react'
+
+import type { PortfolioClosedPosition, PortfolioSummary } from '@/lib/api-types'
+import { useApi } from '@/lib/use-api'
+import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
+import { SplitPane } from './split'
+import { Loading, Notice } from './shared'
+import { computeAnalytics, type Analytics } from './analytics-calc'
+import { fmtMoney, fmtPct, fmtSignedMoney, plColor } from './portfolio-calc'
+
+/** One share of the allocation arc, in the order the legend lists them. */
+const TYPE_COLOR: Record<string, string> = {
+  stock: 'var(--info)',
+  us_stock: 'var(--up)',
+  fund: 'var(--warn)',
+}
+
+function Row({
+  label,
+  value,
+  color,
+  hint,
+  strong,
+}: {
+  label: string
+  value: string
+  color?: string
+  hint?: string
+  strong?: boolean
+}) {
+  return (
+    <div className="border-faint2 flex items-baseline justify-between gap-3 border-b py-2.5 last:border-b-0">
+      <div>
+        <span className={strong ? 'text-[13px] font-medium' : 'text-mid text-[13px]'}>{label}</span>
+        {hint && <span className="text-mid ml-1.5 text-[11px]">{hint}</span>}
+      </div>
+      <span
+        className={`num shrink-0 ${strong ? 'text-[17px] font-semibold' : 'text-[14px] font-medium'}`}
+        style={color ? { color } : undefined}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Half-circle allocation arc. Each slice is drawn as the same path with a
+ * dash offset, so the segments meet exactly without gap-filling maths.
+ */
+function AllocationArc({ byType }: { byType: Analytics['byType'] }) {
+  const LENGTH = 251.3 // path length of the semicircle below
+  let offset = 0
+  return (
+    <svg viewBox="0 0 200 115" className="w-full" role="img" aria-label="Tür dağılımı">
+      <path
+        d="M 20 100 A 80 80 0 0 1 180 100"
+        fill="none"
+        stroke="var(--faint2)"
+        strokeWidth="16"
+        strokeLinecap="butt"
+      />
+      {byType.map((t) => {
+        const len = (t.share / 100) * LENGTH
+        const dash = `${len} ${LENGTH}`
+        const el = (
+          <path
+            key={t.key}
+            d="M 20 100 A 80 80 0 0 1 180 100"
+            fill="none"
+            stroke={TYPE_COLOR[t.key] ?? 'var(--mid)'}
+            strokeWidth="16"
+            strokeLinecap="butt"
+            strokeDasharray={dash}
+            strokeDashoffset={-offset}
+          />
+        )
+        offset += len
+        return el
+      })}
+    </svg>
+  )
+}
+
+export function AnalyticsTab() {
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+
+  const { data: summary, loading, error } = useApi<PortfolioSummary>('/api/portfolio/summary')
+  const { data: closed } = useApi<PortfolioClosedPosition[]>('/api/portfolio/closed')
+
+  if (loading) return <Loading />
+  if (error) return <Notice>Portföy verisi alınamadı.</Notice>
+
+  const a = computeAnalytics(summary?.positions ?? [], closed ?? [], summary?.usdTryRate ?? 1, {
+    from: from || null,
+    to: to || null,
+  })
+  const rangeActive = Boolean(from || to)
+
+  const summaryPanel = (
+    <Panel
+      side="a"
+      title="Portföy özeti"
+      right={<Chip>{summary?.positions.length ?? 0} açık pozisyon</Chip>}
+    >
+      <div className="mb-1">
+        <div className="text-mid text-[11px]">Toplam değer</div>
+        <div className="num my-1 text-[28px] font-medium tracking-[-1px]">
+          {fmtMoney(a.totalValue, '₺', 0)}
+        </div>
+        <div className="num text-[12px]" style={{ color: plColor(a.net) }}>
+          {fmtSignedMoney(a.net, '₺')} · {fmtPct(a.netPercent)}
+          <span className="text-mid ml-1.5">net (gerçekleşen + gerçekleşmemiş)</span>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <Row label="Toplam maliyet" value={fmtMoney(a.totalCost, '₺', 0)} />
+        <Row
+          label="Açık pozisyon K/Z"
+          value={`${fmtSignedMoney(a.unrealized, '₺')} · ${fmtPct(a.unrealizedPercent)}`}
+          color={plColor(a.unrealized)}
+          strong
+        />
+        {/* The split that answers both "how did my picks do" and "what did my
+            lira do" without making the user choose one view. */}
+        <Row
+          label="↳ hisse hareketi"
+          value={fmtSignedMoney(a.fromShares, '₺')}
+          color={plColor(a.fromShares)}
+        />
+        <Row
+          label="↳ kur etkisi"
+          value={fmtSignedMoney(a.fromCurrency, '₺')}
+          color={plColor(a.fromCurrency)}
+          hint="ABD pozisyonlarında"
+        />
+        <Row
+          label="Gerçekleşen K/Z"
+          value={fmtSignedMoney(a.realizedLifetime, '₺')}
+          color={plColor(a.realizedLifetime)}
+          hint="tüm zamanlar"
+          strong
+        />
+        {rangeActive && (
+          <Row
+            label="Dönem K/Z"
+            value={fmtSignedMoney(a.realizedPeriod, '₺')}
+            color={plColor(a.realizedPeriod)}
+            hint={`${a.periodCount} satış`}
+          />
+        )}
+      </div>
+
+      <p className="text-mid mt-4 text-[11px] leading-[1.6]">
+        ABD pozisyonlarının maliyeti alış günündeki kurla, güncel değeri bugünkü kurla
+        hesaplanır. Kapanan ABD pozisyonlarında satış günü kuru saklanmadığı için bugünkü
+        kur kullanılır.
+      </p>
+    </Panel>
+  )
+
+  const allocationPanel = (
+    <Panel
+      side="b"
+      title="Tür dağılımı"
+      right={
+        summary ? <Chip>USD/TRY {summary.usdTryRate.toFixed(2)}</Chip> : undefined
+      }
+    >
+      {a.byType.length === 0 ? (
+        <PanelEmpty>Açık pozisyon yok.</PanelEmpty>
+      ) : (
+        <>
+          <AllocationArc byType={a.byType} />
+          <div className="mt-2">
+            {a.byType.map((t) => (
+              <div key={t.key} className="border-faint2 border-b py-2.5 last:border-b-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="flex items-center gap-2 text-[13px] font-medium">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: TYPE_COLOR[t.key] ?? 'var(--mid)' }}
+                    />
+                    {t.label}
+                  </span>
+                  <span className="num text-[14px] font-medium">
+                    {fmtMoney(t.bucket.value, '₺', 0)}
+                  </span>
+                </div>
+                <div className="text-mid num mt-1 flex justify-between gap-3 pl-[18px] text-[11px]">
+                  <span>%{t.share.toFixed(1)} pay · maliyet {fmtMoney(t.bucket.cost, '₺', 0)}</span>
+                  <span style={{ color: plColor(t.bucket.pl) }}>
+                    {fmtSignedMoney(t.bucket.pl, '₺')} · {fmtPct(t.bucket.plPercent)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Panel>
+  )
+
+  return (
+    <div>
+      <TabHeading
+        title="Analiz"
+        subtitle="Portföyün bütünü: değer, kâr-zarar ve dağılım."
+        right={
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              aria-label="Başlangıç tarihi"
+              className="num border-faint bg-card text-ink rounded-lg border px-2 py-1 text-[12px]"
+            />
+            <span className="text-mid text-[12px]">–</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              aria-label="Bitiş tarihi"
+              className="num border-faint bg-card text-ink rounded-lg border px-2 py-1 text-[12px]"
+            />
+            <button
+              onClick={() => {
+                setFrom('')
+                setTo('')
+              }}
+              disabled={!rangeActive}
+              className="border-faint hover:bg-faint2 text-mid cursor-pointer rounded-lg border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-40"
+            >
+              Tümü
+            </button>
+          </div>
+        }
+      />
+      <SplitPane splitKey="analytics" a={summaryPanel} b={allocationPanel} />
+    </div>
+  )
+}

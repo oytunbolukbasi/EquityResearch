@@ -5,7 +5,7 @@ import { portfolioWriteRepo } from '../db/portfolio-write'
 import { requireSession } from '../lib/auth'
 import { getHistoricalExchangeRate } from '../services/exchange-rate'
 import { registerSymbol } from '../services/price-source'
-import { refreshAllPrices, refreshOnePrice } from '../services/price-refresh'
+import { refreshOnePrice, refreshSharePrices } from '../services/price-refresh'
 
 export const portfolioManageRouter = Router()
 
@@ -106,9 +106,16 @@ portfolioManageRouter.post('/positions', async (req, res) => {
   res.status(201).json({ ...created, currentPrice: price?.toFixed(6) ?? created.currentPrice })
 })
 
-// POST /api/portfolio/manage/prices/refresh — refresh every open position
+/**
+ * POST /api/portfolio/manage/prices/refresh — the "Fiyatları yenile" button.
+ *
+ * Shares only, on purpose. A fund's unit price changes once a day and comes
+ * from a scraped page against a metered quota, so re-fetching it on every click
+ * would spend the quota to re-read a number that cannot have moved. Funds keep
+ * the price already stored for them and are refreshed by the morning schedule.
+ */
 portfolioManageRouter.post('/prices/refresh', async (_req, res) => {
-  const result = await refreshAllPrices(true)
+  const result = await refreshSharePrices(true)
   res.json(result)
 })
 

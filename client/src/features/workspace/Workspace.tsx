@@ -17,9 +17,10 @@ import { PulseTab } from './PulseTab'
 import { IdeasTab } from './IdeasTab'
 import { PaperTab } from './PaperTab'
 import { VirtualPortfolioTab } from './VirtualPortfolioTab'
+import { AnalyticsTab } from './AnalyticsTab'
 import { useLayoutPersistence } from './useLayoutPersistence'
 
-type TabId = 'overview' | 'reader' | 'ideas' | 'paper' | 'virtual'
+type TabId = 'overview' | 'reader' | 'ideas' | 'paper' | 'virtual' | 'analytics'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'overview', label: 'Genel bakış' },
@@ -27,6 +28,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'ideas', label: 'Pozisyon Fikirleri' },
   { id: 'paper', label: 'Paper Trading' },
   { id: 'virtual', label: 'Sanal Portföy' },
+  { id: 'analytics', label: 'Analiz' },
 ]
 
 const TAB_KEY = 'eqr2:tab'
@@ -160,6 +162,7 @@ export function Workspace() {
         {tab === 'ideas' && <IdeasTab />}
         {tab === 'paper' && <PaperTab />}
         {tab === 'virtual' && <VirtualPortfolioTab />}
+        {tab === 'analytics' && <AnalyticsTab />}
       </main>
 
       <footer className="border-faint border-t">

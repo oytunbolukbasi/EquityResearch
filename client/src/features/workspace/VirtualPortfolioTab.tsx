@@ -596,7 +596,7 @@ export function VirtualPortfolioTab() {
         updated: { symbol: string }[]
         skipped: { symbol: string; reason: string }[]
       }
-      toast.success(`${r.updated.length} fiyat güncellendi`)
+      toast.success(`${r.updated.length} hisse fiyatı güncellendi`)
       // Name the symbols that failed rather than just counting them — a silently
       // skipped price is the failure mode that matters here. Separate toast so
       // it stays on screen as its own line.
@@ -847,7 +847,7 @@ export function VirtualPortfolioTab() {
               <span
                 className="num text-[11px]"
                 style={{ color: freshness.stale ? 'var(--warn)' : 'var(--mid)' }}
-                title="Fiyatlar hafta içi 09:00 ve 10:00'da otomatik yenilenir"
+                title="Hisseler 15 dakikada bir, fonlar hafta içi 09:00 ve 10:00'da yenilenir"
               >
                 {freshness.stale ? '⚠ ' : ''}
                 {freshness.text}
@@ -856,9 +856,10 @@ export function VirtualPortfolioTab() {
             <button
               onClick={refreshPrices}
               disabled={refreshing}
+              title="Fon fiyatı günde bir değişir; sabah otomatik çekilir, burada yenilenmez."
               className="border-faint hover:bg-faint2 text-mid cursor-pointer rounded-lg border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-50"
             >
-              {refreshing ? 'Yenileniyor…' : 'Fiyatları yenile'}
+              {refreshing ? 'Yenileniyor…' : 'Hisse fiyatlarını yenile'}
             </button>
             <Chip>{username}</Chip>
             <button

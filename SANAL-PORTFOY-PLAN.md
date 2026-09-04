@@ -202,7 +202,7 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 - [x] `virtual` sekmesinin varsayılan bölünmesi %75 (tablo sekiz sütun, form tek kolon)
 - [x] Fon birimi düzeltildi: TEFAS fonları da TL, artık ₺ ile gösteriliyor
 
-### Faz 4 — Analytics raporlaması (yapılacak)
+### Faz 4 — Analytics raporlaması ✅ TAMAMLANDI
 
 Eski app'in `analytics` sayfası envanteri çıkarıldı. Yapay zeka görüşü **hariç**,
 geri kalan her şey taşınacak:
@@ -218,7 +218,21 @@ geri kalan her şey taşınacak:
 | Dağılım grafiği | Yarım daire, tür başına pay |
 | Tarih aralığı | Başlangıç-bitiş seçici + LIFETIME |
 
-**🟠 Önce karar verilmesi gereken: ABD maliyetinde hangi kur?**
+**Kur sorusu nasıl çözüldü: ikisi de gösteriliyor**
+
+Tek bir yöntem seçip diğerini gizlemek yerine toplam EQR'nin yöntemiyle veriliyor ve
+ikiye ayrılıyor — çünkü matematiksel olarak tam ayrışıyor:
+
+```
+adet × (güncelFiyat × bugünküKur − alışFiyatı × alışKuru)
+  = adet × (güncelFiyat − alışFiyatı) × bugünküKur    ← hisse hareketi (eski app'in rakamı)
+  + adet × alışFiyatı × (bugünküKur − alışKuru)       ← kur etkisi
+```
+
+Doğrulandı: "hisse hareketi" satırı eski app'in K/Z rakamını **birebir** veriyor
+(−54.960), kur etkisi de aradaki farkı (+23.480). Kullanıcı seçim yapmak zorunda kalmıyor.
+
+**Ölçüm (4 Eylül 2026):**
 
 İki uygulama farklı hesaplıyor ve fark küçük değil (4 Eylül 2026 ölçümü):
 
@@ -234,8 +248,13 @@ geri kalan her şey taşınacak:
 - **Bugünkü kur (eski app)**: kur etkisini dışarıda bırakır, yalnızca hissenin
   kendi hareketini ölçer. "Hisse seçimlerim nasıldı" sorusunun cevabı.
 
-İkisi de geçerli; farklı soruları yanıtlıyorlar. Analytics yazılmadan önce hangisinin
-esas alınacağına karar verilmeli — ya da ikisi birden gösterilmeli.
+**Faz 4 testleri** — altı bağımsız kontrol geçti: ayrışım toplamı = açık pozisyon K/Z ·
+değer − maliyet = K/Z · tür payları %100 · tür değerleri toplamı = toplam değer ·
+gerçekleşen + gerçekleşmemiş = net · hisse hareketi = eski app yöntemi.
+
+**Bilinen sınır:** `closed_positions` satış günü kurunu saklamıyor, bu yüzden kapanan
+ABD pozisyonlarının TL karşılığı bugünkü kurla hesaplanıyor. Arayüzde dipnot olarak
+belirtiliyor.
 
 **Not:** Paralel doğrulama haftasında iki app farklı toplam gösterecek. Bu bir hata
 değil, yukarıdaki yöntem farkı. Fiyat karşılaştırması yaparken **pozisyon bazında
