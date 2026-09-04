@@ -82,6 +82,33 @@ export async function refreshOnePrice(id: string, force = true): Promise<number 
   return price
 }
 
+/**
+ * Keeps trying to price a freshly opened position, in the background.
+ *
+ * A brand-new ticker isn't in the sheet yet: registerSymbol adds the row, and
+ * only then does GOOGLEFINANCE start resolving it — which takes a few seconds.
+ * A single fetch at creation time therefore comes back empty, and without this
+ * the position sits blank until the next 15-minute sweep, so adding a position
+ * looked like it silently failed to price.
+ *
+ * Fire-and-forget: the caller has already saved the position and must not wait
+ * on a spreadsheet. Stops at the first success, and stops quietly if the
+ * position was deleted meanwhile (refreshOnePrice returns null for a missing id).
+ */
+export function ensurePriceSoon(id: string, delaysMs: number[] = [4_000, 12_000, 30_000]) {
+  void (async () => {
+    for (const delay of delaysMs) {
+      await new Promise((r) => setTimeout(r, delay))
+      const price = await refreshOnePrice(id, true).catch(() => null)
+      if (price != null) {
+        console.log(`[price] yeni pozisyon fiyatlandi: ${id} → ${price}`)
+        return
+      }
+    }
+    console.warn(`[price] yeni pozisyonun fiyati alinamadi: ${id}`)
+  })()
+}
+
 async function writePrice(id: string, price: number) {
   const existing = await portfolioWriteRepo.getPosition(id)
   if (!existing) return

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { PortfolioClosedPosition, PortfolioPosition, PortfolioSummary } from '@/lib/api-types'
 import { useSession } from '@/lib/session'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
@@ -247,7 +248,8 @@ function PositionForm({
 }: {
   /** null = create a new position; otherwise edit this one. */
   position: PortfolioPosition | null
-  onDone: () => void
+  /** `pricePending` is true when a brand-new ticker has no price yet. */
+  onDone: (pricePending?: boolean) => void
 }) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [error, setError] = useState<string | null>(null)
@@ -305,10 +307,17 @@ function PositionForm({
       toast.error(message)
       return
     }
-    toast.success(
-      editing ? `${form.symbol} güncellendi` : `${form.symbol} portföye eklendi`,
-    )
-    onDone()
+    const created = editing ? null : ((await res.json().catch(() => null)) as { pricePending?: boolean } | null)
+    if (editing) {
+      toast.success(`${form.symbol} güncellendi`)
+    } else if (created?.pricePending) {
+      // A first-time ticker has to be added to the price sheet before
+      // GOOGLEFINANCE can resolve it, which takes a few seconds.
+      toast.info(`${form.symbol} eklendi — fiyatı birkaç saniye içinde gelecek`)
+    } else {
+      toast.success(`${form.symbol} portföye eklendi`)
+    }
+    onDone(created?.pricePending)
   }
 
   return (
@@ -505,6 +514,7 @@ type RightMode = 'new' | 'edit' | 'close'
 export function VirtualPortfolioTab() {
   const { authenticated, loading: sessionLoading, username, logout } = useSession()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [tab, setTab] = useState<ListTab>('open')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -611,20 +621,32 @@ export function VirtualPortfolioTab() {
     }
   }
 
-  function afterWrite() {
+  function afterWrite(pricePending?: boolean) {
     setSelectedId(null)
     setMode('new')
     reload()
+    // The server keeps retrying a new ticker's price in the background; poll a
+    // couple of times so it appears without the user pressing anything.
+    if (pricePending) {
+      window.setTimeout(reload, 6_000)
+      window.setTimeout(reload, 18_000)
+      window.setTimeout(reload, 35_000)
+    }
   }
 
   async function remove(p: PortfolioPosition) {
-    if (
-      !window.confirm(
-        `${p.symbol} pozisyonu tamamen silinecek. Bu bir satış kaydı OLUŞTURMAZ — ` +
-          `geçmişte de görünmez ve geri alınamaz.\n\nSatış yapmak istiyorsanız "Sat" kullanın.`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: `${p.symbol} pozisyonu silinsin mi?`,
+      body: (
+        <>
+          Bu bir <strong>satış kaydı oluşturmaz</strong> — pozisyon geçmişte de görünmez ve
+          işlem geri alınamaz. Satış yapmak istiyorsanız “Sat” kullanın.
+        </>
+      ),
+      confirmLabel: 'Sil',
+      danger: true,
+    })
+    if (!ok) return
     const res = await fetch(`/api/portfolio/manage/positions/${p.id}`, { method: 'DELETE' })
     if (res.ok) {
       toast.success(`${p.symbol} portföyden silindi`)
@@ -636,7 +658,13 @@ export function VirtualPortfolioTab() {
 
   async function removeClosed(c: PortfolioClosedPosition & { id?: string }) {
     if (!c.id) return
-    if (!window.confirm(`${c.symbol} satış kaydı silinecek. Geri alınamaz.`)) return
+    const ok = await confirm({
+      title: `${c.symbol} satış kaydı silinsin mi?`,
+      body: 'Bu kayıt geçmişten kalkar ve gerçekleşen kâr/zarar toplamından düşer. Geri alınamaz.',
+      confirmLabel: 'Sil',
+      danger: true,
+    })
+    if (!ok) return
     const res = await fetch(`/api/portfolio/manage/closed-positions/${c.id}`, { method: 'DELETE' })
     if (res.ok) {
       toast.success(`${c.symbol} satış kaydı silindi`)

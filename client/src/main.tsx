@@ -7,6 +7,7 @@ import { ThemeProvider } from './lib/theme'
 import { DensityProvider } from './lib/density'
 import { SessionProvider } from './lib/session'
 import { ToastProvider } from './lib/toast'
+import { ConfirmProvider } from './lib/confirm'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,7 +15,9 @@ createRoot(document.getElementById('root')!).render(
       <DensityProvider>
         <SessionProvider>
           <ToastProvider>
-            <App />
+            <ConfirmProvider>
+              <App />
+            </ConfirmProvider>
           </ToastProvider>
         </SessionProvider>
       </DensityProvider>

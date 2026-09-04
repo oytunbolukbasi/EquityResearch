@@ -5,7 +5,7 @@ import { portfolioWriteRepo } from '../db/portfolio-write'
 import { requireSession } from '../lib/auth'
 import { getHistoricalExchangeRate } from '../services/exchange-rate'
 import { registerSymbol } from '../services/price-source'
-import { refreshOnePrice, refreshSharePrices } from '../services/price-refresh'
+import { ensurePriceSoon, refreshOnePrice, refreshSharePrices } from '../services/price-refresh'
 
 export const portfolioManageRouter = Router()
 
@@ -95,15 +95,24 @@ portfolioManageRouter.post('/positions', async (req, res) => {
   })
 
   // The price sheet only knows the tickers it has rows for, so a brand-new
-  // symbol has to be registered or it stays priceless. Fire-and-forget: the
-  // position is already saved and a failed registration must not undo that.
-  if (d.type !== 'fund') void registerSymbol(d.symbol, d.type)
+  // symbol has to be registered first — awaited, because asking for the price
+  // before the row exists is guaranteed to come back empty. A failure here
+  // must not undo the save, so it is swallowed and left to the retry below.
+  if (d.type !== 'fund') await registerSymbol(d.symbol, d.type).catch(() => {})
 
-  // Give the new row a price straight away instead of leaving it blank until
-  // the next scheduled run.
   const price = await refreshOnePrice(created.id).catch(() => null)
 
-  res.status(201).json({ ...created, currentPrice: price?.toFixed(6) ?? created.currentPrice })
+  // GOOGLEFINANCE needs a few seconds to resolve a row it has just been given,
+  // so the first read usually misses. Keep trying in the background rather than
+  // leaving the position blank until the next sweep.
+  if (price == null) ensurePriceSoon(created.id)
+
+  res.status(201).json({
+    ...created,
+    currentPrice: price?.toFixed(6) ?? created.currentPrice,
+    /** Tells the client to re-poll instead of showing a blank price. */
+    pricePending: price == null,
+  })
 })
 
 /**
