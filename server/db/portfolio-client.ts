@@ -35,6 +35,8 @@ export interface PortfolioPositionRow {
   buyDate: string
   currentPrice: number | null
   buyRate: number | null
+  /** When current_price was last written — surfaces stale prices in the UI. */
+  lastUpdated: string | null
 }
 
 export interface PortfolioClosedPositionRow {
@@ -62,10 +64,26 @@ function toNumOrNull(v: unknown): number | null {
   return v == null ? null : Number(v)
 }
 
+/**
+ * Postgres `timestamp` columns (no time zone) come back as
+ * "2026-09-04 10:02:31.90756". The value is UTC, but with no marker saying so
+ * the browser's Date.parse reads it as local time — which made a price
+ * refreshed seconds ago look three hours stale in Turkey. Normalise to a real
+ * ISO-8601 UTC string here, where the column's semantics are known.
+ */
+function toIsoUtc(v: unknown): string | null {
+  if (v == null) return null
+  if (v instanceof Date) return v.toISOString()
+  const s = String(v)
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) return s // already carries an offset
+  return `${s.replace(' ', 'T')}Z`
+}
+
 export const portfolioRepo = {
   async getOpenPositions(): Promise<PortfolioPositionRow[]> {
     const rows = await sql`
-      SELECT id, symbol, name, type, quantity, buy_price, buy_date, current_price, buy_rate
+      SELECT id, symbol, name, type, quantity, buy_price, buy_date, current_price, buy_rate,
+             last_updated
       FROM positions
       ORDER BY symbol
     `
@@ -79,6 +97,7 @@ export const portfolioRepo = {
       buyDate: r.buy_date as string,
       currentPrice: toNumOrNull(r.current_price),
       buyRate: toNumOrNull(r.buy_rate),
+      lastUpdated: toIsoUtc(r.last_updated),
     }))
   },
 

@@ -69,6 +69,7 @@ export interface PortfolioPosition {
   plPercent: number | null
   costBasisTRY: number | null
   currentValueTRY: number | null
+  lastUpdated: string | null
 }
 
 export interface PortfolioClosedPosition {

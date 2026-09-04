@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { portfolioWriteRepo } from '../db/portfolio-write'
 import { requireSession } from '../lib/auth'
 import { getHistoricalExchangeRate } from '../services/exchange-rate'
+import { registerSymbol } from '../services/price-source'
+import { refreshAllPrices, refreshOnePrice } from '../services/price-refresh'
 
 export const portfolioManageRouter = Router()
 
@@ -91,7 +93,33 @@ portfolioManageRouter.post('/positions', async (req, res) => {
     buyRate,
     buyDate: new Date(d.buyDate).toISOString(),
   })
-  res.status(201).json(created)
+
+  // The price sheet only knows the tickers it has rows for, so a brand-new
+  // symbol has to be registered or it stays priceless. Fire-and-forget: the
+  // position is already saved and a failed registration must not undo that.
+  if (d.type !== 'fund') void registerSymbol(d.symbol, d.type)
+
+  // Give the new row a price straight away instead of leaving it blank until
+  // the next scheduled run.
+  const price = await refreshOnePrice(created.id).catch(() => null)
+
+  res.status(201).json({ ...created, currentPrice: price?.toFixed(6) ?? created.currentPrice })
+})
+
+// POST /api/portfolio/manage/prices/refresh — refresh every open position
+portfolioManageRouter.post('/prices/refresh', async (_req, res) => {
+  const result = await refreshAllPrices(true)
+  res.json(result)
+})
+
+// POST /api/portfolio/manage/positions/:id/refresh-price — one position
+portfolioManageRouter.post('/positions/:id/refresh-price', async (req, res) => {
+  const price = await refreshOnePrice(req.params.id)
+  if (price == null) {
+    res.status(404).json({ error: 'price_unavailable' })
+    return
+  }
+  res.json({ price })
 })
 
 // PATCH /api/portfolio/manage/positions/:id

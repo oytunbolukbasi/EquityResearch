@@ -13,6 +13,7 @@ import { portfolioManageRouter } from './routes/portfolio-manage'
 import { paperTradingRouter } from './routes/paper-trading'
 import { layoutsRouter } from './routes/layouts'
 import { authRouter } from './routes/auth'
+import { startPriceScheduler } from './services/price-scheduler'
 
 const app = express()
 app.use(express.json({ limit: '2mb' }))
@@ -61,4 +62,6 @@ app.use(errorHandler)
 const port = Number(process.env.PORT) || 3000
 app.listen(port, () => {
   console.log(`API${existsSync(clientDist) ? ' + static client' : ''} listening on http://localhost:${port}`)
+  // Takes over the price refresh the PortfoyTakip app used to run.
+  startPriceScheduler()
 })

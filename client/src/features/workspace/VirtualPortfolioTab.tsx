@@ -27,6 +27,33 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+/**
+ * Newest `last_updated` across all positions, rendered as "az önce" / "3 saat
+ * önce" / "2 gün önce".
+ *
+ * This is the tell that matters most once the old app is retired: if the
+ * refresh job ever stops, every number on the panel keeps looking authoritative
+ * while quietly going stale. Showing the age makes that visible instead.
+ */
+function freshnessLabel(positions: PortfolioPosition[]): { text: string; stale: boolean } | null {
+  const times = positions
+    .map((p) => (p.lastUpdated ? Date.parse(p.lastUpdated) : NaN))
+    .filter((t) => Number.isFinite(t))
+  if (times.length === 0) return null
+
+  const minutes = Math.round((Date.now() - Math.max(...times)) / 60_000)
+  if (minutes < 2) return { text: 'az önce güncellendi', stale: false }
+  if (minutes < 60) return { text: `${minutes} dk önce güncellendi`, stale: false }
+
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return { text: `${hours} saat önce güncellendi`, stale: hours >= 30 }
+
+  const days = Math.round(hours / 24)
+  // Prices refresh on weekday mornings, so a weekend gap is normal; past two
+  // days something is actually wrong.
+  return { text: `${days} gün önce güncellendi`, stale: days >= 2 }
+}
+
 // ─── login ───────────────────────────────────────────────────────────────────
 
 function LoginForm() {
@@ -383,6 +410,8 @@ export function VirtualPortfolioTab() {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null)
   const [closed, setClosed] = useState<PortfolioClosedPosition[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshNote, setRefreshNote] = useState<string | null>(null)
 
   const reload = useCallback(() => setVersion((v) => v + 1), [])
 
@@ -420,6 +449,33 @@ export function VirtualPortfolioTab() {
 
   const positions = summary?.positions ?? []
   const selected = positions.find((p) => p.id === selectedId) ?? null
+  const freshness = freshnessLabel(positions)
+
+  async function refreshPrices() {
+    setRefreshing(true)
+    setRefreshNote(null)
+    try {
+      const res = await fetch('/api/portfolio/manage/prices/refresh', { method: 'POST' })
+      if (!res.ok) throw new Error()
+      const r = (await res.json()) as {
+        updated: { symbol: string }[]
+        skipped: { symbol: string; reason: string }[]
+      }
+      // Name the symbols that failed rather than just counting them — a silently
+      // skipped price is the failure mode that matters here.
+      setRefreshNote(
+        `${r.updated.length} fiyat güncellendi` +
+          (r.skipped.length
+            ? ` · alınamadı: ${r.skipped.map((s) => `${s.symbol} (${s.reason})`).join(', ')}`
+            : ''),
+      )
+      reload()
+    } catch {
+      setRefreshNote('Fiyatlar yenilenemedi.')
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   function afterWrite() {
     setSelectedId(null)
@@ -610,7 +666,24 @@ export function VirtualPortfolioTab() {
         title="Sanal Portföy"
         subtitle="Pozisyonlarını buradan ekle, düzenle ve kapat."
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            {freshness && (
+              <span
+                className="num text-[11px]"
+                style={{ color: freshness.stale ? 'var(--warn)' : 'var(--mid)' }}
+                title="Fiyatlar hafta içi 09:00 ve 10:00'da otomatik yenilenir"
+              >
+                {freshness.stale ? '⚠ ' : ''}
+                {freshness.text}
+              </span>
+            )}
+            <button
+              onClick={refreshPrices}
+              disabled={refreshing}
+              className="border-faint hover:bg-faint2 text-mid cursor-pointer rounded-lg border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-50"
+            >
+              {refreshing ? 'Yenileniyor…' : 'Fiyatları yenile'}
+            </button>
             <Chip>{username}</Chip>
             <button
               onClick={logout}
@@ -621,6 +694,9 @@ export function VirtualPortfolioTab() {
           </div>
         }
       />
+      {refreshNote && (
+        <p className="text-mid mb-3 text-[11px] leading-[1.6]">{refreshNote}</p>
+      )}
       <SplitPane splitKey="virtual" a={listPanel} b={formPanel} />
     </div>
   )

@@ -3,7 +3,8 @@
 > Amaç: `oytunbolukbasi/PortfoyTakip` uygulamasını **tamamen kapatmak** ve portföy
 > yönetimini EQR paneli içindeki "Sanal Portföy" sekmesine taşımak.
 >
-> Durum: **Faz 1 tamamlandı** (kod + testler). Faz 0 kullanıcıda, Faz 2 sırada. Son güncelleme: 4 Eylül 2026.
+> Durum: **Faz 1 ve Faz 2 tamamlandı** (kod + testler). Faz 3 (eski app'in kapatılması)
+> için Railway değişkenleri ve bir haftalık paralel doğrulama bekleniyor. Son güncelleme: 4 Eylül 2026.
 
 ---
 
@@ -119,8 +120,8 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 ## 4. Fazlar
 
 ### Faz 0 — Güvenlik (kod öncesi, kullanıcı aksiyonu)
-- [ ] Parolayı her yerde değiştir
-- [ ] PortfoyTakip reposunu private yap / arşivle
+- [x] Parolayı her yerde değiştir
+- [~] PortfoyTakip reposunu private yap / arşivle (kullanıcı yapacak)
 
 ### Faz 1 — Kimlik doğrulama + yazma yolu + sekme
 **Backend**
@@ -158,12 +159,25 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
       yeni tasarım turu yok
 
 ### Faz 2 — Fiyat boru hattı
-- [ ] `server/services/price-source.ts` (Google Apps Script: BIST + ABD)
-- [ ] `server/services/fund-price.ts` (Fintables + ScraperAPI, önbellekli)
-- [ ] `node-cron` 09:00 / 10:00 TR, hafta içi
-- [ ] Elle "Fiyatları yenile" butonu (tek pozisyon + toplu)
-- [ ] Railway env: `SCRAPER_API_KEY`, `SHEETS_PRICE_URL`
+- [x] `server/services/price-source.ts` (Google Apps Script: BIST + ABD) + yeni sembol kaydı
+- [x] `server/services/fund-price.ts` (Fintables + ScraperAPI, günlük önbellekli)
+- [x] Zamanlayıcı 09:00 / 10:00 TR, hafta içi (`price-scheduler.ts` — node-cron yerine
+      ~30 satırlık dakika-tick'i; bağımlılık eklenmedi)
+- [x] Elle "Fiyatları yenile" butonu (tek pozisyon + toplu) + bayatlık göstergesi
+- [ ] **Railway env: `SCRAPER_API_KEY`, `SHEETS_PRICE_URL`** ← kullanıcıda
 - [ ] **Doğrulama:** iki app bir hafta paralel çalışır, fiyatlar karşılaştırılır
+
+**Faz 2 testleri**
+- [x] Apps Script kaynağı doğrulandı: 38 sembol, portföydeki 16 hissenin **tamamı** var,
+      fiyatlar DB ile birebir eşleşti
+- [x] Elle yenileme: 16 hisse güncellendi, YKT atlandı (`SCRAPER_API_KEY` yerelde yok —
+      Fintables doğrudan istekte 403 veriyor, beklenen davranış)
+- [x] Başarısız sembol **atlanıyor, sıfırlanmıyor** — ulaşılamayan kaynak fiyatı silemez
+- [x] `lastUpdated` zaman dilimi hatası bulundu ve düzeltildi: Postgres `timestamp`
+      kolonu UTC değeri zaman dilimi işareti olmadan döndürüyordu; tarayıcı bunu yerel
+      saat sanıp yeni yenilenen fiyatı "3 saat önce" gösteriyordu (`toIsoUtc`)
+- [x] Yeni pozisyon açılışında sembol Apps Script'e otomatik kaydediliyor; aksi hâlde
+      yeni hisse fiyatsız kalırdı (BSX'in sheet'te olması bu mekanizmanın kanıtı)
 
 ### Faz 3 — Eski app'in kapatılması
 - [ ] Fiyatların EQR'den güncellendiği teyit edilir
