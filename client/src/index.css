@@ -23,6 +23,9 @@
   /* rounded cards ~14px */
   --radius: 0.875rem;
 
+  /* vertical padding of every workspace table row — flipped by DensityProvider */
+  --rowpad: 10px;
+
   /* shadcn semantic tokens mapped onto the palette */
   --background: var(--bg);
   --foreground: var(--ink);
@@ -191,190 +194,121 @@
   }
 }
 
+
 /*
-  Typography overrides — unlayered, wins over Tailwind @layer utilities.
-  Sets minimum readable sizes for table cells/headers across all widgets.
+  Workspace layout — unlayered on purpose so these win over Tailwind's utility
+  layer (a `py-2.5` on a cell must not beat the density token below).
 */
 
-/* Widget eyebrow title (WidgetFrame header) */
-.widget-eyebrow {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+/* Row density. `--rowpad` is set on :root and swapped by DensityProvider. */
+html[data-density='compact'] {
+  --rowpad: 6px;
 }
 
-/* Table headers: 11px, 500 weight, 0.04em spacing */
-.react-grid-item th {
+/* Table typography, scoped to panels so the admin page keeps its own sizing. */
+.eqr-panel th {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.04em;
 }
 
-/* Table cells: minimum 13px */
-.react-grid-item td {
+.eqr-panel td {
   font-size: 13px;
+  padding-top: var(--rowpad);
+  padding-bottom: var(--rowpad);
+}
+
+/* ── header logo ────────────────────────────────────────────────────────── */
+
+/* One turn on load — the EQR bot's greeting. */
+@keyframes eqr-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.eqr-logo-spin {
+  animation: eqr-logo-spin 900ms ease-in-out;
+}
+
+/* ── split pane ─────────────────────────────────────────────────────────── */
+
+/*
+  Divider grip. The 12px track is a comfortable pointer target while the visible
+  rule stays hairline; it lights up on hover so the affordance is discoverable
+  without an icon.
+*/
+.eqr-divider-grip {
+  background: var(--faint);
+  transition: background 120ms ease;
+}
+.eqr-divider:hover .eqr-divider-grip {
+  background: var(--info);
 }
 
 /*
-  react-grid-layout theming. Unlayered so these win the cascade over both the
-  package stylesheet (imported first in main.tsx) and Tailwind utility layers.
+  Swap and resize must land in the same frame the pointer crosses the divider —
+  any transition here reads as the "sloppy" drift the redesign is replacing.
 */
+.eqr-split > * {
+  transition: none !important;
+}
 
-/* ── global interaction lock ────────────────────────────────────────────── */
-body.rgl-interacting * {
+/*
+  Global drag lock. Without it a header drag selects text across both panels,
+  and the browser's own drag-image kicks in over the headings.
+*/
+body.eqr-dragging * {
   user-select: none !important;
   -webkit-user-select: none !important;
+  cursor: grabbing !important;
 }
 
-/* ── A: cursor ──────────────────────────────────────────────────────────── */
-.widget-drag-handle {
-  cursor: grab;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.react-grid-item.react-draggable-dragging .widget-drag-handle,
-.widget-drag-handle:active {
-  cursor: grabbing;
-}
+/* ── stacked layout ─────────────────────────────────────────────────────── */
 
 /*
-  Scale + shadow during drag.
-  Scale goes on the *inner* div so it doesn't fight the library's inline
-  transform: translate(x, y) on the positioned item itself.
+  Below 800px the split collapses to one column: SplitPane stops rendering the
+  divider and drops every pointer handler, so these rules only need to undo the
+  inline flex sizing that would otherwise survive.
 */
-.react-grid-item.react-draggable-dragging > div {
-  transform: scale(1.02);
-  transform-origin: center;
-  transition: transform 150ms ease, box-shadow 150ms ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+@media (max-width: 800px) {
+  .eqr-split > * {
+    flex: none !important;
+    order: 0 !important;
+    width: auto !important;
+  }
+
+  .eqr-kpis {
+    grid-template-columns: 1fr !important;
+  }
 }
 
-/* z-index + subtle shadow transition on the grid item wrapper */
-.react-grid-item.react-draggable-dragging {
-  z-index: 10;
-  transition: box-shadow 150ms ease; /* overrides library's transition:none only for shadow */
+/* ── scrollbars ─────────────────────────────────────────────────────────── */
+
+.eqr-panel ::-webkit-scrollbar,
+.eqr-split ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-/* ── B: placeholder ─────────────────────────────────────────────────────── */
-.react-grid-item.react-grid-placeholder {
-  background: rgba(37, 99, 168, 0.05);   /* --blue at 5% — softer against dotted grid */
-  border: 1px solid rgba(37, 99, 168, 0.25);
-  border-radius: var(--radius);
-  opacity: 1;                             /* override library's 0.2; colour carries transparency */
-  backdrop-filter: blur(1.2px);
-  transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+.eqr-panel ::-webkit-scrollbar-thumb,
+.eqr-split ::-webkit-scrollbar-thumb {
+  background: var(--faint);
+  border: 2px solid var(--card);
+  border-radius: 6px;
 }
 
-/* ── C: settling animation ──────────────────────────────────────────────── */
-.react-grid-item.cssTransforms:not(.react-draggable-dragging):not(.resizing) {
-  transition-property: transform, width, height;
-  transition-duration: 220ms;
-  transition-timing-function: cubic-bezier(0.2, 0, 0, 1); /* tok, zıplamasız yerleşme */
-}
+/* ── reduced motion ─────────────────────────────────────────────────────── */
 
-/* ── D: resize handles — 8-direction (Midas Atlas pattern) ─────────────── */
-
-/* Base: invisible hit-areas, no background */
-.react-grid-item > .react-resizable-handle {
-  transition: opacity 150ms ease;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  background: none;
-}
-
-/* Corner handles: 1rem × 1rem */
-.react-grid-item > .react-resizable-handle.react-resizable-handle-ne,
-.react-grid-item > .react-resizable-handle.react-resizable-handle-nw,
-.react-grid-item > .react-resizable-handle.react-resizable-handle-sw,
-.react-grid-item > .react-resizable-handle.react-resizable-handle-se {
-  width: 1rem;
-  height: 1rem;
-}
-
-/* Edge N/S: span full width, thin hit area */
-.react-grid-item > .react-resizable-handle.react-resizable-handle-n,
-.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
-  left: 1rem;
-  right: 1rem;
-  width: auto;
-  height: 0.5rem;
-  margin-left: 0;
-  cursor: ns-resize;
-  transform: none;
-}
-
-/* Edge E/W: span full height, thin hit area */
-.react-grid-item > .react-resizable-handle.react-resizable-handle-e,
-.react-grid-item > .react-resizable-handle.react-resizable-handle-w {
-  top: 1rem;
-  bottom: 1rem;
-  height: auto;
-  width: 0.5rem;
-  margin-top: 0;
-  cursor: ew-resize;
-  transform: none;
-}
-
-/* All handles: pure hit-area, no visual — cursor change is the only affordance */
-.react-grid-item > .react-resizable-handle::after {
-  display: none;
-}
-
-/* Same lift shadow during resize */
-.react-grid-item.resizing > div {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  transition: box-shadow 150ms ease;
-}
-
-/* ── F: Widget Ekle panel — grain + pale blue gradient ─────────────────── */
-/*
-  SVG feTurbulence grain (256×256 tile, 7% opacity) layered over a
-  subtle blue gradient. Grain uses fractalNoise so it tiles seamlessly.
-  Blue value: #2563a8 (var(--blue)) at 4% opacity.
-*/
-/* Grain via ::before so feTurbulence filter actually renders (CSS bg-image
-   data URIs suppress SVG filters in Chromium). z-index:-1 keeps it behind
-   menu items; isolation:isolate confines the stacking context. */
-.widget-add-panel {
-  position: relative;
-  isolation: isolate;
-  background-image: linear-gradient(
-    135deg,
-    rgba(37, 99, 168, 0.18) 0%,
-    rgba(37, 99, 168, 0.05) 55%,
-    transparent 85%
-  );
-}
-
-.widget-add-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  border-radius: inherit;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  background-size: 300px 300px;
-  opacity: 0.07;
-}
-
-/* ── E: performance hints ───────────────────────────────────────────────── */
-.react-grid-item { isolation: isolate; }
-.react-grid-item.resizing { will-change: width, height; }
-.react-grid-item.react-draggable-dragging { will-change: transform; }
-.react-grid-item img { pointer-events: none; user-select: none; }
-
-/* ── F: reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .react-grid-layout,
-  .react-grid-item,
-  .react-grid-item.cssTransforms:not(.react-draggable-dragging):not(.resizing),
-  .react-grid-item.react-draggable-dragging > div,
-  .react-grid-item.resizing > div,
-  .react-grid-item > .react-resizable-handle,
-  .react-grid-item > .react-resizable-handle::after {
-    transition: none !important;
+  .eqr-divider-grip {
+    transition: none;
+  }
+
+  .eqr-logo-spin {
+    animation: none;
   }
 }

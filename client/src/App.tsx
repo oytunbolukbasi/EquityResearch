@@ -1,69 +1,10 @@
-import { useState } from 'react'
-import { BotMessageSquare } from 'lucide-react'
-import { motion } from 'framer-motion'
-
-import { DashboardCanvas } from '@/features/dashboard/DashboardCanvas'
 import { AdminPage } from '@/features/admin/AdminPage'
-import { SelectedTickerCtx } from '@/features/dashboard/selected-ticker'
-import { useDashboardLayout } from '@/features/dashboard/useDashboardLayout'
-import { DashboardWidgetControls } from '@/features/dashboard/DashboardWidgetControls'
+import { Workspace } from '@/features/workspace/Workspace'
 
 export default function App() {
   // Normalize path so /admin, /admin/, and //admin/ all resolve to the admin page.
   if (window.location.pathname.replace(/\/+$/, '').replace(/\/+/g, '/') === '/admin')
     return <AdminPage />
 
-  const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
-  const { items, layout, addWidget, removeWidget, onLayoutChange, resetLayout, saveLayout } =
-    useDashboardLayout()
-
-  return (
-    <SelectedTickerCtx.Provider value={{ selectedTicker, setSelectedTicker }}>
-      <div className="min-h-screen">
-        <header className="bg-card/70 sticky top-0 z-20 border-b backdrop-blur">
-          <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-3 sm:px-8">
-            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-              <motion.span
-                className="inline-flex"
-                initial={{ rotate: 0 }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.9, ease: 'easeInOut' }}
-              >
-                <BotMessageSquare className="size-5 text-[var(--up)]" strokeWidth={1.75} />
-              </motion.span>
-              EQR
-            </h1>
-            <DashboardWidgetControls onAdd={addWidget} onReset={resetLayout} onSave={saveLayout} />
-          </div>
-        </header>
-
-        <main className="py-6">
-          <DashboardCanvas
-            items={items}
-            layout={layout}
-            onLayoutChange={onLayoutChange}
-            addWidget={addWidget}
-            removeWidget={removeWidget}
-          />
-        </main>
-
-        <footer className="border-t border-faint">
-          <div className="mx-auto max-w-[1400px] px-5 py-3 sm:px-8">
-            <p className="num text-[10px] text-mid">
-              Charts powered by{' '}
-              <a
-                href="https://tradingview.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline-offset-2 hover:underline"
-              >
-                TradingView
-              </a>
-              {' '}Lightweight Charts (Apache 2.0)
-            </p>
-          </div>
-        </footer>
-      </div>
-    </SelectedTickerCtx.Provider>
-  )
+  return <Workspace />
 }
