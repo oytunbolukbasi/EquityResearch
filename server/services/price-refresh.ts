@@ -9,26 +9,20 @@ export interface RefreshResult {
 }
 
 /**
- * Refreshes `current_price` for every open position.
- *
- * This is the job the PortfoyTakip app used to run. Once it lives here, that
- * app can be switched off — and until it does, prices freeze silently and the
- * whole panel (KPI cards, P/L, the daily note) quietly shows stale numbers.
+ * Shares and funds refresh on completely different rhythms, so they are two
+ * separate jobs — see price-scheduler.ts.
  *
  * A symbol with no price is SKIPPED, never zeroed: an unreachable source must
  * not be able to wipe a figure the rest of the panel depends on.
  */
-export async function refreshAllPrices(force = false): Promise<RefreshResult> {
-  const positions = await portfolioRepo.getOpenPositions()
+
+/** BIST + US positions. Cheap: one request covers every symbol. */
+export async function refreshSharePrices(force = false): Promise<RefreshResult> {
+  const shares = (await portfolioRepo.getOpenPositions()).filter((p) => p.type !== 'fund')
   const result: RefreshResult = { updated: [], skipped: [] }
-  if (positions.length === 0) return result
+  if (shares.length === 0) return result
 
-  const shares = positions.filter((p) => p.type !== 'fund')
-  const funds = positions.filter((p) => p.type === 'fund')
-
-  // One request covers every share; the sheet returns the whole tracked set.
-  const sheet = shares.length > 0 ? await fetchSharePrices(force) : {}
-
+  const sheet = await fetchSharePrices(force)
   for (const p of shares) {
     const price = sheet[p.symbol.toUpperCase()]
     if (price == null) {
@@ -38,9 +32,19 @@ export async function refreshAllPrices(force = false): Promise<RefreshResult> {
     await writePrice(p.id, price)
     result.updated.push({ symbol: p.symbol, price })
   }
+  return result
+}
 
-  // Funds are scraped one page at a time, so they run sequentially to stay
-  // gentle on the ScraperAPI quota.
+/**
+ * TEFAS funds. Expensive: one scraped page per fund against a metered
+ * ScraperAPI quota, which is why this runs on a schedule rather than a timer.
+ */
+export async function refreshFundPrices(force = false): Promise<RefreshResult> {
+  const funds = (await portfolioRepo.getOpenPositions()).filter((p) => p.type === 'fund')
+  const result: RefreshResult = { updated: [], skipped: [] }
+
+  // Sequential on purpose — parallel scrapes burn quota faster and are more
+  // likely to trip rate limiting.
   for (const p of funds) {
     const price = await fetchFundPrice(p.symbol, force)
     if (price == null) {
@@ -50,8 +54,17 @@ export async function refreshAllPrices(force = false): Promise<RefreshResult> {
     await writePrice(p.id, price)
     result.updated.push({ symbol: p.symbol, price })
   }
-
   return result
+}
+
+/** Both at once — what the manual "Fiyatları yenile" button runs. */
+export async function refreshAllPrices(force = false): Promise<RefreshResult> {
+  const shares = await refreshSharePrices(force)
+  const funds = await refreshFundPrices(force)
+  return {
+    updated: [...shares.updated, ...funds.updated],
+    skipped: [...shares.skipped, ...funds.skipped],
+  }
 }
 
 /** Refreshes one position; returns the new price, or null if unresolved. */
