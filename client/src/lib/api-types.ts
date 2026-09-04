@@ -72,12 +72,16 @@ export interface PortfolioPosition {
 }
 
 export interface PortfolioClosedPosition {
+  id: string
   symbol: string
+  name: string | null
+  type: string
   buyPrice: number
   sellPrice: number
   quantity: number
   pl: number
   plPercent: number
+  buyDate: string
   sellDate: string
 }
 

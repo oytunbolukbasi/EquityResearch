@@ -17,6 +17,7 @@ import {
   fmtMoney,
   fmtN,
   fmtPct,
+  fmtQty,
   fmtSignedMoney,
   plColor,
   UNIT_FOR_TYPE,
@@ -221,7 +222,7 @@ function DetailPanel({
             value={`${fmtPct(position.plPercent)}`}
             color={plColor(position.plPercent)}
           />
-          <Metric label="Miktar" value={fmtN(position.quantity, 0)} />
+          <Metric label="Miktar" value={fmtQty(position.quantity)} />
           <Metric label="Not tarihi" value={action ? noteDate : '—'} />
         </div>
 

@@ -3,8 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useMediaQuery } from '@/lib/use-media-query'
 
 /** Tabs that own a resizable split. `reader` has no swap (TOC ↔ article are not interchangeable). */
-export type SplitKey = 'overview' | 'reader' | 'ideas'
-export type SwapKey = Extract<SplitKey, 'overview' | 'ideas'>
+export type SplitKey = 'overview' | 'reader' | 'ideas' | 'virtual'
+export type SwapKey = Extract<SplitKey, 'overview' | 'ideas' | 'virtual'>
 
 const SPLITS_KEY = 'eqr2:splits:v2'
 const SWAPPED_KEY = 'eqr2:swapped'

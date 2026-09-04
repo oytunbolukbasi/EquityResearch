@@ -38,12 +38,17 @@ export interface PortfolioPositionRow {
 }
 
 export interface PortfolioClosedPositionRow {
+  /** Needed so the Sanal Portföy tab can delete a mistaken sale record. */
+  id: string
   symbol: string
+  name: string | null
+  type: string
   buyPrice: number
   sellPrice: number
   quantity: number
   pl: number
   plPercent: number
+  buyDate: string
   sellDate: string
 }
 
@@ -79,17 +84,22 @@ export const portfolioRepo = {
 
   async getClosedPositions(): Promise<PortfolioClosedPositionRow[]> {
     const rows = await sql`
-      SELECT symbol, buy_price, sell_price, quantity, pl, pl_percent, sell_date
+      SELECT id, symbol, name, type, buy_price, sell_price, quantity,
+             pl, pl_percent, buy_date, sell_date
       FROM closed_positions
       ORDER BY sell_date DESC
     `
     return rows.map((r) => ({
+      id: String(r.id),
       symbol: r.symbol as string,
+      name: (r.name as string | null) ?? null,
+      type: r.type as string,
       buyPrice: toNum(r.buy_price),
       sellPrice: toNum(r.sell_price),
       quantity: toNum(r.quantity),
       pl: toNum(r.pl),
       plPercent: toNum(r.pl_percent),
+      buyDate: r.buy_date as string,
       sellDate: r.sell_date as string,
     }))
   },

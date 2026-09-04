@@ -9,11 +9,17 @@ import { ideasRouter } from './routes/ideas'
 import { tradePlansRouter } from './routes/trade-plans'
 import { bulkImportRouter } from './routes/bulk-import'
 import { portfolioRouter } from './routes/portfolio'
+import { portfolioManageRouter } from './routes/portfolio-manage'
 import { paperTradingRouter } from './routes/paper-trading'
 import { layoutsRouter } from './routes/layouts'
+import { authRouter } from './routes/auth'
 
 const app = express()
 app.use(express.json({ limit: '2mb' }))
+// Session cookies are signed application-side (server/lib/auth.ts), so Express
+// only needs to know it sits behind Railway's proxy for `secure` cookies and
+// req.ip (login throttling) to be correct.
+app.set('trust proxy', 1)
 
 const api = Router()
 api.get('/health', (_req, res) => {
@@ -24,8 +30,11 @@ api.use('/ideas', ideasRouter)
 api.use('/trade-plans', tradePlansRouter)
 api.use('/admin/bulk-import', bulkImportRouter)
 api.use('/portfolio', portfolioRouter)
+// Mounted under /portfolio/manage — every route there requires a session.
+api.use('/portfolio/manage', portfolioManageRouter)
 api.use('/paper-trading', paperTradingRouter)
 api.use('/layouts', layoutsRouter)
+api.use('/auth', authRouter)
 app.use('/api', api)
 
 // In production this single service also serves the built client.

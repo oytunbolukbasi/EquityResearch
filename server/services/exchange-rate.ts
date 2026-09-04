@@ -28,3 +28,26 @@ export async function getExchangeRate(pair: string = 'USDTRY'): Promise<Exchange
     return { rate: FALLBACK_USDTRY, isFallback: true }
   }
 }
+
+/**
+ * USD/TRY on a specific date, used to fix a US position's cost basis in lira at
+ * the moment it was bought.
+ *
+ * Frankfurter answers a weekend or holiday with the previous published rate, so
+ * a Saturday buy date resolves to Friday's close rather than failing. Falls
+ * back to today's live rate, then to the static level.
+ */
+export async function getHistoricalExchangeRate(date: Date): Promise<number> {
+  const day = date.toISOString().slice(0, 10)
+  try {
+    const response = await fetch(`https://api.frankfurter.app/${day}?from=USD&to=TRY`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = (await response.json()) as { rates?: { TRY?: number } }
+    const rate = data?.rates?.TRY
+    if (typeof rate !== 'number' || !Number.isFinite(rate)) throw new Error('malformed response')
+    return rate
+  } catch (e) {
+    console.warn(`getHistoricalExchangeRate(${day}): falling back to the live rate —`, e)
+    return (await getExchangeRate('USDTRY')).rate
+  }
+}

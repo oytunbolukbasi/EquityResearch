@@ -85,6 +85,17 @@ export function fmtSignedMoney(n: number | null | undefined, unit: '₺' | '$' |
   return `${n >= 0 ? '+' : '−'}${unit}${fmtN(Math.abs(n), decimals)}`
 }
 
+/**
+ * Share counts, which are not always whole: the live portfolio holds 6.11 of
+ * one position and 0.809883524 of another. Rounding those to 0 decimals showed
+ * "6" and "1" — the second one not just imprecise but wrong by 24%. Shows up to
+ * 4 decimals and drops trailing zeros, so 1000 still reads as "1.000".
+ */
+export function fmtQty(n: number | null | undefined): string {
+  if (n == null) return '—'
+  return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 4 })
+}
+
 export function fmtPct(n: number | null | undefined): string {
   if (n == null) return '—'
   return `${n >= 0 ? '+' : '−'}%${fmtN(Math.abs(n), 2)}`
