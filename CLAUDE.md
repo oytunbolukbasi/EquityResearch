@@ -111,7 +111,8 @@ divider sürüklenince genişlik imleci serbest takip eder ve bırakınca **tam 
 %25/50/75**'ten birine oturur. Panel başlığı sürükleme tutamacıdır: imleç divider'ın
 öbür tarafına geçtiği an iki panel **anında** yer değiştirir (geçiş süresi 0, DOM
 sırası sabit — yalnız `flex order` değişir, dolayısıyla panel remount olmaz, grafik
-ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır.
+ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır; ≤640px
+Sanal Portföy ayrıca tabloyu bırakıp kart listesine geçer (GÖREV 30).
 
 1. **Genel bakış** — 3 KPI kartı (Toplam / TL varlıklar / ABD hisseleri) + Portföy
    paneli (Hisse notları / Günlük analiz / Geçmiş) ↔ Piyasa Nabzı özeti. Portföy
@@ -128,6 +129,8 @@ ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır
 5. **Sanal Portföy** — pozisyon ekle / düzenle / sat / sil. **Giriş ister**
    (bkz. Kimlik Doğrulama). Kısmi satış destekli. Sütunlar sıralanabilir; Varlık ve
    İşlem sütunları sabitlenmiştir (panel daraldığında butonlar kaybolmasın diye).
+   **≤640px'te tablo yerine kart listesi + bottom sheet** — sekiz sütun telefona
+   sığmıyordu (GÖREV 30).
 6. **Analiz** — portföy özeti, kâr/zarar özeti, performans metrikleri, **Dağılım**
    (yığılmış şerit + pay lejantı) ve kâr/zarar dağılımı. Günlük/Aylık/Tümü preset'li
    takvim seçici; başlığın hemen altında **dönem özeti şeridi** — seçili dönemde kaç
@@ -211,7 +214,7 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > tablo silindi). Çelişki görürsen **en yüksek numaralı GÖREV** geçerlidir. GÖREV 27 pek çok erken
 > kararı geçersiz kıldı: react-grid-layout, widget ekle/kaldır menüsü ve Framer Motion
 > artık yok. GÖREV 29 Analiz'deki yarım daire donut'ı kaldırdı ve panele 12px punto
-> tabanı koydu.
+> tabanı koydu. GÖREV 30 Sanal Portföy'e telefon için ayrı bir render dalı ekledi.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -673,3 +676,42 @@ Ders (kendi hatam): prettier'ı ayar dosyası olmadan çalıştırdım, dört do
 kullanmadığı stile çevirdi ve 60 satırlık diff 800 satır oldu. Dosyalar HEAD'den geri
 alınıp değişiklikler yeniden uygulandı. Bir biçimlendiriciyi ayarını doğrulamadan
 çalıştırma.
+
+GÖREV 30 — Sanal Portföy telefonda: kart listesi + bottom sheet (Faz 5B)
+
+Tasarım turu `/design` canvas'ında yapıldı; üç yerleşim yerine tek bir yön
+(kart + sheet) çizilip dört ekran üzerinden onaylandı.
+
+Sorun: sekiz sütunlu tablo 375px'te **Varlık, Adet'in yarısı ve İşlem**'i
+gösteriyordu. Değer, K/Z ve K/Z % — sekmeyi açma sebebi — yatay scroll'un
+arkasındaydı; kesilen Adet ise yanlış sayı gibi okunuyordu (0,809883524 →
+"0,8"). Üç ayrı scroll ekseni vardı: sayfa, panel gövdesi, tablonun yatayı.
+
+- **`CARD_QUERY = '(max-width: 640px)'`** — `useMediaQuery` ile ayrı render
+  dalı. Sınır `sm:` ile aynı tutuldu; iki farklı kırılma noktası taşımamak için.
+  641–800px arası eskisi gibi: tablo, yığılmış paneller.
+- **Kart** yalnız değer + K/Z taşır; kalan altı değer bir dokunuş ötede.
+- **`BottomSheet`** (`client/src/components/ui/bottom-sheet.tsx`): scrim +
+  alttan sheet, gövde kayar, footer sabit. Tam ekran sayfa yerine sheet, çünkü
+  sheet her zaman bir SATIRDAN açılıyor — o satırın arkada görünür kalması
+  hangi pozisyonda olduğunuzu söyleyen şey.
+- Ekle / düzenle / sat üçü de aynı sheet'te; mevcut `PositionForm` ve
+  `CloseForm` aynen kullanılıyor (form mantığı çoğaltılmadı).
+- **Sheet state'i masaüstünün `mode`/`selectedId` ikilisinden AYRI.** İkisinin
+  yaşam döngüsü farklı — masaüstü form paneli hep ekranda, sheet değil — ve tek
+  state'te sheet açılışta kendiliğinden açılıyordu.
+- Kapanan sekmesi de kart; dokunmak satış detayını ve kayıt silmeyi açıyor.
+
+Aynı ekranın sıkışmaları (yan iş):
+- Sayfa telefonda **41px sağa taşıyordu** (`scrollWidth` 416 / ekran 375):
+  `TabHeading` satırı sarmalanmıyordu. Şüphelenilen sekme şeridi değildi —
+  şerit zaten yatay kayan bir şerit, kesik görünmesinin sebebi bu taşmaydı.
+- Kullanıcı adı + Çıkış başlıktan listenin altına indi; dört kontrol 327px'e
+  sığmıyordu.
+- Sekme şeridine **kısa etiketler** (Genel / Nabız / Fikirler / Paper / Portföy
+  / Analiz): altısı da sığıyor, şerit artık hiç kaymıyor. Masaüstünde tam
+  etiketler (`sm:` ile iki span).
+- Form input'ları telefonda **16px** — iOS 16px altındaki alana odaklanınca
+  sayfayı zoomluyor. Masaüstünde 13px.
+
+Masaüstü tablosu, sıralama ve form paneli değişmedi.
