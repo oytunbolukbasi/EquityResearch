@@ -16,10 +16,11 @@ import { computeAnalytics, type Analytics } from './analytics-calc'
 import { fmtMoney, fmtPct, fmtSignedMoney, plColor } from './portfolio-calc'
 
 /** One share of the allocation arc, in the order the legend lists them. */
+/** See --alloc-* in index.css for why these are their own scale. */
 const TYPE_COLOR: Record<string, string> = {
-  stock: 'var(--info)',
-  us_stock: 'var(--up)',
-  fund: 'var(--warn)',
+  stock: 'var(--alloc-1)',
+  us_stock: 'var(--alloc-2)',
+  fund: 'var(--alloc-3)',
 }
 
 /** The legend wants a word, not a phrase — the full label is in the rows below. */

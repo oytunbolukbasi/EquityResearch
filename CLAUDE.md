@@ -59,6 +59,13 @@ köşeli kartlar (radius ~14px), bol boşluk — her iki temada da.
   - TP merdiveni: `--tp1..3` + `--tp1..3-tint`
   - Cam modal + scrim: `--glass-bg` / `--glass-border` / `--scrim`
   - Grafik: `--chart-grid` / `--chart-axis`
+  - Dağılım serisi: `--alloc-1..3` (mavi / turuncu / gül kurusu) — **kendi
+    skalası**, çünkü `--up`/`--warn` bu panelde anlam taşıyor; yeşil bir dilim
+    hemen üstündeki K/Z çubuklarıyla karışıp "kâr" okunuyordu. Renkler göz
+    kararı değil, `dataviz` doğrulayıcısıyla iki temada da ölçüldü ve ayrıca
+    `--down`'a uzaklıkları sınandı (gül↔kırmızı ΔE 17,7 açık / 14,1 koyu).
+    Koyu temada bu üçü **koyulaştırılır**, diğer accent'ler gibi parlatılmaz —
+    doğrulayıcının koyu bandı L 0,48–0,67. (GÖREV 34)
 
 **Tema state + toggle (`client/src/lib/theme.tsx`):**
 - İlk açılışta OS tercihini (`prefers-color-scheme`) izler; header'daki Sun/Moon toggle ile
@@ -808,3 +815,26 @@ görünmeli.
 - **"İçindekiler" başlığı kaldırıldı.** Bültenin bölüm başlıklarından oluşan
   bir liste, bültenin yanında dururken kendini anlatıyor. `nav`'ın
   `aria-label`'ı duruyor, yani ekran okuyucuda hâlâ adlandırılmış.
+
+GÖREV 34 — Dağılım grafiğine kendi renk skalası
+
+Şerit `--info` / `--up` / `--warn` kullanıyordu. Yeşil olan ABD payı, hemen
+altındaki gerçekten yeşil-kırmızı K/Z çubuklarının yanında "kâr" okunuyordu:
+iki grafik aynı dili konuşup farklı şey söylüyordu.
+
+`--alloc-1..3` eklendi — mavi `#2563a8` · turuncu `#e09a10` · gül kurusu
+`#c47aa4`; koyuda `#4a8fd1` · `#c08000` · `#c458a0`.
+
+- **Renkler ölçülerek seçildi**, `dataviz` doğrulayıcısıyla: açıklık bandı,
+  doygunluk tabanı, renk körlüğü ayrışması, karta karşı kontrast — her iki
+  temada da 5/5.
+- **Ek olarak `--down`'a uzaklık ölçüldü**, çünkü istenen gül kurusu zarar
+  kırmızısına komşu bir hue. Aday taraması yapıldı; 15 eşiğini geçen tek
+  kombinasyon bu çıktı (gül↔kırmızı ΔE 17,7 açık / 14,1 koyu).
+- **Koyuda koyulaştırılır, parlatılmaz.** Panelin diğer accent'leri koyu temada
+  açılır (`--green` #1a7a5e → #3fae86); dolgu markları için bu yanlış — açık
+  zeminde doğru olan ton koyu kartta parlıyor. Doğrulayıcının koyu bandı
+  L 0,48–0,67, yani bizim parlatılmış accent'lerimizin tamamının altında.
+- **4. renk ayrılmadı.** Turkuaz ve mor adayları gül kurusuyla renk körlüğünde
+  çakıştı; iki temada birden geçen bir dördüncü bulunamadı. Var olmayan bir tür
+  için yanlış renk rezerve etmektense, Avrupa hissesi eklendiğinde çözülecek.

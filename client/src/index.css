@@ -64,6 +64,23 @@
   --warn-tint: #fef8e9;
   --neutral-tint: #f5f4f0;
 
+  /*
+    Allocation series — the Dağılım bar and its legend.
+
+    Its own scale rather than reusing --up/--info/--warn: those carry meaning
+    here. A green slice sits directly above the Kâr/Zarar bars, which really
+    are green and red, so "ABD %71,8" read as profit. These three say nothing
+    but "different type".
+
+    Not eyeballed. Checked with the dataviz validator against the card surface
+    on both themes — lightness band, chroma floor, colour-blind separation,
+    contrast — and additionally measured against --down so a slice can never be
+    mistaken for a loss: rose↔red ΔE 17,7 light / 14,1 dark (normal vision).
+  */
+  --alloc-1: #2563a8; /* BİST hissesi  — mavi */
+  --alloc-2: #e09a10; /* ABD hissesi   — turuncu */
+  --alloc-3: #c47aa4; /* Yatırım fonu  — gül kurusu */
+
   /* TP ladder (trade-plan levels) */
   --tp1: #52b08a;
   --tp2: #2e8a65;
@@ -111,6 +128,15 @@
   --info-tint: rgba(107, 163, 224, 0.14);
   --warn-tint: rgba(217, 164, 65, 0.14);
   --neutral-tint: rgba(255, 255, 255, 0.06);
+
+  /*
+    Darker, not brighter — the opposite of the accents above. A fill that works
+    on white glares on the dark card; the validator's dark band is L 0.48–0.67,
+    below every one of our brightened accents.
+  */
+  --alloc-1: #4a8fd1;
+  --alloc-2: #c08000;
+  --alloc-3: #c458a0;
 
   --tp1: #5cc59a;
   --tp2: #3fae86;
