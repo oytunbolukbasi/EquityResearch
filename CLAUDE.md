@@ -153,7 +153,9 @@ react-grid-layout satırları geri yüklemede yok sayılır). **Sıfırla** vars
 döner. Son açık sekme de hatırlanır (`eqr2:tab`).
 
 **Header:** scroll'da kimlik satırı katlanır, yalnızca sekme adları kalır (102→46px).
-Kontroller: Sıfırla · Kaydet · satır aralığı (yoğunluk) · tema.
+Kontroller: Sıfırla · Kaydet · satır aralığı (yoğunluk) · tema · **profil menüsü**
+(`ProfileMenu`, en sonda; yalnızca oturum varken görünür — kullanıcı adı + Çıkış yap).
+Telefonda tetikleyici yalnız ikon, ad menünün içinde. (GÖREV 35)
 
 ## Kimlik Doğrulama
 
@@ -236,7 +238,8 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > GÖREV 31 fiyat okumasını yazma yolundan çıkardı; GÖREV 32 Analiz'deki
 > "hisse hareketi / kur etkisi" ayrıştırmasını ekrandan kaldırdı ve isabet
 > oranını bölüm başlığına rozet olarak taşıdı; GÖREV 33 Piyasa Nabzı'nın
-> içindekiler panelini başlık gibi okuttu.
+> içindekiler panelini başlık gibi okuttu; GÖREV 34 Dağılım'a kendi renk
+> skalasını verdi; GÖREV 35 kullanıcı menüsünü header'a taşıdı.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -838,3 +841,29 @@ iki grafik aynı dili konuşup farklı şey söylüyordu.
 - **4. renk ayrılmadı.** Turkuaz ve mor adayları gül kurusuyla renk körlüğünde
   çakıştı; iki temada birden geçen bir dördüncü bulunamadı. Var olmayan bir tür
   için yanlış renk rezerve etmektense, Avrupa hissesi eklendiğinde çözülecek.
+
+GÖREV 35 — Kullanıcı menüsü header'a taşındı
+
+Kullanıcı adı ve Çıkış, Sanal Portföy'ün başlık satırında duruyordu. Oturum tek
+bir sekmeyi kapıyor ama **panelin tamamına ait**; orada durunca o sekmenin kendi
+kontrolü gibi okunuyordu ve zaten tazelik etiketi + yenile butonuyla dolu bir
+satırı sıkıştırıyordu.
+
+- `ProfileMenu` (`features/workspace/ProfileMenu.tsx`) header kontrollerinin
+  **en sonuna** eklendi: ad + ⌄, altında tek bir "Çıkış yap" (`--down`).
+  Masaüstünde kullanıcı ikonu YOK — adın yanında ikon, adın söylemediği bir şey
+  söylemiyor. İkon yalnızca telefonda görünür, çünkü orada ad gizli ve tetikleyici
+  tek başına bir ⌄ olurdu. Sol iç boşluk `sm:pl-3` ile korundu.
+- **Oturum yoksa hiç render edilmez** — giriş yapmamış birinin header'ı eskisiyle
+  birebir aynı.
+- Telefonda tetikleyici yalnız ikon (`sm:` altında ad gizli); ad menünün içinde
+  gösteriliyor. Dört ikon butonun yanına 90px'lik bir ad sığmıyordu.
+- Scroll ve resize menüyü kapatır: header scroll'da katlanıyor, yani tetikleyici
+  menünün ölçüldüğü konumdan kayıyor.
+- **Elle yazıldı**, date-range-picker ile aynı gerekçeyle: tek öğeli bir popover
+  bir buton, konumlanmış bir kart ve iki dinleyicidir.
+  `@radix-ui/react-dropdown-menu` bağımlılıkta ve `components/ui/dropdown-menu.tsx`
+  duruyor, ama ikisini de henüz hiçbir yer import etmiyor — tek bir öğe için
+  paketi taşımaya başlamanın sebebi yok.
+
+Giriş mantığı değişmedi.

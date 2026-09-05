@@ -704,7 +704,7 @@ type Sheet =
   | { kind: 'new' }
 
 export function VirtualPortfolioTab() {
-  const { authenticated, loading: sessionLoading, username, logout } = useSession()
+  const { authenticated, loading: sessionLoading } = useSession()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -1242,30 +1242,10 @@ export function VirtualPortfolioTab() {
             >
               {refreshing ? 'Yenileniyor…' : 'Hisse fiyatlarını yenile'}
             </button>
-            <span className="hidden items-center gap-2.5 sm:flex">
-              <Chip>{username}</Chip>
-              <button
-                onClick={logout}
-                className="text-mid hover:text-ink cursor-pointer border-0 bg-transparent p-0 text-xs"
-              >
-                Çıkış
-              </button>
-            </span>
           </div>
         }
       />
       {cards ? mobileBody : <SplitPane splitKey="virtual" a={listPanel} b={formPanel} />}
-
-      {/* Same pair, parked at the foot of the page where a phone has room. */}
-      <div className="text-mid mt-5 flex items-center justify-between text-[12px] sm:hidden">
-        <span>{username}</span>
-        <button
-          onClick={logout}
-          className="text-mid hover:text-ink cursor-pointer border-0 bg-transparent p-0 text-[12px]"
-        >
-          Çıkış
-        </button>
-      </div>
     </div>
   )
 }

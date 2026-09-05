@@ -19,6 +19,7 @@ import { PaperTab } from "./PaperTab";
 import { VirtualPortfolioTab } from "./VirtualPortfolioTab";
 import { AnalyticsTab } from "./AnalyticsTab";
 import { useLayoutPersistence } from "./useLayoutPersistence";
+import { ProfileMenu } from "./ProfileMenu";
 
 type TabId =
   "overview" | "reader" | "ideas" | "paper" | "virtual" | "analytics";
@@ -180,6 +181,9 @@ export function Workspace() {
                       <Moon className="size-[15px]" />
                     )}
                   </IconToggle>
+
+                  {/* Renders nothing until there is a session. */}
+                  <ProfileMenu />
                 </div>
               </div>
             </div>
