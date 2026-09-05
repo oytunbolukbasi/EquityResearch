@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Target } from 'lucide-react'
 
 import type { PortfolioClosedPosition, PortfolioSummary } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
@@ -158,13 +158,45 @@ function PeriodBand({ range, a }: { range: DateRange; a: Analytics }) {
   )
 }
 
-/** Section heading inside a panel. */
-function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
+/** Section heading inside a panel. `right` outranks `hint` when both are given. */
+function SectionTitle({
+  children,
+  hint,
+  right,
+}: {
+  children: React.ReactNode
+  hint?: string
+  right?: React.ReactNode
+}) {
   return (
     <div className="border-faint mt-5 mb-1 flex items-baseline justify-between gap-2 border-t pt-4">
-      <h3 className="m-0 text-[13px] font-medium">{children}</h3>
-      {hint && <span className="text-mid text-[12px]">{hint}</span>}
+      {/* The heading gives way, never the badge: a narrowed panel must not push
+          the number off the edge. */}
+      <h3 className="m-0 min-w-0 truncate text-[13px] font-medium">{children}</h3>
+      {right ?? (hint && <span className="text-mid shrink-0 text-[12px]">{hint}</span>)}
     </div>
+  )
+}
+
+/**
+ * Win rate, promoted out of the grey footnote it used to sit in.
+ *
+ * Uncoloured on purpose: the winners/losers counters right below are already
+ * green and red, and tinting the aggregate would make %51 read as "good" and
+ * %49 as "bad" — a two-point swing is not that story. Visibility comes from
+ * size and weight instead.
+ */
+function HitRate({ value }: { value: number }) {
+  return (
+    <span
+      className="flex shrink-0 items-center gap-1.5 self-center rounded-full py-1 pr-2.5 pl-2"
+      style={{ background: 'var(--neutral-tint)' }}
+      title="Kazanan işlemlerin, karara bağlanmış işlemlere oranı"
+    >
+      <Target className="text-mid size-3.5 shrink-0" aria-hidden="true" />
+      <span className="text-mid text-[12px]">İsabet</span>
+      <span className="num text-[14px] leading-none font-semibold">%{value.toFixed(0)}</span>
+    </span>
   )
 }
 
@@ -308,7 +340,9 @@ export function AnalyticsTab() {
         />
       </div>
 
-      <SectionTitle>Performans metrikleri</SectionTitle>
+      <SectionTitle right={a.winRate != null ? <HitRate value={a.winRate} /> : undefined}>
+        Performans metrikleri
+      </SectionTitle>
       <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-2">
         <Stat label="Açık pozisyon" value={String(a.openCount)} />
         <Stat
@@ -318,10 +352,11 @@ export function AnalyticsTab() {
         <Stat label="Kazanan işlem" value={String(a.winners)} color="var(--up)" />
         <Stat label="Kaybeden işlem" value={String(a.losers)} color="var(--down)" />
       </div>
-      {a.winRate != null && (
+      {/* The rate itself now lives in the heading; this line survives only for
+          the context the heading has no room for. */}
+      {rangeActive && a.winRate != null && (
         <p className="text-mid mt-3 text-[12px]">
-          İsabet oranı %{a.winRate.toFixed(0)}
-          {rangeActive && ` · toplam ${a.closedCountLifetime} kapanış`}
+          Tüm zamanlarda {a.closedCountLifetime} kapanış
         </p>
       )}
 

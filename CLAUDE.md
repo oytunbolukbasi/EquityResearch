@@ -227,7 +227,8 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > artık yok. GÖREV 29 Analiz'deki yarım daire donut'ı kaldırdı ve panele 12px punto
 > tabanı koydu. GÖREV 30 Sanal Portföy'e telefon için ayrı bir render dalı ekledi;
 > GÖREV 31 fiyat okumasını yazma yolundan çıkardı; GÖREV 32 Analiz'deki
-> "hisse hareketi / kur etkisi" ayrıştırmasını ekrandan kaldırdı.
+> "hisse hareketi / kur etkisi" ayrıştırmasını ekrandan kaldırdı ve isabet
+> oranını bölüm başlığına rozet olarak taşıdı.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -779,3 +780,13 @@ da ortadan kalktı; geriye okuyucunun sormadığı bir soru soran iki satır kal
   kur işleme mantığı kaymış demektir — bu yüzden silinmediler.
 - Yöntemi açıklayan dipnot (panelin altında, "ABD pozisyonlarının maliyeti alış
   günündeki kurla…") KORUNDU; artık yöntemi anlatan tek yer o.
+
+Aynı turda isabet oranı da taşındı: bölümün altındaki gri 12px satırdan
+("İsabet oranı %59") **"Performans metrikleri" başlığının sağındaki rozete**
+(`HitRate` — hedef ikonu + 12px etiket + 14px semibold sayı, `--neutral-tint`).
+Rozet **renksiz**: hemen altındaki kazanan/kaybeden sayaçları zaten yeşil ve
+kırmızı, ve toplamı boyamak %51'i "iyi" %49'u "kötü" gibi okuturdu. Görünürlük
+renkten değil punto ve ağırlıktan geliyor. `SectionTitle`'a `right` slotu
+eklendi; başlık `truncate`, rozet `shrink-0` — panel daralınca kenardan taşan
+şey başlık olur, sayı değil. Dönem seçiliyken "Tüm zamanlarda N kapanış"
+satırı altta kalır.
