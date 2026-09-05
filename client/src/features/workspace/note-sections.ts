@@ -34,7 +34,9 @@ export function noteSections(note: MorningNote | null): NoteSection[] {
     const { label, detail } = splitBullet(b)
     out.push({
       id: `macro-${i}`,
-      kicker: `Makro ${String(i + 1).padStart(2, '0')}`,
+      // Just the number: the article body already numbers macros "01", "02" —
+      // spelling out "Makro" only in the contents made the two disagree.
+      kicker: String(i + 1).padStart(2, '0'),
       label,
       detail,
     })

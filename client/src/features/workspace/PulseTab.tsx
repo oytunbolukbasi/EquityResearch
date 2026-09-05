@@ -64,12 +64,19 @@ export function PulseTab({
         <button
           key={s.id}
           onClick={() => scrollToSection(s.id)}
-          className="text-mid hover:text-info block w-full cursor-pointer border-0 bg-transparent py-2.5 text-left text-xs leading-[1.6] transition-colors"
+          className="group block w-full cursor-pointer border-0 bg-transparent py-2.5 text-left"
         >
           {s.kicker && (
-            <small className="text-mid mb-[3px] block text-[12px]">{s.kicker}</small>
+            <small className="text-mid group-hover:text-info mb-[3px] block text-[12px] font-semibold transition-colors">
+              {s.kicker}
+            </small>
           )}
-          {s.label}
+          {/* --ink rather than --mid: these are headings, and the contents is
+              the one place the whole note is skimmed. Hover has to be driven
+              from the button (group-), since a colour set here would win. */}
+          <span className="text-ink group-hover:text-info block text-xs leading-[1.6] font-semibold transition-colors">
+            {s.label}
+          </span>
         </button>
       ))}
     </nav>

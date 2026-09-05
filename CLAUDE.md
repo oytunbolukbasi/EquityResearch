@@ -228,7 +228,8 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > tabanı koydu. GÖREV 30 Sanal Portföy'e telefon için ayrı bir render dalı ekledi;
 > GÖREV 31 fiyat okumasını yazma yolundan çıkardı; GÖREV 32 Analiz'deki
 > "hisse hareketi / kur etkisi" ayrıştırmasını ekrandan kaldırdı ve isabet
-> oranını bölüm başlığına rozet olarak taşıdı.
+> oranını bölüm başlığına rozet olarak taşıdı; GÖREV 33 Piyasa Nabzı'nın
+> içindekiler panelini başlık gibi okuttu.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -790,3 +791,17 @@ renkten değil punto ve ağırlıktan geliyor. `SectionTitle`'a `right` slotu
 eklendi; başlık `truncate`, rozet `shrink-0` — panel daralınca kenardan taşan
 şey başlık olur, sayı değil. Dönem seçiliyken "Tüm zamanlarda N kapanış"
 satırı altta kalır.
+
+GÖREV 33 — Piyasa Nabzı: içindekiler paneli
+
+İki küçük değişiklik, ikisi de aynı sebeple: bu panel bülteni tarayarak
+okuduğunuz yer, dolayısıyla girdileri gövde metni gibi değil başlık gibi
+görünmeli.
+
+- **Kicker "Makro 01" → "01".** Makale gövdesi bölümleri zaten "01", "02" diye
+  numaralandırıyordu; içindekilerde "Makro" yazmak ikisini farklı dile
+  düşürüyordu. `kicker` yalnızca bu panelde kullanıldığı için değişiklik
+  kaynağında (`note-sections.ts`) yapıldı.
+- **Girdiler kalın ve `--ink`.** Eskiden hepsi `--mid` gövde metniydi. Hover
+  rengi butondan `group-hover:` ile sürülüyor — span'e konan bir renk butonun
+  hover'ını ezerdi.
