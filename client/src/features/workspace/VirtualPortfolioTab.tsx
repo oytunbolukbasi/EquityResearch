@@ -488,7 +488,7 @@ function CloseForm({
   return (
     <form onSubmit={submit}>
       <div className="grid grid-cols-2 gap-x-3">
-        <Field label={`Satılan adet (elde ${fmtQty(held)})`}>
+        <Field label="Satılan adet">
           <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className={inputClass} />
         </Field>
         <Field label="Satış fiyatı">
@@ -530,6 +530,19 @@ function CloseForm({
           {error}
         </p>
       )}
+
+      {/* The ceiling on the input above, moved down here: as part of the label
+          it wrapped to a second line and dropped the field out of line with
+          "Satış fiyatı" beside it. */}
+      <p className="mb-3 flex items-baseline justify-between gap-3">
+        <span className="text-mid text-[12px]">Satılabilir adet</span>
+        <span
+          className="num text-[14px] font-semibold whitespace-nowrap"
+          style={{ color: 'var(--info)' }}
+        >
+          {fmtQty(held)}
+        </span>
+      </p>
 
       <button type="submit" disabled={busy} className={primaryButtonClass}>
         {busy ? 'Kaydediliyor…' : partial ? 'Kısmi satışı kaydet' : 'Pozisyonu kapat'}
