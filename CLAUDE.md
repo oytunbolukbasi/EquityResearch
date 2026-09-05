@@ -226,7 +226,8 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > kararı geçersiz kıldı: react-grid-layout, widget ekle/kaldır menüsü ve Framer Motion
 > artık yok. GÖREV 29 Analiz'deki yarım daire donut'ı kaldırdı ve panele 12px punto
 > tabanı koydu. GÖREV 30 Sanal Portföy'e telefon için ayrı bir render dalı ekledi;
-> GÖREV 31 fiyat okumasını yazma yolundan çıkardı.
+> GÖREV 31 fiyat okumasını yazma yolundan çıkardı; GÖREV 32 Analiz'deki
+> "hisse hareketi / kur etkisi" ayrıştırmasını ekrandan kaldırdı.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -759,3 +760,22 @@ Kural: **yavaş ve oynak bir dış bağımlılık bir yazmanın kritik yolunda o
 Ölçüm: `POST /manage/positions` **~110 sn → 200 ms** (uçtan uca, oturum açık
 tarayıcıdan; test satırı hemen silindi, portföy 18 açık / 23 kapalı olarak
 doğrulandı).
+
+GÖREV 32 — Analiz: kur ayrıştırması ekrandan kalktı
+
+"Açık pozisyon K/Z" altındaki iki satır kaldırıldı:
+
+    ↳ hisse hareketi   −₺53.727
+    ↳ kur etkisi       +₺25.974   (ABD pozisyonlarında)
+
+Bu ayrıştırma GÖREV 28'de, EQR'nin rakamını emekliye ayrılan PortfoyTakip'in
+rakamıyla uzlaştırmak için eklenmişti ("hisse hareketi" satırı eski uygulamanın
+sayısını birebir veriyordu). O uygulama kapanınca satırların cevapladığı soru
+da ortadan kalktı; geriye okuyucunun sormadığı bir soru soran iki satır kaldı.
+
+- **Hesap duruyor.** `analytics-calc.ts` hâlâ `fromShares` / `fromCurrency`
+  üretiyor, çünkü `scripts/verify-analytics.ts` bunları SQL ile karşılaştırıp
+  ayrışmanın tam olduğunu doğruluyor. İkisi `unrealized`'a toplanmayı bırakırsa
+  kur işleme mantığı kaymış demektir — bu yüzden silinmediler.
+- Yöntemi açıklayan dipnot (panelin altında, "ABD pozisyonlarının maliyeti alış
+  günündeki kurla…") KORUNDU; artık yöntemi anlatan tek yer o.

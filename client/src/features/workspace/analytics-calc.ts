@@ -34,7 +34,16 @@ export interface Analytics {
   totalCost: number
   unrealized: number
   unrealizedPercent: number
-  /** `unrealized` split into its two causes. Sums back to `unrealized`. */
+  /**
+   * `unrealized` split into its two causes. Sums back to `unrealized`.
+   *
+   * No longer shown in the panel: the split existed to reconcile EQR's figure
+   * with the app it replaced, and once that app was retired the two extra rows
+   * only raised a question the reader hadn't asked. Kept because
+   * `scripts/verify-analytics.ts` uses them as an independent check that the
+   * decomposition is exact — if these stop summing to `unrealized`, the
+   * exchange-rate handling has drifted.
+   */
   fromShares: number
   fromCurrency: number
 

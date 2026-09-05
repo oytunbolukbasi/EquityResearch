@@ -260,19 +260,6 @@ export function AnalyticsTab() {
           color={plColor(a.unrealized)}
           strong
         />
-        {/* The split that answers both "how did my picks do" and "what did my
-            lira do" without making the user choose one view. */}
-        <Row
-          label="↳ hisse hareketi"
-          value={fmtSignedMoney(a.fromShares, '₺')}
-          color={plColor(a.fromShares)}
-        />
-        <Row
-          label="↳ kur etkisi"
-          value={fmtSignedMoney(a.fromCurrency, '₺')}
-          color={plColor(a.fromCurrency)}
-          hint="ABD pozisyonlarında"
-        />
         <Row
           label="Gerçekleşen K/Z"
           value={fmtSignedMoney(a.realizedLifetime, '₺')}
