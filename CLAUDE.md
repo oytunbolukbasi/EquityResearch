@@ -805,3 +805,6 @@ görünmeli.
 - **Girdiler kalın ve `--ink`.** Eskiden hepsi `--mid` gövde metniydi. Hover
   rengi butondan `group-hover:` ile sürülüyor — span'e konan bir renk butonun
   hover'ını ezerdi.
+- **"İçindekiler" başlığı kaldırıldı.** Bültenin bölüm başlıklarından oluşan
+  bir liste, bültenin yanında dururken kendini anlatıyor. `nav`'ın
+  `aria-label`'ı duruyor, yani ekran okuyucuda hâlâ adlandırılmış.

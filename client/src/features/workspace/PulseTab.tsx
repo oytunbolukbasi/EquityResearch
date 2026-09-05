@@ -57,9 +57,11 @@ export function PulseTab({
   const isNewest = safeIndex === 0
   const isOldest = safeIndex >= notes.length - 1
 
+  // No visible "İçindekiler" heading: a list of the note's section titles, sat
+  // beside the note itself, needs no label. The nav's aria-label still names it
+  // for screen readers.
   const toc = (
     <nav className="min-w-0 py-3" aria-label="Bülten içindekiler">
-      <h2 className="m-0 mb-3 text-xs font-medium">İçindekiler</h2>
       {sections.map((s) => (
         <button
           key={s.id}
