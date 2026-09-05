@@ -7,6 +7,7 @@ import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { Select, type SelectOption } from '@/components/ui/select'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
@@ -48,6 +49,13 @@ type ListTab = 'open' | 'closed'
 const LIST_TABS = [
   { id: 'open' as const, label: 'Açık' },
   { id: 'closed' as const, label: 'Kapanan' },
+]
+
+/** The Tür dropdown. Values match FormState['type'] and the DB's `type` column. */
+const TYPE_OPTIONS: SelectOption<'stock' | 'us_stock' | 'fund'>[] = [
+  { value: 'stock', label: 'BİST hissesi' },
+  { value: 'us_stock', label: 'ABD hissesi' },
+  { value: 'fund', label: 'Yatırım fonu' },
 ]
 
 const TYPE_LABEL: Record<string, string> = {
@@ -298,7 +306,7 @@ function PositionForm({
     )
   }, [position])
 
-  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
 
   async function submit(e: React.FormEvent) {
@@ -359,16 +367,13 @@ function PositionForm({
           />
         </Field>
         <Field label="Tür">
-          <select
+          <Select
             value={form.type}
-            onChange={set('type')}
+            options={TYPE_OPTIONS}
+            onChange={(type) => setForm((f) => ({ ...f, type }))}
             disabled={position != null}
-            className={`${inputClass} disabled:opacity-60`}
-          >
-            <option value="stock">BİST hissesi</option>
-            <option value="us_stock">ABD hissesi</option>
-            <option value="fund">Yatırım fonu</option>
-          </select>
+            ariaLabel="Varlık türü"
+          />
         </Field>
       </div>
 

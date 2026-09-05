@@ -239,7 +239,8 @@ Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek 
 > "hisse hareketi / kur etkisi" ayrıştırmasını ekrandan kaldırdı ve isabet
 > oranını bölüm başlığına rozet olarak taşıdı; GÖREV 33 Piyasa Nabzı'nın
 > içindekiler panelini başlık gibi okuttu; GÖREV 34 Dağılım'a kendi renk
-> skalasını verdi; GÖREV 35 kullanıcı menüsünü header'a taşıdı.
+> skalasını verdi; GÖREV 35 kullanıcı menüsünü header'a taşıdı; GÖREV 36 native
+> `<select>`'i kaldırdı.
 
 **Proje İlk Session'ı** 
 Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
@@ -867,3 +868,26 @@ satırı sıkıştırıyordu.
   paketi taşımaya başlamanın sebebi yok.
 
 Giriş mantığı değişmedi.
+
+GÖREV 36 — Tür seçici: native `<select>` yerine kendi bileşenimiz
+
+Pozisyon formundaki Tür alanı tarayıcının `<select>`'iydi. Bir `<select>` kenarlığının
+ötesinde biçimlendirilemez: oku ve açılan listesi işletim sistemi tarafından çizilir,
+yani kontrol formun içinde misafir gibi duruyordu ve **koyu temada açık bir menü
+açıyordu**.
+
+`components/ui/select.tsx` — form input'larıyla birebir aynı görünen bir listbox:
+
+- Ölçüm: tetikleyici ile gerçek input aynı — 34px yükseklik, 6/10 padding, 14px
+  köşe, 13px punto (telefonda 16px, iOS zoom'u için).
+- **Liste portal'lı ve `fixed`**, date-range-picker ile aynı sebeple: form,
+  kayabilen bir panelin içinde; normal akıştaki bir menü panel tarafından kırpılır.
+  Scroll ve resize listeyi kapatır.
+- Yer yoksa yukarı açılır (`place()` alttaki boşluğu ölçer).
+- Klavye: ↓/Enter/Space açar, ↑↓/Home/End gezinir, Enter seçer, Esc kapatır ve
+  **odağı tetikleyiciye geri verir**, Tab kapatıp geçer.
+- Fare hover'ı ile klavye imleci tek bir vurgu paylaşır — bir listede iki ayrı
+  "şu anki satır" kafa karıştırır.
+
+`FormState['type']` değerleri ve `TYPE_OPTIONS` etiketleri DB'nin `type` kolonuyla
+aynı; seçenek listesi `TYPE_LABEL`'ın hemen yanında duruyor ki ikisi ayrışmasın.
