@@ -167,194 +167,29 @@ için kullanılacak.
 
 ## ADIM 3 — YENİ FİKİR TARAMASI
 
-BIST/NYSE/NASDAQ/**XETRA (Frankfurt)**'dan 0-3 yeni long fikri. Başka borsa önerme.
+**`Skill(eqr-idea-generation)` çağır.** Tarama yöntemi, borsaya göre metrik uyarlaması,
+risk-getiri barı ve eleme tablosu orada duruyor:
+`.claude/skills/eqr-idea-generation/SKILL.md`.
 
-**Frankfurt artık birinci sınıf bir av sahası, dipnot değil.** Portföyde EUR
-pozisyonları var; ABD piyasasının kapalı olduğu günlerde tek açık gelişmiş piyasa
-çoğu zaman burasıdır ve o günlerde taramayı Frankfurt öncelikli yap.
+Metin bilerek buraya kopyalanmadı. Gözünün önünde duran bir iş akışını skill'i
+çağırmadan "zaten biliyorum" diye uygulamak çok kolay — 2026-08-26'da tam olarak
+bu yaşandı ve eleme tablosu aylarca atlandı. Kopya yoksa ezberden uygulanacak
+bir şey de yok.
 
-- **Sembol:** panele **çıplak ticker** yaz (`SAP`, `SZG`, `VOW3`) ve
-  `exchange: "XETRA"` ver. `FRA:` ön ekini panel kendisi ekliyor — sen yazma.
-- **Veri:** yfinance'te Alman hisseleri `.DE` uzantısıyla sorgulanır
-  (`SAP.DE`, `VOW3.DE`). Fiyat ve OHLC oradan gelir; panele giden ticker yine çıplaktır.
-- **Fiyatlar EUR.** entryLow/entryHigh/stopLoss/target'lar EUR cinsinden verilir;
-  dolara çevirme. Panel para birimini türden biliyor.
-- **Metrikler:** ABD şablonu (EV/EBITDA, FCF verimi) Almanya'da genelde çalışır;
-  ancak analist kapsamı ABD'dekinden ince olabilir — veri yoksa uydurma, tezi
-  temel + teknik yapı üzerinden kur (BIST için yazılan kuralın aynısı).
+Bu adımda karar verilen tek şey, taramadan çıkanın nereye gittiği:
 
-**Her gün GERÇEK tarama yap** — idea-generation skill'ini çalıştırıp aday üret; "uygun
-yoksa boş bırak"ı tam tarama yapmadan bir kaçış olarak kullanma. Sonucu ikiye ayır:
-
-1. **ideas dizisi (panele yazılır) — R:R barı korunur.** SADECE
-   `(TP1 - giriş_orta) / (giriş_orta - stopLoss) >= 2.0` sağlayan long'lar `ideas`'a girer.
-   Sağlamayan panele EKLENMEZ. Bu barı geçen fikir yoksa `ideas: []` göndermek **normaldir**
-   (özellikle risk-off günlerde) — zorla fikir üretme.
-
-2. **İzleme Listesi (panele YAZILMAZ, ADIM 7 loguna yazılır).** Taramadan çıkan **en iyi
-   1-3 aday**ı, R:R barını geçmese bile, ADIM 7 özet logunda "📋 İzleme Listesi" başlığı
-   altında sun: ticker + tek cümle tez + hesaplanan R:R + neden bara takıldığı (ör.
-   "R:R 1.6 — stop geniş" / "katalizör belirsiz"). Böylece 0 idea çıksa bile kullanıcı
-   sahadaki en iyi kurguları görür ve isterse manuel ekler. Bu bir JSON alanı değildir;
-   sadece rapor.
-
-Yeni fikir taramasında Equity Research Plugin'indeki /idea-generation skill'ini kullan. Ancak idea-generation çıktıları panel için tasarlanmış  json output formatında olsun. 
-
-> ### ⚠️ UYARI — SKILL'İ FİİLEN ÇAĞIR, EZBERDEN UYGULAMA
-> (2026-08-26'da tespit edildi ve kullanıcıyla mutabık kalındı.)
->
-> Bu dosyanın altında idea-generation iş akışının **tam metni kopyalanmış durumda**.
-> Bu bir tuzak: metin gözünün önünde olduğu için skill'i çağırmadan "zaten biliyorum"
-> deyip devam etmek çok kolay — nitekim 20 Ağustos'a kadar tam olarak bu yapıldı.
->
-> **Kural: her taramada `Skill(equity-research:idea-generation)` aracını GERÇEKTEN çağır.**
-> Aynısı ADIM 4 için `equity-research:morning-note` skill'inde de geçerli.
->
-> **Neden önemli — ezberden uygulayınca atlanan adımlar:**
-> - **Elenen adayları da göster.** Sadece seçilen fikri sunmak yetmez; hangi isimlere
->   bakıldığı ve neden elendiği ADIM 7 raporunda karşılaştırma tablosu olarak verilir.
->   Kullanıcı böylece taramanın gerçekten yapıldığını görür.
-> - **Karşılaştırma tablosu zorunlu** (aday · fiyat · analist ortalaması · yükseliş payı ·
->   eleme gerekçesi).
-> - **Tarama isabet oranını takip et** — hangi yaklaşımın işe yaradığını zamanla izle.
-> - Skill "taramalar aday üretir, sonuç üretmez" diyor: her aday için temel çalışma şart.
->
-> Bu uyarı, "0 fikir çıktı" dendiği günlerde de geçerli — eleme tablosu yine sunulur.
-
-> **NOT — `/screen` = `/idea-generation` kısayolu.** `commands/screen.md`, doğrudan
-> `idea-generation` skill'ini yükler; ayrı bir metodolojisi yoktur. Bu adım zaten aynı
-> workflow'u kullanır, dolayısıyla ekstra bir "screen" talimatına gerek yok.
->
-> **BIST uyarlaması (önemli).** Skill ABD/hisse-raporu odaklı metrikler kullanır
-> (EV/EBITDA, FCF verimi, SaaS net retention). BIST isimleri için bunları uygun
-> karşılıklarıyla değiştir — bankalarda **P/DD + ROE**, sanayide **F/K + FAVÖK marjı**
-> vb. Metrikleri yfinance'ten gerçek veriyle doldur; kapsama yoksa (BIST'te analist
-> hedefi/tavsiye çoğu zaman boş döner) sayı uydurma, tezi teknik yapı + makro tema
-> üzerinden kur. (Örn. AKBNK: ROE ~%23 / net kâr büyümesi ~%39 YoY + dezenflasyon
-> re-rating teması.)
-
-Detayları aşağıda:
-
----
-name: idea-generation
-description: Systematic stock screening and investment idea sourcing. Combines quantitative screens, thematic research, and pattern recognition to surface new long and short ideas. Use when looking for new ideas, running screens, or conducting thematic sweeps. Triggers on "idea generation", "stock screen", "find ideas", "what looks interesting", "screen for", "new ideas", or "pitch me something".
----
-
-# Idea Generation
-
-## Workflow
-
-### Step 1: Define Search Criteria
-
-Ask the user for parameters:
-- **Direction**: Long ideas, short ideas, or both
-- **Market cap**: Large, mid, small, micro
-- **Sector**: Specific sector or cross-sector
-- **Style**: Value, growth, quality, special situation, event-driven
-- **Geography**: US, international, global
-- **Theme**: Any specific thematic angle (AI, reshoring, aging demographics, etc.)
-
-### Step 2: Quantitative Screens
-
-Run screens based on the style:
-
-**Value Screen**
-- P/E below sector median
-- EV/EBITDA below historical average
-- Free cash flow yield >5%
-- Price/book below 1.5x
-- Insider buying in last 90 days
-- Dividend yield above market average
-
-**Growth Screen**
-- Revenue growth >15% YoY
-- Earnings growth >20% YoY
-- Revenue acceleration (growth rate increasing)
-- Expanding margins
-- High return on invested capital (>15%)
-- Strong net retention (>110% for SaaS)
-
-**Quality Screen**
-- Consistent revenue growth (5+ years)
-- Stable or expanding margins
-- ROE >15%
-- Low debt/equity
-- High free cash flow conversion
-- Insider ownership >5%
-
-**Short Screen**
-- Declining revenue or decelerating growth
-- Margin compression
-- Rising receivables / inventory vs. sales
-- Insider selling
-- Valuation premium to peers without justification
-- High short interest with deteriorating fundamentals
-- Accounting red flags (auditor changes, restatements)
-
-**Special Situation Screen**
-- Recent IPOs / SPACs with lockup expirations
-- Spin-offs in last 12 months
-- Companies emerging from restructuring
-- Activist involvement
-- Management changes at underperforming companies
-
-### Step 3: Thematic Sweep
-
-For thematic ideas, research the theme and identify beneficiaries:
-
-1. Define the thesis (e.g., "AI infrastructure spending accelerates through 2026")
-2. Map the value chain — who benefits directly vs. indirectly?
-3. Identify pure-play vs. diversified exposure
-4. Assess which names are already "priced in" vs. under-appreciated
-5. Look for second-order beneficiaries that the market hasn't connected to the theme
-
-### Step 4: Idea Presentation
-
-For each idea that passes the screen, present:
-
-**[Company Name] — [Long/Short] — [One-Line Thesis]**
-
-| Metric | Value | vs. Peers |
-|--------|-------|-----------|
-| Market cap | | |
-| EV/EBITDA (NTM) | | |
-| P/E (NTM) | | |
-| Revenue growth | | |
-| EBITDA margin | | |
-| FCF yield | | |
-
-**Thesis (3-5 bullets):**
-- Why this is mispriced
-- What the market is missing
-- Catalyst to realize value
-
-**Key Risks:**
-- What would make this wrong
-
-**Suggested Next Steps:**
-- Build full model? Deep-dive diligence? Expert call?
-
-### Step 5: Output
-
-- Shortlist of 5-10 ideas with one-page summaries
-- Screening criteria and methodology documented
-- Comparison table across all ideas
-- Prioritized list: which ideas to research first
-
-## Important Notes
-
-- Screens surface candidates, not conclusions — every screen output needs fundamental work
-- The best ideas often come from intersections (e.g., quality company at value price due to temporary headwind)
-- Avoid crowded trades — check ownership data, short interest, and how many analysts cover the name
-- Contrarian ideas need a catalyst — being early without a catalyst is the same as being wrong
-- Track idea hit rates over time — which screens and approaches produce the best ideas?
-- Short ideas need higher conviction — timing is harder and risk is asymmetric
-
+- **Panele giren fikirler** → `ideas` dizisi, 0-3 long. Skill'in risk-getiri barını
+  geçemeyen fikir eklenmez; `ideas: []` normal bir sonuçtur, zorla fikir üretme.
+- **İzleme listesi** → JSON'a DEĞİL, ADIM 7 özet logunda "📋 İzleme Listesi"
+  başlığı altına.
+- **Eleme tablosu** → ADIM 7 raporunda, sıfır fikir çıkan günlerde de.
 ---
 
 ## ADIM 4 — JSON OLUŞTUR
 
-Equity Research Plugin'indeki /morning-note skill'ini kullan. Ancak morning-note çıktıları panel için tasarlanmış  json output formatında olsun. 
+**`Skill(eqr-morning-note)` çağır** — bülten bölümleri, Avrupa bölümünün kuralları ve
+veri disiplini orada: `.claude/skills/eqr-morning-note/SKILL.md`. Aşağıdaki yazım tonu
+ve şema bu adımın kendi sözleşmesidir; skill oraya işaret eder.
 
 
 
@@ -517,12 +352,12 @@ Hangi temalar güçleniyor/zayıflıyor? Her pozisyon hangi temada? Konsantrasyo
 
 ---
 
-## ADIM 6 — DASHBOARD'A GÖNDER (Claude in Chrome)
+## ADIM 6 — DASHBOARD'A GÖNDER
 
 `portfolio_insight` dolu olmadan başlama.
 
 1. Tam JSON'ı `~/eqr-update.json` dosyasına kaydet.
-2. Claude in Chrome: `https://equityresearch-production.up.railway.app/admin` → "Toplu İçerik Girişi" textarea → JSON'ı yapıştır → "İçeriği Gönder" → response'u oku.
+2. `https://equityresearch-production.up.railway.app/admin` → "Toplu İçerik Girişi" textarea → JSON'ı yapıştır → "İçeriği Gönder" → response'u oku.
 
 ---
 

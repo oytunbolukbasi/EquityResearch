@@ -240,7 +240,16 @@ maliyeti çok farklı:
   uyarı rengine döner. Fiyat akışı durursa panel sessizce yanlış göstermesin diye.
 
 ## İçerik Besleme Akışı
-Bir **cowork agent** (Claude; yfinance MCP birincil, fallback Twelve Data + tek web_search) günlük içeriği (morning_note / ideas / trade_plans / portfolio_insight) üretip şemaya uygun JSON döner. JSON, `/admin` sayfasındaki **"Toplu İçerik Girişi"** textarea'sına yapıştırılıp `POST /api/admin/bulk-import` ile kaydedilir (`x-admin-key` korumalı; her tablo bağımsız hata izolasyonlu upsert). ABD (NYSE/NASDAQ) fikirleri için bulk-import ayrıca otomatik Alpaca Paper Trading emri yönetir.
+Günlük içerik (morning_note / ideas / trade_plans / portfolio_insight) **bu repo'da
+Claude Code ile** üretilir; yfinance MCP birincil, fallback Twelve Data + tek web_search.
+İki temel adım repo'nun kendi skill'leridir — `Skill(eqr-idea-generation)` ve
+`Skill(eqr-morning-note)`, `.claude/skills/` altında. Üretilen JSON, `/admin` sayfasındaki
+**"Toplu İçerik Girişi"** textarea'sına yapıştırılıp `POST /api/admin/bulk-import` ile
+kaydedilir (`x-admin-key` korumalı; her tablo bağımsız hata izolasyonlu upsert). ABD
+(NYSE/NASDAQ) fikirleri için bulk-import ayrıca otomatik Alpaca Paper Trading emri yönetir.
+
+*(GÖREV 40'a kadar içerik claude.ai'daki ayrı bir "cowork agent"ta üretiliyordu; skill'ler
+o projenin plugin'inde yaşıyordu ve talimatnamede ikinci bir kopyası duruyordu.)*
 
 - Tam görev akışı, statü yaşam döngüsü ve JSON şeması: bu klasördeki cowork-instructions-final.md.
 
@@ -670,7 +679,7 @@ kalan adımlar: **SANAL-PORTFOY-PLAN.md**.
 - Fiyat boru hattı devralındı: hisseler 15 dk (Apps Script), fonlar hafta içi
   09:00/10:00 (Fintables + ScraperAPI, açılışta çekilmez — kota koruması).
 - Analiz sekmesi: eski uygulamanın analytics sayfasındaki her metrik taşındı (yapay
-  zeka görüşü hariç — cowork agent zaten daha iyisini yapıyor).
+  zeka görüşü hariç — içerik üretimi zaten daha iyisini yapıyor).
 - **Kur yöntemi farkı:** eski uygulama ABD maliyetini bugünkü kurla, EQR alış anındaki
   kurla hesaplıyor; fark 23.480 TL / 1,70 puandı. Birini seçip diğerini gizlemek
   yerine toplam EQR'nin yöntemiyle verilip ikiye ayrılıyor (hisse hareketi + kur
