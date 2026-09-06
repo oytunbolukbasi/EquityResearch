@@ -1024,3 +1024,37 @@ mevcut bültenler etkilenmedi.
 - **Kripto açıkça kapsam dışı.** Panelde varlık sınıfı olarak var ama haber
   taraması, fikir veya trade planı üretilmiyor; fiyatı panel kendi kaynağından
   çekiyor.
+
+GÖREV 40 — İki temel skill talimatnameden çıkıp repo'ya taşındı
+
+İçerik üretimi claude.ai'daki cowork agent'tan **bu repo'ya** alındı. Bunun
+sonucu olarak `idea-generation` ve `morning-note` artık repo'nun kendi
+skill'leri: `.claude/skills/eqr-idea-generation/` ve `.claude/skills/eqr-morning-note/`.
+Talimatname 545 → 393 satır.
+
+**Gömülü kopya bir tuzaktı ve dosya bunu kendi uyarısında yazıyordu:** *"metin
+gözünün önünde olduğu için skill'i çağırmadan 'zaten biliyorum' deyip devam
+etmek çok kolay."* Kopya yoksa ezberden uygulanacak bir şey de yok — uyarı
+kopyayla birlikte silindi. Hatırlanması gereken bir kural yerine yapı halletti.
+
+- **Metin olduğu gibi taşınmadı.** Gömülü bloğun çoğu jenerik tarama bilgisiydi
+  (F/K sektör medyanının altında, ciro >%15 YoY…) ve bunu kopyalamak hiçbir şey
+  kazandırmıyordu. Davranışı değiştiren kısım ADIM 3'e dağılmış EQR özeliydi;
+  skill artık o: R:R ≥ 2,0 barı, izleme listesi, eleme tablosu, BİST/Frankfurt
+  metrik uyarlaması, panel JSON çıktı biçimi.
+- **`eqr-` ön eki zorunlu.** `equity-research` eklentisinin aynı adlı skill'leri
+  de kurulu ve ad çakışmasında **eklenti kazanıyor** — ölçüldü: çıplak `Skill(idea-generation)`
+  eklentinin jenerik İngilizce sürümünü yükledi, repo dosyası gölgede kaldı.
+  Gerekçe iki `SKILL.md`'ye de yazıldı ki ileride "gereksiz ön ek" diye silinmesin.
+- **Jargon tablosu ve JSON şeması talimatnamede kaldı.** İkisi de `ideas.thesis`,
+  `ideas.invalidation` ve `portfolio_insight`'i kapsıyor; tek bir skill'e koymak
+  diğerinden gizlerdi. Skill'ler oraya işaret ediyor — `shared/asset-types.ts`
+  ile aynı gerekçe: aynalamak değil paylaşmak.
+
+**Skill'in taşıdığı yeni kural (GÖREV 39 turundan çıktı):** kaynaklar bir veri
+üzerinde çelişiyorsa sayıyı seçme — piyasanın ölçülebilir tepkisini yaz. O gün
+ağustos istihdam rakamı için iki farklı sayı dolaşıyordu; bülten rakamı değil
+tahvil faizinin bir yılın zirvesine çıkışını anlattı.
+
+*Sınır:* oturum içinde eklenen skill'ler yeniden başlatılana kadar `Skill`
+aracına görünmüyor.
