@@ -82,6 +82,19 @@ export interface PositionRow {
   currentPrice: string | null
 }
 
+/**
+ * A `timestamp`-without-zone value as an ISO string that means the same wall
+ * clock. Shared with portfolio-client.ts's reader for the same reason.
+ */
+function naiveIso(v: unknown): string {
+  if (!(v instanceof Date)) return String(v)
+  const p = (n: number, w = 2) => String(n).padStart(w, '0')
+  return (
+    `${v.getFullYear()}-${p(v.getMonth() + 1)}-${p(v.getDate())}` +
+    `T${p(v.getHours())}:${p(v.getMinutes())}:${p(v.getSeconds())}.${p(v.getMilliseconds(), 3)}Z`
+  )
+}
+
 function toRow(r: Record<string, unknown>): PositionRow {
   return {
     id: String(r.id),
@@ -91,13 +104,11 @@ function toRow(r: Record<string, unknown>): PositionRow {
     quantity: String(r.quantity),
     buyPrice: String(r.buy_price),
     buyRate: String(r.buy_rate),
-    // ISO, never String(Date). The driver hands back a JS Date, and its default
-    // string form is a LOCALE one — "Thu Jun 18 2026 00:00:00 GMT+0300
-    // (GMT+03:00)". Postgres reads that back as a timezone NAME and rejects it
-    // ("time zone \"gmt+0300\" not recognized"), so any update that round-trips
-    // the date — every price write does — failed outside UTC. Production runs
-    // in UTC, where "GMT+0000" happens to parse, which is why this survived.
-    buyDate: r.buy_date instanceof Date ? r.buy_date.toISOString() : String(r.buy_date),
+    // The column is `timestamp` with no zone, so the stored value IS the
+    // calendar moment. The driver parses it in the process's local timezone,
+    // which means its LOCAL components are the stored ones — re-emit those,
+    // never toISOString(), which would re-anchor the value and move the day.
+    buyDate: naiveIso(r.buy_date),
     currentPrice: r.current_price == null ? null : String(r.current_price),
   }
 }
@@ -140,6 +151,26 @@ export const portfolioWriteRepo = {
       RETURNING id, symbol, name, type, quantity, buy_price, buy_rate, buy_date, current_price
     `
     return rows[0] ? toRow(rows[0]) : null
+  },
+
+  /**
+   * Writes ONLY the price. Refreshing a price used to go through
+   * updatePosition, which meant reading the whole row and writing it all back —
+   * including buy_date. That date is a `timestamp` with no zone: the driver
+   * parsed it in the process's local timezone and the write put the shifted
+   * instant back, so every refresh walked the purchase date backwards by the
+   * local offset. Nineteen rows lost a day before it was caught.
+   *
+   * The columns a price refresh has any business touching are these two.
+   */
+  async updatePrice(id: string, currentPrice: string): Promise<boolean> {
+    const rows = await sql`
+      UPDATE positions
+      SET current_price = ${currentPrice}, last_updated = now()
+      WHERE id = ${id} AND user_id = ${PORTFOLIO_USER_ID}
+      RETURNING id
+    `
+    return rows.length > 0
   },
 
   async deletePosition(id: string): Promise<boolean> {

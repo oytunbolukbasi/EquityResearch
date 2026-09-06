@@ -73,7 +73,17 @@ function toNumOrNull(v: unknown): number | null {
  */
 function toIsoUtc(v: unknown): string | null {
   if (v == null) return null
-  if (v instanceof Date) return v.toISOString()
+  if (v instanceof Date) {
+    // The driver parsed a zone-less value in the process's LOCAL timezone, so
+    // its local components are the stored ones. toISOString() would re-anchor
+    // them and shift the wall clock — three hours in Turkey, which was enough
+    // to show a purchase made on the 18th as the 17th.
+    const p = (n: number, w = 2) => String(n).padStart(w, '0')
+    return (
+      `${v.getFullYear()}-${p(v.getMonth() + 1)}-${p(v.getDate())}` +
+      `T${p(v.getHours())}:${p(v.getMinutes())}:${p(v.getSeconds())}.${p(v.getMilliseconds(), 3)}Z`
+    )
+  }
   const s = String(v)
   if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) return s // already carries an offset
   return `${s.replace(' ', 'T')}Z`
@@ -94,7 +104,7 @@ export const portfolioRepo = {
       type: r.type as string,
       quantity: toNum(r.quantity),
       buyPrice: toNum(r.buy_price),
-      buyDate: r.buy_date as string,
+      buyDate: toIsoUtc(r.buy_date) ?? '',
       currentPrice: toNumOrNull(r.current_price),
       buyRate: toNumOrNull(r.buy_rate),
       lastUpdated: toIsoUtc(r.last_updated),
@@ -118,8 +128,8 @@ export const portfolioRepo = {
       quantity: toNum(r.quantity),
       pl: toNum(r.pl),
       plPercent: toNum(r.pl_percent),
-      buyDate: r.buy_date as string,
-      sellDate: r.sell_date as string,
+      buyDate: toIsoUtc(r.buy_date) ?? '',
+      sellDate: toIsoUtc(r.sell_date) ?? '',
     }))
   },
 }

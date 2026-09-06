@@ -197,15 +197,8 @@ export function ensurePriceSoon(
 }
 
 async function writePrice(id: string, price: number) {
-  const existing = await portfolioWriteRepo.getPosition(id)
-  if (!existing) return
-  await portfolioWriteRepo.updatePosition(id, {
-    name: existing.name,
-    quantity: existing.quantity,
-    buyPrice: existing.buyPrice,
-    buyRate: existing.buyRate,
-    buyDate: existing.buyDate,
-    // 6 decimals matches the column and keeps fund unit prices exact.
-    currentPrice: price.toFixed(6),
-  })
+  // Price only. Reading the row and writing every column back was how a price
+  // refresh managed to move purchase dates — see updatePrice.
+  // 6 decimals matches the column and keeps fund unit prices exact.
+  await portfolioWriteRepo.updatePrice(id, price.toFixed(6))
 }
