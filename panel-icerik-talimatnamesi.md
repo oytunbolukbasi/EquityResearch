@@ -343,6 +343,17 @@ GET `https://equityresearch-production.up.railway.app/api/portfolio/insight` (ö
 >    fiilen girilememişti — bunlar "kâğıt üzerinde" kazançtır, öyle raporlanır.)
 > 4. JSON'u göndermeden önce denetle: aksiyon listesindeki semboller kümesi,
 >    portfolio API'sindeki sembol kümesine **birebir eşit** olmalı.
+>
+> **Bu kuralı elle kontrol etme, betiği çalıştır:**
+> ```
+> npx tsx scripts/verify-insight.ts <payload.json>
+> ```
+> Eksik/fazla sembolü, aynı sembolün iki kez yazılmasını, geçersiz aksiyon
+> adını ve boş gerekçeyi yakalar; hata varsa 1 ile çıkar.
+> *(7 Eylül 2026'da bu kural ihlal edildi — 23 pozisyonun 7'sine not yazıldı ve
+> listeye portföyde olmayan NVDA girdi. Kaybolan şey görünmüyordu da: NASA ve TXT
+> için üç gündür bekleyen SAT kararları listeden düştüğü an sessizce yok oldu.
+> Kural zaten yazılıydı; hatırlatma yetmedi, ölçüm gerekti.)*
 
 **Tematik rotasyon çerçevesi** (ADIM 2 haberlerini kullan):
 Hangi temalar güçleniyor/zayıflıyor? Her pozisyon hangi temada? Konsantrasyon riski (tek pozisyon/tema >%25)? TL-USD ve büyüme-savunma dengesi?
@@ -363,9 +374,11 @@ elle yapıştırmıyor.
 1. Tam JSON'ı scratchpad'e kaydet.
 2. `POST /api/admin/bulk-import` — `x-admin-key` başlığı `.env`'deki `ADMIN_KEY`'den
    okunur. **Anahtarı ekrana basma, sohbete yazma.**
-3. Yanıttaki `results` sayılarını ve `warnings` dizisini oku; tablo başına kaç kayıt
+3. **Göndermeden önce** `npx tsx scripts/verify-insight.ts <payload.json>` — temiz
+   çıkmadan gönderme.
+4. Yanıttaki `results` sayılarını ve `warnings` dizisini oku; tablo başına kaç kayıt
    yazıldığını ADIM 7 loguna geçir.
-4. Yüklendikten sonra panelden **doğrula** — en az bir uç: `/api/morning-notes`
+5. Yüklendikten sonra panelden **doğrula** — en az bir uç: `/api/morning-notes`
    bugünün tarihini mi dönüyor, yeni fikir `/api/ideas`'te görünüyor mu.
 
 > **Bu adım deploy GEREKTİRMEZ.** İçerik doğrudan çalışan uygulamaya gider; deploy
