@@ -3,9 +3,9 @@
  *
  * Talimatnamedeki ADIM 5 iki şey söylüyor: aksiyon listesi HER açık pozisyonu
  * içerir ve YALNIZCA açık pozisyonları içerir. İkisi de hatırlanması gereken
- * kurallardı ve 6 Eylül 2026'da ikisi birden ihlal edildi (7 Eylül tarihli notu
- * yazarken) — 23 pozisyonun
- * 7'sine not yazıldı, listeye portföyde olmayan bir panel fikri (NVDA) girdi.
+ * kurallardı ve 6 Eylül 2026'da, 7 Eylül tarihli not yazılırken ikisi birden
+ * ihlal edildi: 23 pozisyonun 7'sine not yazıldı ve listeye portföyde olmayan
+ * bir panel fikri (NVDA) girdi.
  * Kaybolan şey görünmüyordu da: NASA ve TXT için üç gündür bekleyen "SAT"
  * kararları listeden düştüğü an sessizce ortadan kalktı.
  *
