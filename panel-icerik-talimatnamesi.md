@@ -183,6 +183,7 @@ Bu adımda karar verilen tek şey, taramadan çıkanın nereye gittiği:
 - **İzleme listesi** → JSON'a DEĞİL, ADIM 7 özet logunda "📋 İzleme Listesi"
   başlığı altına.
 - **Eleme tablosu** → ADIM 7 raporunda, sıfır fikir çıkan günlerde de.
+
 ---
 
 ## ADIM 4 — JSON OLUŞTUR
@@ -356,8 +357,20 @@ Hangi temalar güçleniyor/zayıflıyor? Her pozisyon hangi temada? Konsantrasyo
 
 `portfolio_insight` dolu olmadan başlama.
 
-1. Tam JSON'ı `~/eqr-update.json` dosyasına kaydet.
-2. `https://equityresearch-production.up.railway.app/admin` → "Toplu İçerik Girişi" textarea → JSON'ı yapıştır → "İçeriği Gönder" → response'u oku.
+**Yüklemeyi Claude yapar** (6 Eylül 2026'da kararlaştırıldı); kullanıcı artık `/admin`'e
+elle yapıştırmıyor.
+
+1. Tam JSON'ı scratchpad'e kaydet.
+2. `POST /api/admin/bulk-import` — `x-admin-key` başlığı `.env`'deki `ADMIN_KEY`'den
+   okunur. **Anahtarı ekrana basma, sohbete yazma.**
+3. Yanıttaki `results` sayılarını ve `warnings` dizisini oku; tablo başına kaç kayıt
+   yazıldığını ADIM 7 loguna geçir.
+4. Yüklendikten sonra panelden **doğrula** — en az bir uç: `/api/morning-notes`
+   bugünün tarihini mi dönüyor, yeni fikir `/api/ideas`'te görünüyor mu.
+
+> **Bu adım deploy GEREKTİRMEZ.** İçerik doğrudan çalışan uygulamaya gider; deploy
+> yalnızca panel KODU değiştiğinde gerekir. İkisi bir kez aynı turda yapıldı diye
+> bağlı sanılmıştı, değiller.
 
 ---
 
