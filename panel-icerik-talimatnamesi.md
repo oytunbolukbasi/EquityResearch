@@ -350,7 +350,8 @@ GET `https://equityresearch-production.up.railway.app/api/portfolio/insight` (ö
 > ```
 > Eksik/fazla sembolü, aynı sembolün iki kez yazılmasını, geçersiz aksiyon
 > adını ve boş gerekçeyi yakalar; hata varsa 1 ile çıkar.
-> *(7 Eylül 2026'da bu kural ihlal edildi — 23 pozisyonun 7'sine not yazıldı ve
+> *(6 Eylül 2026'da, 7 Eylül tarihli not yazılırken bu kural ihlal edildi —
+> 23 pozisyonun 7'sine not yazıldı ve
 > listeye portföyde olmayan NVDA girdi. Kaybolan şey görünmüyordu da: NASA ve TXT
 > için üç gündür bekleyen SAT kararları listeden düştüğü an sessizce yok oldu.
 > Kural zaten yazılıydı; hatırlatma yetmedi, ölçüm gerekti.)*
