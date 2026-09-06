@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 
 import type {
   PortfolioAction,
@@ -20,9 +20,11 @@ import {
   fmtQty,
   fmtSignedMoney,
   plColor,
+  GROUP_COLOR,
   UNIT_FOR_TYPE,
 } from './portfolio-calc'
 import { computeAnalytics, type Bucket } from './analytics-calc'
+import { ASSET_GROUPS, groupOf } from '@shared/asset-types'
 import { fmtNoteDate, noteSections, readMinutes } from './note-sections'
 
 type PortSub = 'notes' | 'analysis' | 'history'
@@ -37,29 +39,27 @@ const PORT_SUBS = [
 
 function KpiCard({
   label,
-  hint,
+  rate,
   bucket,
-  footer,
 }: {
   label: string
-  hint: string
+  /** "USD @48,44" — only for groups held in a foreign currency. */
+  rate?: string
   bucket: Bucket
-  footer: string
 }) {
   return (
     <article className="bg-card border-faint rounded-xl border px-[18px] py-4">
       <div className="text-mid flex justify-between gap-2 text-[12px]">
-        <span>{label}</span>
-        <span>{hint}</span>
+        <span className="truncate">{label}</span>
+        {rate && <span className="num shrink-0">{rate}</span>}
       </div>
       <div className="num my-2 text-[26px] font-medium tracking-[-1px]">
         {fmtMoney(bucket.value, '₺', 0)}
       </div>
-      <div className="flex items-center justify-between gap-2 text-[12px]">
-        <span className="num" style={{ color: plColor(bucket.pl) }}>
-          {fmtSignedMoney(bucket.pl, '₺')} · {fmtPct(bucket.plPercent)}
-        </span>
-        <span className="text-mid num shrink-0">{footer}</span>
+      {/* The figure under a portfolio value is its profit and loss; saying so
+          in a second label was repeating the obvious. */}
+      <div className="num text-[12px]" style={{ color: plColor(bucket.pl) }}>
+        {fmtSignedMoney(bucket.pl, '₺')} · {fmtPct(bucket.plPercent)}
       </div>
     </article>
   )
@@ -97,11 +97,37 @@ function PositionsTable({
         </tr>
       </thead>
       <tbody>
-        {positions.map((p) => {
-          const action = actions.get(p.symbol)
-          const unit = UNIT_FOR_TYPE[p.type] ?? ''
+        {/*
+          Grouped by asset class, in ASSET_GROUPS order — fixed, not by size, so
+          a group sits in the same place every time you open the tab. A group
+          with nothing in it is not drawn at all.
+        */}
+        {ASSET_GROUPS.map((g) => {
+          const rows = positions.filter((p) => groupOf(p.type) === g.id)
+          if (rows.length === 0) return null
           return (
-            <tr
+            <Fragment key={g.id}>
+              <tr>
+                <td colSpan={4} className="px-[18px] pt-4 pb-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="h-[17px] w-1 shrink-0 rounded-full"
+                      style={{ background: GROUP_COLOR[g.id] }}
+                    />
+                    <span className="text-[14px] font-semibold tracking-[-0.2px]">{g.label}</span>
+                    {/* The group's value is on the card directly above; the one
+                        thing the heading can add is how many rows follow. */}
+                    <span className="text-mid num ml-auto text-[12px]">
+                      {rows.length} pozisyon
+                    </span>
+                  </div>
+                </td>
+              </tr>
+              {rows.map((p) => {
+                const action = actions.get(p.symbol)
+                const unit = UNIT_FOR_TYPE[p.type] ?? ''
+                return (
+                  <tr
               key={p.id}
               onClick={() => onSelect(p.symbol)}
               className="border-faint2 hover:bg-bg cursor-pointer border-b"
@@ -126,8 +152,11 @@ function PositionsTable({
                 ) : (
                   <span className="text-mid text-[12px]">—</span>
                 )}
-              </td>
-            </tr>
+                    </td>
+                  </tr>
+                )
+              })}
+            </Fragment>
           )
         })}
       </tbody>
@@ -242,20 +271,15 @@ function DetailPanel({
   )
 }
 
-/** The currency each group is priced in — the card's small right-hand note. */
-const GROUP_HINT: Record<string, string> = {
-  tr: 'BİST + fon',
-  us: 'USD',
-  de: 'EUR',
-  crypto: 'USD',
-}
-
-/** Groups priced in a foreign currency show the rate they were converted at. */
-function rateFooter(id: string, summary: PortfolioSummary | null): string {
-  if (!summary) return 'Maliyete göre'
-  if (id === 'us' || id === 'crypto') return `Kur: ${fmtN(summary.rates.USD, 2)}`
-  if (id === 'de') return `Kur: ${fmtN(summary.rates.EUR, 2)}`
-  return 'Maliyete göre'
+/**
+ * "USD @48,44" for a group held in a foreign currency, nothing for lira ones —
+ * a rate is only worth printing where a conversion actually happened.
+ */
+function rateNote(id: string, summary: PortfolioSummary | null): string | undefined {
+  if (!summary) return undefined
+  if (id === 'us' || id === 'crypto') return `USD @${fmtN(summary.rates.USD, 2)}`
+  if (id === 'de') return `EUR @${fmtN(summary.rates.EUR, 2)}`
+  return undefined
 }
 
 function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
@@ -459,22 +483,19 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
       <ScrollRail className="eqr-kpi-rail mb-5 gap-3 pb-1">
         <KpiCard
           label="Toplam portföy değeri"
-          hint="TL bazında"
           bucket={{
             value: totals.totalValue,
             cost: totals.totalCost,
             pl: totals.unrealized,
             plPercent: totals.unrealizedPercent,
           }}
-          footer="Açık pozisyon K/Z"
         />
         {totals.byGroup.map((g) => (
           <KpiCard
             key={g.id}
             label={g.label}
-            hint={GROUP_HINT[g.id] ?? ''}
+            rate={rateNote(g.id, summary)}
             bucket={g.bucket}
-            footer={rateFooter(g.id, summary)}
           />
         ))}
       </ScrollRail>

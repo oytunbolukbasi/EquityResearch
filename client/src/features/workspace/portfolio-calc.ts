@@ -57,3 +57,18 @@ export function plColor(n: number | null | undefined): string {
 export const UNIT_FOR_TYPE: Record<string, Unit> = Object.fromEntries(
   POSITION_TYPES.map((t) => [t, UNIT_FOR_CURRENCY[CURRENCY_FOR_TYPE[t]]]),
 )
+
+/**
+ * One colour per asset group — see --alloc-* in index.css for why it is its own
+ * scale, and ASSET_GROUPS for why there are four groups and not five.
+ *
+ * Lives here so the allocation bar, its legend and the portfolio sections all
+ * read the same map: a class must not be blue in one panel and violet in
+ * another.
+ */
+export const GROUP_COLOR: Record<string, string> = {
+  tr: 'var(--alloc-1)',
+  us: 'var(--alloc-2)',
+  de: 'var(--alloc-3)',
+  crypto: 'var(--alloc-4)',
+}

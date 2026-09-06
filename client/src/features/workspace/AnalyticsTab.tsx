@@ -13,16 +13,7 @@ import {
   type DateRange,
 } from '@/components/ui/date-range-picker'
 import { computeAnalytics, type Analytics } from './analytics-calc'
-import { fmtMoney, fmtPct, fmtSignedMoney, plColor } from './portfolio-calc'
-
-/** One colour per asset group — see --alloc-* in index.css for why it is its
-    own scale, and ASSET_GROUPS for why there are four of them and not five. */
-const GROUP_COLOR: Record<string, string> = {
-  tr: 'var(--alloc-1)',
-  us: 'var(--alloc-2)',
-  de: 'var(--alloc-3)',
-  crypto: 'var(--alloc-4)',
-}
+import { fmtMoney, fmtPct, fmtSignedMoney, GROUP_COLOR, plColor } from './portfolio-calc'
 
 /** The legend wants a word, not a phrase — the full label is in the rows below. */
 const GROUP_SHORT: Record<string, string> = {
