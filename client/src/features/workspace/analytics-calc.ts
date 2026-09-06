@@ -1,4 +1,19 @@
 import type { PortfolioClosedPosition, PortfolioPosition } from '@/lib/api-types'
+import {
+  ASSET_GROUPS,
+  CURRENCY_FOR_TYPE,
+  groupOf,
+  type AssetGroupId,
+  type Currency,
+  type PositionType,
+} from '@shared/asset-types'
+
+export type Rates = Record<Currency, number>
+
+/** The rate that turns a position's own currency into lira. */
+function rateFor(type: string, rates: Rates): number {
+  return rates[CURRENCY_FOR_TYPE[type as PositionType] ?? 'TRY'] ?? 1
+}
 
 /**
  * Everything the Analiz tab reports, in lira.
@@ -73,28 +88,22 @@ export interface Analytics {
   /** Winners as a share of decided trades, null until at least one is closed. */
   winRate: number | null
 
-  byType: { key: string; label: string; bucket: Bucket; share: number }[]
+  /**
+   * One entry per asset group that actually holds something — the allocation
+   * bar, its legend, the KPI cards and the portfolio sections all read this.
+   */
+  byGroup: { id: AssetGroupId; label: string; bucket: Bucket; share: number }[]
 
-  /** Genel Bakış'ın KPI kartları: TL varlıklar (hisse + fon) ve ABD hisseleri. */
-  tryAssets: Bucket
-  usdAssets: Bucket
-  /** "Kur: 48,32" — kartın alt satırı. */
-  rateLabel: string
 }
 
-const TYPE_LABELS: [string, string][] = [
-  ['stock', 'BİST hissesi'],
-  ['us_stock', 'ABD hissesi'],
-  ['fund', 'Yatırım fonu'],
-]
-
-function bucketOf(positions: PortfolioPosition[], liveRate: number): Bucket {
+function bucketOf(positions: PortfolioPosition[], rates: Rates): Bucket {
   let value = 0
   let cost = 0
   for (const p of positions) {
-    const isUs = p.type === 'us_stock'
-    const rate = isUs ? liveRate : 1
-    const buyRate = isUs ? (p.buyRate ?? liveRate) : 1
+    const rate = rateFor(p.type, rates)
+    // buyRate is the position's own currency on its purchase day; lira
+    // positions carry 1, so this line needs no special case for them.
+    const buyRate = rate === 1 ? 1 : (p.buyRate ?? rate)
     value += p.quantity * (p.currentPrice ?? p.buyPrice) * rate
     cost += p.quantity * p.buyPrice * buyRate
   }
@@ -109,17 +118,16 @@ function bucketOf(positions: PortfolioPosition[], liveRate: number): Bucket {
 export function computeAnalytics(
   positions: PortfolioPosition[],
   closed: PortfolioClosedPosition[],
-  liveRate: number,
+  rates: Rates,
   range: { from: string | null; to: string | null },
 ): Analytics {
-  const open = bucketOf(positions, liveRate)
+  const open = bucketOf(positions, rates)
 
   let fromShares = 0
   let fromCurrency = 0
   for (const p of positions) {
-    const isUs = p.type === 'us_stock'
-    const rate = isUs ? liveRate : 1
-    const buyRate = isUs ? (p.buyRate ?? liveRate) : 1
+    const rate = rateFor(p.type, rates)
+    const buyRate = rate === 1 ? 1 : (p.buyRate ?? rate)
     fromShares += p.quantity * ((p.currentPrice ?? p.buyPrice) - p.buyPrice) * rate
     fromCurrency += p.quantity * p.buyPrice * (rate - buyRate)
   }
@@ -128,7 +136,7 @@ export function computeAnalytics(
   // valued at today's rate. Exact for TRY holdings, an approximation for US
   // ones — surfaced as a footnote in the UI rather than hidden.
   const realizedOf = (rows: PortfolioClosedPosition[]) =>
-    rows.reduce((sum, c) => sum + (c.type === 'us_stock' ? c.pl * liveRate : c.pl), 0)
+    rows.reduce((sum, c) => sum + c.pl * rateFor(c.type, rates), 0)
 
   // Dates arrive as 'YYYY-MM-DD...' strings; comparing the day part as text is
   // exact and avoids a timezone round-trip through Date.
@@ -150,24 +158,26 @@ export function computeAnalytics(
   // Cost of everything ever held, so the net percentage has a denominator that
   // includes positions already sold.
   const closedCost = closed.reduce(
-    (sum, c) => sum + c.quantity * c.buyPrice * (c.type === 'us_stock' ? liveRate : 1),
+    (sum, c) => sum + c.quantity * c.buyPrice * rateFor(c.type, rates),
     0,
   )
   const lifetimeCost = open.cost + closedCost
   const net = realizedLifetime + open.pl
 
-  const byType = TYPE_LABELS.map(([key, label]) => ({
-    key,
-    label,
+  // Groups, not raw types: BİST and funds are reported together — see
+  // ASSET_GROUPS for why. A group with nothing in it is not drawn at all.
+  const byGroup = ASSET_GROUPS.map((g) => ({
+    id: g.id,
+    label: g.label,
     bucket: bucketOf(
-      positions.filter((p) => p.type === key),
-      liveRate,
+      positions.filter((p) => groupOf(p.type) === g.id),
+      rates,
     ),
     share: 0,
-  })).filter((t) => t.bucket.value > 0)
+  })).filter((g) => g.bucket.value > 0)
 
-  for (const t of byType) {
-    t.share = open.value > 0 ? (t.bucket.value / open.value) * 100 : 0
+  for (const g of byGroup) {
+    g.share = open.value > 0 ? (g.bucket.value / open.value) * 100 : 0
   }
 
   // Win/loss is counted over the selected range so the record can be read for
@@ -176,19 +186,7 @@ export function computeAnalytics(
   const losers = inRange.filter((c) => c.pl < 0).length
   const decided = winners + losers
 
-  const tryAssets = bucketOf(
-    positions.filter((p) => p.type !== 'us_stock'),
-    liveRate,
-  )
-  const usdAssets = bucketOf(
-    positions.filter((p) => p.type === 'us_stock'),
-    liveRate,
-  )
-
   return {
-    tryAssets,
-    usdAssets,
-    rateLabel: `Kur: ${liveRate.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     totalValue: open.value,
     totalCost: open.cost,
     unrealized: open.pl,
@@ -209,6 +207,6 @@ export function computeAnalytics(
     // Break-even trades are excluded from the denominator: they decided
     // nothing either way.
     winRate: decided > 0 ? (winners / decided) * 100 : null,
-    byType,
+    byGroup,
   }
 }

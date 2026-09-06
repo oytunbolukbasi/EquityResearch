@@ -1,3 +1,13 @@
+import type { Currency } from '@shared/asset-types'
+import {
+  CURRENCY_FOR_TYPE,
+  POSITION_TYPES,
+  UNIT_FOR_CURRENCY,
+} from '@shared/asset-types'
+
+/** Every currency symbol the panel can print, plus "no unit". */
+export type Unit = (typeof UNIT_FOR_CURRENCY)[Currency] | ''
+
 export function fmtN(n: number | null | undefined, decimals = 2): string {
   if (n == null) return '—'
   return n.toLocaleString('tr-TR', {
@@ -7,12 +17,12 @@ export function fmtN(n: number | null | undefined, decimals = 2): string {
 }
 
 /** `₺1.295.784` / `$187,62` / bare number for funds. */
-export function fmtMoney(n: number | null | undefined, unit: '₺' | '$' | '' = '', decimals = 2) {
+export function fmtMoney(n: number | null | undefined, unit: Unit = '', decimals = 2) {
   if (n == null) return '—'
   return `${unit}${fmtN(n, decimals)}`
 }
 
-export function fmtSignedMoney(n: number | null | undefined, unit: '₺' | '$' | '' = '', decimals = 0) {
+export function fmtSignedMoney(n: number | null | undefined, unit: Unit = '', decimals = 0) {
   if (n == null) return '—'
   return `${n >= 0 ? '+' : '−'}${unit}${fmtN(Math.abs(n), decimals)}`
 }
@@ -43,8 +53,7 @@ export function plColor(n: number | null | undefined): string {
  * same symbol — leaving them bare made a fund's value read as unitless next to
  * ₺ and $ rows.
  */
-export const UNIT_FOR_TYPE: Record<string, '₺' | '$' | ''> = {
-  stock: '₺',
-  fund: '₺',
-  us_stock: '$',
-}
+/** A position's currency symbol, derived from its type. */
+export const UNIT_FOR_TYPE: Record<string, Unit> = Object.fromEntries(
+  POSITION_TYPES.map((t) => [t, UNIT_FOR_CURRENCY[CURRENCY_FOR_TYPE[t]]]),
+)

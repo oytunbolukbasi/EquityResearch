@@ -241,6 +241,22 @@ function DetailPanel({
   )
 }
 
+/** The currency each group is priced in — the card's small right-hand note. */
+const GROUP_HINT: Record<string, string> = {
+  tr: 'BİST + fon',
+  us: 'USD',
+  de: 'EUR',
+  crypto: 'USD',
+}
+
+/** Groups priced in a foreign currency show the rate they were converted at. */
+function rateFooter(id: string, summary: PortfolioSummary | null): string {
+  if (!summary) return 'Maliyete göre'
+  if (id === 'us' || id === 'crypto') return `Kur: ${fmtN(summary.rates.USD, 2)}`
+  if (id === 'de') return `Kur: ${fmtN(summary.rates.EUR, 2)}`
+  return 'Maliyete göre'
+}
+
 function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
@@ -354,7 +370,7 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
   // Genel Bakış ve Analiz aynı hesaptan besleniyor. Ayrı iki uygulama
   // (computeTotals) vardı; aynı etiketin altında farklı rakamlar çıkabildiği
   // için kaldırıldı — tek kaynak kalsın.
-  const totals = computeAnalytics(positions, closed ?? [], summary?.usdTryRate ?? 1, {
+  const totals = computeAnalytics(positions, closed ?? [], summary?.rates ?? { TRY: 1, USD: 1, EUR: 1 }, {
     from: null,
     to: null,
   })
@@ -433,30 +449,36 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
         subtitle="Portföyün, araştırman ve işlem planların bir arada."
       />
 
-      <div className="eqr-kpis mb-5 grid gap-3" style={{ gridTemplateColumns: '1.15fr 1fr 1fr' }}>
-        <KpiCard
-          label="Toplam portföy değeri"
-          hint="TL bazında"
-          bucket={{
-            value: totals.totalValue,
-            cost: totals.totalCost,
-            pl: totals.unrealized,
-            plPercent: totals.unrealizedPercent,
-          }}
-          footer="Açık pozisyon K/Z"
-        />
-        <KpiCard
-          label="TL varlıklar"
-          hint="Hisse + fon"
-          bucket={totals.tryAssets}
-          footer="Maliyete göre"
-        />
-        <KpiCard
-          label="ABD hisseleri"
-          hint="TL karşılığı"
-          bucket={totals.usdAssets}
-          footer={totals.rateLabel}
-        />
+      {/*
+        One card per asset group, plus the total — five today and one more
+        whenever a group is added, which is why they live on a scrolling rail
+        instead of a grid: the last card is deliberately cut off, because a
+        clipped card is the only honest way to say "there is more to the right".
+      */}
+      <div className="relative mb-5">
+        <div className="eqr-kpi-rail flex gap-3 overflow-x-auto pb-1">
+          <KpiCard
+            label="Toplam portföy değeri"
+            hint="TL bazında"
+            bucket={{
+              value: totals.totalValue,
+              cost: totals.totalCost,
+              pl: totals.unrealized,
+              plPercent: totals.unrealizedPercent,
+            }}
+            footer="Açık pozisyon K/Z"
+          />
+          {totals.byGroup.map((g) => (
+            <KpiCard
+              key={g.id}
+              label={g.label}
+              hint={GROUP_HINT[g.id] ?? ''}
+              bucket={g.bucket}
+              footer={rateFooter(g.id, summary)}
+            />
+          ))}
+        </div>
+        <div className="eqr-kpi-fade" aria-hidden="true" />
       </div>
 
       <SplitPane splitKey="overview" a={portfolioPanel} b={rightPanel} />

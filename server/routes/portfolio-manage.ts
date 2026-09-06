@@ -4,7 +4,12 @@ import { z } from 'zod'
 import { portfolioWriteRepo } from '../db/portfolio-write'
 import { requireSession } from '../lib/auth'
 import { getHistoricalExchangeRate } from '../services/exchange-rate'
-import { ensurePriceSoon, refreshOnePrice, refreshSharePrices } from '../services/price-refresh'
+import {
+  CURRENCY_FOR_TYPE,
+  POSITION_TYPES,
+  PRICE_SOURCE_FOR_TYPE,
+} from '../../shared/asset-types'
+import { ensurePriceSoon, refreshLivePrices, refreshOnePrice } from '../services/price-refresh'
 
 export const portfolioManageRouter = Router()
 
@@ -41,7 +46,7 @@ const isoDate = (label: string) =>
 const newPositionInput = z.object({
   symbol: z.string().min(1, 'Varlık kodu gerekli').max(20).trim().toUpperCase(),
   name: z.string().max(200).nullish(),
-  type: z.enum(['stock', 'us_stock', 'fund'], { message: 'Varlık türü seçilmeli' }),
+  type: z.enum(POSITION_TYPES, { message: 'Varlık türü seçilmeli' }),
   quantity: decimalString('Adet'),
   buyPrice: decimalString('Alış fiyatı'),
   buyDate: isoDate('Alış tarihi'),
@@ -78,9 +83,12 @@ portfolioManageRouter.post('/positions', async (req, res) => {
 
   // US positions are priced in USD but reported in TL, so the rate on the buy
   // date is part of the cost basis. Look it up unless the caller pinned one.
+  // buyRate is "this position's currency → TRY, on the day it was bought". For
+  // a lira position that is 1; for USD, EUR and crypto it is looked up.
+  const currency = CURRENCY_FOR_TYPE[d.type]
   let buyRate = d.buyRate ?? '1.0'
-  if (d.type === 'us_stock' && !d.buyRate) {
-    buyRate = String(await getHistoricalExchangeRate(new Date(d.buyDate)))
+  if (currency !== 'TRY' && !d.buyRate) {
+    buyRate = String(await getHistoricalExchangeRate(new Date(d.buyDate), currency))
   }
 
   const created = await portfolioWriteRepo.createPosition({
@@ -101,7 +109,12 @@ portfolioManageRouter.post('/positions', async (req, res) => {
   // roughly a hundred seconds between "Pozisyon ekle" and a response for a row
   // that was already committed, so the button sat on a spinner and the save
   // looked broken. The position is saved; the price catches up on its own.
-  ensurePriceSoon(created.id, d.type !== 'fund' ? { symbol: d.symbol, type: d.type } : undefined)
+  ensurePriceSoon(
+    created.id,
+    // Only the sheet needs to be told about a new ticker; funds and crypto are
+    // looked up by symbol at read time.
+    PRICE_SOURCE_FOR_TYPE[d.type] === 'sheet' ? { symbol: d.symbol, type: d.type } : undefined,
+  )
 
   res.status(201).json({
     ...created,
@@ -119,7 +132,7 @@ portfolioManageRouter.post('/positions', async (req, res) => {
  * the price already stored for them and are refreshed by the morning schedule.
  */
 portfolioManageRouter.post('/prices/refresh', async (_req, res) => {
-  const result = await refreshSharePrices(true)
+  const result = await refreshLivePrices(true)
   res.json(result)
 })
 

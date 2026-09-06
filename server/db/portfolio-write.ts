@@ -39,7 +39,8 @@ const sql = neon(portfolioDatabaseUrl)
  */
 export const PORTFOLIO_USER_ID = 'demo-user'
 
-export type PositionType = 'stock' | 'us_stock' | 'fund'
+import type { PositionType } from '../../shared/asset-types'
+export type { PositionType }
 
 export interface NewPosition {
   symbol: string

@@ -1,3 +1,5 @@
+import type { Currency } from '@shared/asset-types'
+
 export type MacroBullet = string | { label: string; detail?: string }
 export type SectorDeepDive = { title?: string | null; body?: string | null; [key: string]: unknown }
 export type IdeaMetrics = Record<string, string | number | null>
@@ -57,18 +59,18 @@ export interface PortfolioPosition {
   id: string
   symbol: string
   name: string | null
-  type: string // 'stock' | 'us_stock' | 'fund'
+  type: string // see shared/asset-types.ts
   quantity: number
   buyPrice: number
   buyDate: string
   currentPrice: number | null
   buyRate: number | null
+  /** The currency this position's price and cost are quoted in. */
+  currency: Currency
   costBasis: number
   currentValue: number | null
   plAmount: number | null
   plPercent: number | null
-  costBasisTRY: number | null
-  currentValueTRY: number | null
   lastUpdated: string | null
 }
 
@@ -88,8 +90,10 @@ export interface PortfolioClosedPosition {
 
 export interface PortfolioSummary {
   positions: PortfolioPosition[]
-  usdTryRate: number
-  usdTryRateIsFallback: boolean
+  /** <currency>/TRY, live. TRY is 1. */
+  rates: Record<Currency, number>
+  /** Currencies whose rate is a static stand-in, not a live quote. */
+  ratesFallback: Currency[]
 }
 
 export interface PortfolioAction {

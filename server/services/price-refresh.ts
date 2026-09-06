@@ -2,6 +2,8 @@ import { portfolioRepo } from '../db/portfolio-client'
 import { portfolioWriteRepo } from '../db/portfolio-write'
 import { fetchFundPrice } from './fund-price'
 import { fetchSharePrices, PriceSourceUnavailable, registerSymbol } from './price-source'
+import { CryptoSourceUnavailable, fetchCryptoPrices } from './crypto-price'
+import { PRICE_SOURCE_FOR_TYPE, type PositionType } from '../../shared/asset-types'
 
 export interface RefreshResult {
   updated: { symbol: string; price: number }[]
@@ -18,9 +20,13 @@ export interface RefreshResult {
  * not be able to wipe a figure the rest of the panel depends on.
  */
 
-/** BIST + US positions. Cheap: one request covers every symbol. */
+const sourceOf = (type: string) => PRICE_SOURCE_FOR_TYPE[type as PositionType] ?? 'sheet'
+
+/** BIST, US and German positions. Cheap: one request covers every symbol. */
 export async function refreshSharePrices(force = false): Promise<RefreshResult> {
-  const shares = (await portfolioRepo.getOpenPositions()).filter((p) => p.type !== 'fund')
+  const shares = (await portfolioRepo.getOpenPositions()).filter(
+    (p) => sourceOf(p.type) === 'sheet',
+  )
   const result: RefreshResult = { updated: [], skipped: [] }
   if (shares.length === 0) return result
 
@@ -51,7 +57,7 @@ export async function refreshSharePrices(force = false): Promise<RefreshResult> 
  * ScraperAPI quota, which is why this runs on a schedule rather than a timer.
  */
 export async function refreshFundPrices(force = false): Promise<RefreshResult> {
-  const funds = (await portfolioRepo.getOpenPositions()).filter((p) => p.type === 'fund')
+  const funds = (await portfolioRepo.getOpenPositions()).filter((p) => sourceOf(p.type) === 'fund')
   const result: RefreshResult = { updated: [], skipped: [] }
 
   // Sequential on purpose — parallel scrapes burn quota faster and are more
@@ -68,13 +74,64 @@ export async function refreshFundPrices(force = false): Promise<RefreshResult> {
   return result
 }
 
+/**
+ * Crypto. One request covers every coin, needs no key, and is cheap enough to
+ * ride the same fifteen-minute sweep as the shares.
+ */
+export async function refreshCryptoPrices(force = false): Promise<RefreshResult> {
+  const coins = (await portfolioRepo.getOpenPositions()).filter(
+    (p) => sourceOf(p.type) === 'crypto',
+  )
+  const result: RefreshResult = { updated: [], skipped: [] }
+  if (coins.length === 0) return result
+
+  let prices: Record<string, number>
+  try {
+    prices = await fetchCryptoPrices(
+      coins.map((p) => p.symbol),
+      force,
+    )
+  } catch (e) {
+    if (e instanceof CryptoSourceUnavailable) return { ...result, sourceError: e.message }
+    throw e
+  }
+
+  for (const p of coins) {
+    const price = prices[p.symbol.toUpperCase()]
+    if (price == null) {
+      result.skipped.push({ symbol: p.symbol, reason: 'kripto listesinde tanımlı değil' })
+      continue
+    }
+    await writePrice(p.id, price)
+    result.updated.push({ symbol: p.symbol, price })
+  }
+  return result
+}
+
 /** Both at once — what the manual "Fiyatları yenile" button runs. */
 export async function refreshAllPrices(force = false): Promise<RefreshResult> {
   const shares = await refreshSharePrices(force)
+  const crypto = await refreshCryptoPrices(force)
   const funds = await refreshFundPrices(force)
   return {
-    updated: [...shares.updated, ...funds.updated],
-    skipped: [...shares.skipped, ...funds.skipped],
+    updated: [...shares.updated, ...crypto.updated, ...funds.updated],
+    skipped: [...shares.skipped, ...crypto.skipped, ...funds.skipped],
+    sourceError: shares.sourceError ?? crypto.sourceError,
+  }
+}
+
+/**
+ * What the manual "Fiyatları yenile" button runs: shares and crypto, never
+ * funds. A fund's unit price changes once a day and comes from a metered
+ * scrape; crypto is a free unauthenticated call, so it costs nothing to join.
+ */
+export async function refreshLivePrices(force = false): Promise<RefreshResult> {
+  const shares = await refreshSharePrices(force)
+  const crypto = await refreshCryptoPrices(force)
+  return {
+    updated: [...shares.updated, ...crypto.updated],
+    skipped: [...shares.skipped, ...crypto.skipped],
+    sourceError: shares.sourceError ?? crypto.sourceError,
   }
 }
 
@@ -83,14 +140,21 @@ export async function refreshOnePrice(id: string, force = true): Promise<number 
   const position = await portfolioWriteRepo.getPosition(id)
   if (!position) return null
 
+  const source = sourceOf(position.type)
   const price =
-    position.type === 'fund'
+    source === 'fund'
       ? await fetchFundPrice(position.symbol, force)
-      : (
-          await fetchSharePrices(force, { attempts: 1 }).catch(
-            () => ({}) as Record<string, number>,
-          )
-        )[position.symbol.toUpperCase()]
+      : source === 'crypto'
+        ? (
+            await fetchCryptoPrices([position.symbol], force).catch(
+              () => ({}) as Record<string, number>,
+            )
+          )[position.symbol.toUpperCase()]
+        : (
+            await fetchSharePrices(force, { attempts: 1 }).catch(
+              () => ({}) as Record<string, number>,
+            )
+          )[position.symbol.toUpperCase()]
 
   if (price == null) return null
   await writePrice(id, price)

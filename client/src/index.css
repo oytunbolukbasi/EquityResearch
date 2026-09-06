@@ -77,9 +77,10 @@
     contrast — and additionally measured against --down so a slice can never be
     mistaken for a loss: rose↔red ΔE 17,7 light / 14,1 dark (normal vision).
   */
-  --alloc-1: #2563a8; /* BİST hissesi  — mavi */
-  --alloc-2: #e09a10; /* ABD hissesi   — turuncu */
-  --alloc-3: #c47aa4; /* Yatırım fonu  — gül kurusu */
+  --alloc-1: #2563a8; /* Borsa İstanbul ve Fon — mavi */
+  --alloc-2: #e09a10; /* ABD hisseleri         — turuncu */
+  --alloc-3: #6b4e9e; /* Almanya hisseleri     — mor */
+  --alloc-4: #00829b; /* Kripto                — turkuaz */
 
   /* TP ladder (trade-plan levels) */
   --tp1: #52b08a;
@@ -136,7 +137,8 @@
   */
   --alloc-1: #4a8fd1;
   --alloc-2: #c08000;
-  --alloc-3: #c458a0;
+  --alloc-3: #8f74d2;
+  --alloc-4: #1a8fa8;
 
   --tp1: #5cc59a;
   --tp2: #3fae86;
@@ -286,6 +288,36 @@ tr:hover .eqr-pin-r,
 tr[data-selected='true'] .eqr-pin-l,
 tr[data-selected='true'] .eqr-pin-r {
   background: var(--bg);
+}
+
+/* ── Genel bakış KPI rail ───────────────────────────────────────────────── */
+
+/*
+  Five cards do not fit the content column, and squeezing them would make every
+  number smaller. They scroll instead, with the last card deliberately cut in
+  half: the clipped card IS the affordance. The fade stops that reading as a
+  broken layout rather than as "more to the right".
+*/
+.eqr-kpi-rail {
+  scroll-snap-type: x proximity;
+  /* The scrollbar would sit under the cards and jitter the row's height. */
+  scrollbar-width: none;
+}
+.eqr-kpi-rail::-webkit-scrollbar {
+  display: none;
+}
+.eqr-kpi-rail > * {
+  flex: 0 0 264px;
+  scroll-snap-align: start;
+}
+.eqr-kpi-fade {
+  position: absolute;
+  top: 0;
+  bottom: 4px;
+  right: 0;
+  width: 56px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg) 78%);
 }
 
 /* ── header logo ────────────────────────────────────────────────────────── */

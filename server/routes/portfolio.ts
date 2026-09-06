@@ -4,7 +4,8 @@ import { desc } from 'drizzle-orm'
 import { db } from '../db/client'
 import { portfolioInsights } from '../db/schema'
 import { portfolioRepo } from '../db/portfolio-client'
-import { getExchangeRate } from '../services/exchange-rate'
+import { getRates } from '../services/exchange-rate'
+import { CURRENCY_FOR_TYPE, type PositionType } from '../../shared/asset-types'
 import { fetchSharePrices } from '../services/price-source'
 
 export const portfolioRouter = Router()
@@ -23,38 +24,31 @@ portfolioRouter.get('/insight', async (_req, res) => {
 // GET /api/portfolio/summary — open positions with derived P/L. Read-only
 // against the separate portfolio DB.
 portfolioRouter.get('/summary', async (_req, res) => {
-  const [positions, { rate: usdTryRate, isFallback: usdTryRateIsFallback }] = await Promise.all([
+  const [positions, { rates, fallback }] = await Promise.all([
     portfolioRepo.getOpenPositions(),
-    getExchangeRate('USDTRY'),
+    getRates(),
   ])
 
+  // Figures stay in the POSITION's currency here. Converting to lira is the
+  // panel's job and it already does it in one place (analytics-calc); a second
+  // conversion on this side would be the same money computed twice.
   const enriched = positions.map((p) => {
     const costBasis = p.quantity * p.buyPrice
     const currentValue = p.currentPrice != null ? p.quantity * p.currentPrice : null
     const plAmount = currentValue != null ? currentValue - costBasis : null
     const plPercent = plAmount != null && costBasis !== 0 ? (plAmount / costBasis) * 100 : null
 
-    // TL equivalents only make sense for us_stock (priced in USD). buyRate is
-    // the USD/TRY rate at purchase time, so costBasisTRY is exact using it.
-    // currentValueTRY uses today's live rate (usdTryRate) instead, since the
-    // position is still open and its TL worth today isn't the purchase-time
-    // rate.
-    const isUsStock = p.type === 'us_stock'
-    const costBasisTRY = isUsStock && p.buyRate != null ? costBasis * p.buyRate : null
-    const currentValueTRY = isUsStock && currentValue != null ? currentValue * usdTryRate : null
-
     return {
       ...p,
+      currency: CURRENCY_FOR_TYPE[p.type as PositionType] ?? 'TRY',
       costBasis,
       currentValue,
       plAmount,
       plPercent,
-      costBasisTRY,
-      currentValueTRY,
     }
   })
 
-  res.json({ positions: enriched, usdTryRate, usdTryRateIsFallback })
+  res.json({ positions: enriched, rates, ratesFallback: fallback })
 })
 
 /**

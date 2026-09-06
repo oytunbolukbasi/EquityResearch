@@ -1,4 +1,4 @@
-import { refreshFundPrices, refreshSharePrices } from './price-refresh'
+import { refreshFundPrices, refreshLivePrices } from './price-refresh'
 
 /**
  * Two schedules, because the two price sources cost very different amounts.
@@ -47,7 +47,8 @@ let lastFundSlot: string | null = null
 
 async function runShares() {
   try {
-    const { updated, skipped } = await refreshSharePrices(true)
+    // Crypto rides this sweep: one free request, same cadence.
+    const { updated, skipped } = await refreshLivePrices(true)
     if (skipped.length) {
       console.log(
         `[price] ${updated.length} hisse güncellendi, ${skipped.length} atlandı: ` +

@@ -8,6 +8,12 @@ import { useConfirm } from '@/lib/confirm'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Select, type SelectOption } from '@/components/ui/select'
+import {
+  POSITION_TYPES,
+  TYPE_LABEL as TYPE_LABEL_FULL,
+  TYPE_SHORT,
+  type PositionType,
+} from '@shared/asset-types'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
@@ -51,18 +57,13 @@ const LIST_TABS = [
   { id: 'closed' as const, label: 'Kapanan' },
 ]
 
-/** The Tür dropdown. Values match FormState['type'] and the DB's `type` column. */
-const TYPE_OPTIONS: SelectOption<'stock' | 'us_stock' | 'fund'>[] = [
-  { value: 'stock', label: 'BİST hissesi' },
-  { value: 'us_stock', label: 'ABD hissesi' },
-  { value: 'fund', label: 'Yatırım fonu' },
-]
+/** The Tür dropdown — every type the DB accepts, in one place. */
+const TYPE_OPTIONS: SelectOption<PositionType>[] = POSITION_TYPES.map((value) => ({
+  value,
+  label: TYPE_LABEL_FULL[value],
+}))
 
-const TYPE_LABEL: Record<string, string> = {
-  stock: 'BİST',
-  us_stock: 'ABD',
-  fund: 'Fon',
-}
+const TYPE_LABEL: Record<string, string> = TYPE_SHORT
 
 const TH =
   'bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 text-left font-medium whitespace-nowrap'
@@ -261,7 +262,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 interface FormState {
   symbol: string
   name: string
-  type: 'stock' | 'us_stock' | 'fund'
+  type: PositionType
   quantity: string
   buyPrice: string
   buyDate: string

@@ -14,6 +14,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
     alias: {
       '@': path.resolve(import.meta.dirname, 'client/src'),
+      // Facts both the client and the server must agree on — see shared/.
+      '@shared': path.resolve(import.meta.dirname, 'shared'),
     },
   },
   optimizeDeps: {
@@ -25,6 +27,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // shared/ sits outside the Vite root, so dev has to be told it may read it.
+    fs: { allow: [import.meta.dirname] },
     // During dev, proxy API calls to the Express server (added in step 3).
     proxy: {
       '/api': 'http://localhost:3000',

@@ -15,5 +15,5 @@
     "noEmit": true,
     "moduleDetection": "force"
   },
-  "include": ["**/*.ts", "../drizzle.config.ts"]
+  "include": ["**/*.ts", "../shared/**/*.ts", "../drizzle.config.ts"]
 }

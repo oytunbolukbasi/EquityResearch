@@ -15,19 +15,21 @@ import {
 import { computeAnalytics, type Analytics } from './analytics-calc'
 import { fmtMoney, fmtPct, fmtSignedMoney, plColor } from './portfolio-calc'
 
-/** One share of the allocation arc, in the order the legend lists them. */
-/** See --alloc-* in index.css for why these are their own scale. */
-const TYPE_COLOR: Record<string, string> = {
-  stock: 'var(--alloc-1)',
-  us_stock: 'var(--alloc-2)',
-  fund: 'var(--alloc-3)',
+/** One colour per asset group — see --alloc-* in index.css for why it is its
+    own scale, and ASSET_GROUPS for why there are four of them and not five. */
+const GROUP_COLOR: Record<string, string> = {
+  tr: 'var(--alloc-1)',
+  us: 'var(--alloc-2)',
+  de: 'var(--alloc-3)',
+  crypto: 'var(--alloc-4)',
 }
 
 /** The legend wants a word, not a phrase — the full label is in the rows below. */
-const TYPE_SHORT: Record<string, string> = {
-  stock: 'BİST',
-  us_stock: 'ABD',
-  fund: 'Fon',
+const GROUP_SHORT: Record<string, string> = {
+  tr: 'BİST + Fon',
+  us: 'ABD',
+  de: 'Almanya',
+  crypto: 'Kripto',
 }
 
 function Row({
@@ -67,33 +69,33 @@ function Row({
  * bar costs ~45px at any width, and its legend gives the share percentages a
  * place of their own instead of the grey sub-line they were buried in.
  */
-function AllocationBar({ byType }: { byType: Analytics['byType'] }) {
+function AllocationBar({ byGroup }: { byGroup: Analytics['byGroup'] }) {
   return (
     <div className="mt-2">
       <div
         className="flex h-2 w-full gap-[3px]"
         role="img"
-        aria-label={byType.map((t) => `${t.label} %${t.share.toFixed(1)}`).join(', ')}
+        aria-label={byGroup.map((t) => `${t.label} %${t.share.toFixed(1)}`).join(', ')}
       >
-        {byType.map((t) => (
+        {byGroup.map((t) => (
           // Percentage widths overflow once the gaps are added, so the segments
           // shrink to fit — proportionally, which keeps the shares honest.
           // min-width keeps a sliver of a 1% holding visible in a narrow panel.
           <div
-            key={t.key}
+            key={t.id}
             className="min-w-[3px] rounded-full"
-            style={{ width: `${t.share}%`, background: TYPE_COLOR[t.key] ?? 'var(--mid)' }}
+            style={{ width: `${t.share}%`, background: GROUP_COLOR[t.id] ?? 'var(--mid)' }}
           />
         ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-        {byType.map((t) => (
-          <span key={t.key} className="flex items-center gap-1.5 text-[12px] whitespace-nowrap">
+        {byGroup.map((t) => (
+          <span key={t.id} className="flex items-center gap-1.5 text-[12px] whitespace-nowrap">
             <span
               className="size-2 shrink-0 rounded-full"
-              style={{ background: TYPE_COLOR[t.key] ?? 'var(--mid)' }}
+              style={{ background: GROUP_COLOR[t.id] ?? 'var(--mid)' }}
             />
-            <span className="text-mid">{TYPE_SHORT[t.key] ?? t.label}</span>
+            <span className="text-mid">{GROUP_SHORT[t.id] ?? t.label}</span>
             <span className="num font-medium">%{t.share.toFixed(1)}</span>
           </span>
         ))}
@@ -217,15 +219,15 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
  * Per-type P/L, drawn as bars scaled to the largest absolute contribution so a
  * small loss next to a big gain stays visible rather than collapsing to a line.
  */
-function PlDistribution({ byType }: { byType: Analytics['byType'] }) {
-  const peak = Math.max(...byType.map((t) => Math.abs(t.bucket.pl)), 1)
+function PlDistribution({ byGroup }: { byGroup: Analytics['byGroup'] }) {
+  const peak = Math.max(...byGroup.map((t) => Math.abs(t.bucket.pl)), 1)
   return (
     <div className="mt-1">
-      {byType.map((t) => {
+      {byGroup.map((t) => {
         const width = (Math.abs(t.bucket.pl) / peak) * 100
         const up = t.bucket.pl >= 0
         return (
-          <div key={t.key} className="py-2">
+          <div key={t.id} className="py-2">
             <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3">
               <span className="truncate text-[12px]">{t.label}</span>
               <span
@@ -265,7 +267,7 @@ export function AnalyticsTab() {
   if (loading) return <Loading />
   if (error) return <Notice>Portföy verisi alınamadı.</Notice>
 
-  const a = computeAnalytics(summary?.positions ?? [], closed ?? [], summary?.usdTryRate ?? 1, range)
+  const a = computeAnalytics(summary?.positions ?? [], closed ?? [], summary?.rates ?? { TRY: 1, USD: 1, EUR: 1 }, range)
   const rangeActive = Boolean(range.from || range.to)
 
   const summaryPanel = (
@@ -374,19 +376,23 @@ export function AnalyticsTab() {
       side="b"
       title="Dağılım"
       right={
-        summary ? <Chip>USD/TRY {summary.usdTryRate.toFixed(2)}</Chip> : undefined
+        summary ? (
+          <Chip>
+            USD {summary.rates.USD.toFixed(2)} · EUR {summary.rates.EUR.toFixed(2)}
+          </Chip>
+        ) : undefined
       }
     >
-      {a.byType.length === 0 ? (
+      {a.byGroup.length === 0 ? (
         <PanelEmpty>Açık pozisyon yok.</PanelEmpty>
       ) : (
         <>
-          <AllocationBar byType={a.byType} />
+          <AllocationBar byGroup={a.byGroup} />
           {/* The bar's legend owns the colour key and the share, so the rows
               below carry neither — each fact is stated once. */}
           <div className="mt-4">
-            {a.byType.map((t) => (
-              <div key={t.key} className="border-faint2 border-b py-2.5 last:border-b-0">
+            {a.byGroup.map((t) => (
+              <div key={t.id} className="border-faint2 border-b py-2.5 last:border-b-0">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="min-w-0 truncate text-[13px] font-medium">{t.label}</span>
                   <span className="num shrink-0 text-[14px] font-medium whitespace-nowrap">
@@ -408,7 +414,7 @@ export function AnalyticsTab() {
           </div>
 
           <SectionTitle hint="açık pozisyonlar">Kâr/Zarar dağılımı</SectionTitle>
-          <PlDistribution byType={a.byType} />
+          <PlDistribution byGroup={a.byGroup} />
         </>
       )}
     </Panel>

@@ -24,8 +24,9 @@
 
     /* Path alias (paths resolve relative to this file in TS 6+) */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "../shared"]
 }
