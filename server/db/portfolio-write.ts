@@ -91,7 +91,13 @@ function toRow(r: Record<string, unknown>): PositionRow {
     quantity: String(r.quantity),
     buyPrice: String(r.buy_price),
     buyRate: String(r.buy_rate),
-    buyDate: String(r.buy_date),
+    // ISO, never String(Date). The driver hands back a JS Date, and its default
+    // string form is a LOCALE one — "Thu Jun 18 2026 00:00:00 GMT+0300
+    // (GMT+03:00)". Postgres reads that back as a timezone NAME and rejects it
+    // ("time zone \"gmt+0300\" not recognized"), so any update that round-trips
+    // the date — every price write does — failed outside UTC. Production runs
+    // in UTC, where "GMT+0000" happens to parse, which is why this survived.
+    buyDate: r.buy_date instanceof Date ? r.buy_date.toISOString() : String(r.buy_date),
     currentPrice: r.current_price == null ? null : String(r.current_price),
   }
 }

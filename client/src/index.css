@@ -306,8 +306,14 @@ tr[data-selected='true'] .eqr-pin-r {
 .eqr-kpi-rail::-webkit-scrollbar {
   display: none;
 }
+/*
+  Grow when they fit, overflow when they don't. `flex-grow: 1` fills the row
+  while there are few groups (three cards must not leave a third of the width
+  empty); `flex-shrink: 0` stops five cards from squeezing themselves smaller
+  instead of scrolling.
+*/
 .eqr-kpi-rail > * {
-  flex: 0 0 264px;
+  flex: 1 0 264px;
   scroll-snap-align: start;
 }
 .eqr-kpi-fade {
