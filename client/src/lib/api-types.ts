@@ -10,6 +10,7 @@ export interface MorningNote {
   date: string
   topCall: string | null
   macroBullets: MacroBullet[] | null
+  europeBullets: MacroBullet[] | null
   sectorDeepDive: SectorDeepDive | null
   createdAt: string
 }

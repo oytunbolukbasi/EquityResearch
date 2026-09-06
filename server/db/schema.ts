@@ -25,6 +25,8 @@ export const morningNotes = pgTable('morning_notes', {
   date: date('date').notNull(),
   topCall: text('top_call'),
   macroBullets: jsonb('macro_bullets').$type<MacroBullet[]>(),
+  /** Germany / Europe, rendered as its own section — see 0005 migration. */
+  europeBullets: jsonb('europe_bullets').$type<MacroBullet[]>(),
   sectorDeepDive: jsonb('sector_deep_dive').$type<SectorDeepDive>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })

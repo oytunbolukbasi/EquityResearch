@@ -38,6 +38,7 @@ export const morningNoteInput = z.object({
   date: z.string(),
   topCall: z.string().nullish(),
   macroBullets: z.array(z.any()).nullish(),
+  europeBullets: z.array(z.any()).nullish(),
   sectorDeepDive: z.any().nullish(),
 })
 
@@ -54,6 +55,7 @@ morningNotesRouter.post('/', requireAdmin, async (req, res) => {
       parsed.data.map((d) => ({
         date: d.date,
         topCall: d.topCall ?? null,
+        europeBullets: d.europeBullets ?? null,
         macroBullets: d.macroBullets ?? null,
         sectorDeepDive: d.sectorDeepDive ?? null,
       })),

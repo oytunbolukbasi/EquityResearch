@@ -106,13 +106,10 @@ export function PulseTab({
         </div>
       </header>
 
-      {sections.map((s, i) => (
+      {sections.map((s) => (
         <section key={s.id} data-sec={s.id} className="my-[18px] mb-[26px]">
-          {s.id !== 'main' && (
-            <span className="text-mid num text-[12px]">
-              {s.id === 'sector' ? 'Sektör odağı' : String(i).padStart(2, '0')}
-            </span>
-          )}
+          {/* One source for the label — noteSections decides it. */}
+          {s.kicker && <span className="text-mid num text-[12px]">{s.kicker}</span>}
           <h2 className="mt-1 mb-2.5 text-[19px] font-medium tracking-[-0.4px]">{s.label}</h2>
           {s.detail && (
             <p className="m-0 whitespace-pre-line text-sm leading-[1.9]">{s.detail}</p>

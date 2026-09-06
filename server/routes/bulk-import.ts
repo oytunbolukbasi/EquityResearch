@@ -80,6 +80,7 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         date: d.date,
         topCall: d.topCall ?? null,
         macroBullets: d.macroBullets ?? null,
+        europeBullets: d.europeBullets ?? null,
         sectorDeepDive: d.sectorDeepDive ?? null,
       }
       const existing = await db

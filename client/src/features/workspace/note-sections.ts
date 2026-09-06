@@ -21,7 +21,14 @@ function splitBullet(b: MacroBullet): { label: string; detail: string } {
   return { label: b.label, detail: b.detail ?? '' }
 }
 
-/** Ordered sections of a note: Ana görüş, one per macro bullet, then Sektör Odağı. */
+/**
+ * Ordered sections of a note: Ana görüş, the macro bullets, the Europe block,
+ * then Sektör Odağı.
+ *
+ * `kicker` is decided here and nowhere else — the reader used to derive its own
+ * number from the array index, which meant two places had to agree on what a
+ * section was called.
+ */
 export function noteSections(note: MorningNote | null): NoteSection[] {
   if (!note) return []
   const out: NoteSection[] = []
@@ -37,6 +44,19 @@ export function noteSections(note: MorningNote | null): NoteSection[] {
       // Just the number: the article body already numbers macros "01", "02" —
       // spelling out "Makro" only in the contents made the two disagree.
       kicker: String(i + 1).padStart(2, '0'),
+      label,
+      detail,
+    })
+  })
+
+  // Europe carries the word as well as the number, because here the word is
+  // the point: it marks where one section ends and another begins. Macro
+  // bullets need no such marker — they are the note's backbone.
+  ;(note.europeBullets ?? []).forEach((b, i) => {
+    const { label, detail } = splitBullet(b)
+    out.push({
+      id: `europe-${i}`,
+      kicker: `Avrupa ${String(i + 1).padStart(2, '0')}`,
       label,
       detail,
     })
