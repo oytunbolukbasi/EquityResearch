@@ -96,6 +96,20 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 
 ## Veri Modeli (Postgres / Drizzle, jsonb ağırlıklı — şema esnek kalsın)
 
+- **Varlık türleri ve para birimleri: `shared/asset-types.ts`** — istemci ve
+  sunucunun ortak kaynağı (GÖREV 37). Beş tür: `stock` · `us_stock` · `de_stock`
+  · `fund` · `crypto`. `CURRENCY_FOR_TYPE` bir türün hangi para biriminde
+  fiyatlandığını söyler (BİST/fon → TRY, ABD/kripto → USD, Almanya → EUR);
+  `PRICE_SOURCE_FOR_TYPE` fiyatın nereden geldiğini (sheet / fund / crypto);
+  `ASSET_GROUPS` gösterimde dört grubu. Aynalamak yerine paylaşıldı: iki kopya
+  kayarsa hata fırlatmaz, sessizce yanlış para raporlar. `type` kolonu düz
+  `text`, tür eklemek migration istemez.
+- **Tarih kolonları zone'suz `timestamp`.** Sürücü onları yerel saatte
+  ayrıştırıyor, dolayısıyla okurken `toIsoUtc`/`naiveIso` ile YEREL bileşenler
+  UTC olarak yeniden yazılır — `toISOString()` değeri yeniden çapalayıp takvim
+  gününü kaydırır. Ve **fiyat yazan bir işlem yalnızca fiyat yazar**
+  (`updatePrice`); satırın tamamını geri yazmak alış tarihini her yenilemede
+  yerel fark kadar geriye yürütüyordu. (GÖREV 37)
 - Ana DB tabloları: `morning_notes`, `ideas`, `trade_plans`, `portfolio_insights`,
   `layouts` (+ arayüzde kullanılmayan ama korunan `heatmaps`).
 - Portföy pozisyonları AYRI bir DB'de (`PORTFOLIO_DATABASE_URL`): `positions`,
@@ -121,8 +135,11 @@ sırası sabit — yalnız `flex order` değişir, dolayısıyla panel remount o
 ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır; ≤640px
 Sanal Portföy ayrıca tabloyu bırakıp kart listesine geçer (GÖREV 30).
 
-1. **Genel bakış** — 3 KPI kartı (Toplam / TL varlıklar / ABD hisseleri) + Portföy
-   paneli (Hisse notları / Günlük analiz / Geçmiş) ↔ Piyasa Nabzı özeti. Portföy
+1. **Genel bakış** — grup başına bir KPI kartı + Toplam, **yatay kayan şeritte**
+   (`ScrollRail`; son kart bilerek yarım kesilir, kenar solmaları yalnızca o yöne
+   kaydırılabildiğinde çıkar, fareyle sürüklenir). Portföy paneli **varlık
+   sınıfına göre bölümlü** (kalın renkli çizgi + ad + pozisyon sayısı) ↔ Piyasa
+   Nabzı özeti. Portföy
    satırına tıklayınca sağ panel o varlığın detayına döner; makro başlığına tıklamak
    bültenin **tam o bölümüne** atlar.
 2. **Piyasa Nabzı** — İçindekiler ↔ tam metin makale. Üstte ‹ tarih › adımlayıcı;
@@ -180,9 +197,10 @@ maliyeti çok farklı:
 
 | Varlık | Kaynak | Ritim |
 |---|---|---|
-| BİST + ABD hisseleri | Google Apps Script + Sheet (GOOGLEFINANCE, ~15 dk gecikmeli) | **15 dakikada bir** + açılışta |
+| BİST + ABD + Almanya hisseleri | Google Apps Script + Sheet (GOOGLEFINANCE, ~15 dk gecikmeli) | **15 dakikada bir** + açılışta |
+| Kripto | CoinGecko (anahtarsız, tek istekte tüm semboller) | Hisselerle aynı süpürmede |
 | TEFAS fonları | fintables.com kazıma (ScraperAPI, kotalı) | **Hafta içi 09:00 / 10:00 (TR)** — açılışta ÇEKİLMEZ |
-| USD/TRY | Frankfurter | İstek anında |
+| USD/TRY ve EUR/TRY | Frankfurter | İstek anında (`getRates()`) |
 
 - Env: `SHEETS_PRICE_URL`, `SCRAPER_API_KEY`.
 - Zamanlayıcı `node-cron` kullanmaz; `price-scheduler.ts` içinde bir dakika-tick'i.
@@ -891,3 +909,45 @@ açıyordu**.
 
 `FormState['type']` değerleri ve `TYPE_OPTIONS` etiketleri DB'nin `type` kolonuyla
 aynı; seçenek listesi `TYPE_LABEL`'ın hemen yanında duruyor ki ikisi ayrışmasın.
+
+GÖREV 37 — Almanya ve Kripto varlık sınıfları
+
+İki yeni sınıf için önce taban değişti: kodda `type === 'us_stock'` diye
+dallanan 12 yer vardı, hepsi tek bir para birimi haritasına indi.
+
+**`shared/asset-types.ts`** — istemci ve sunucunun aynı cevabı verdiği tek yer.
+Bir türün hangi para biriminde fiyatlandığı, değerinin liraya nasıl çevrileceğini
+belirliyor; iki kopya birbirinden kayarsa hata fırlatmaz, sessizce yanlış para
+raporlar. Vite'a `@shared` alias'ı, iki tsconfig'e de `../shared` eklendi.
+
+- **Almanya:** mevcut Google Sheet'ten. Sheet bir GOOGLEFINANCE hücre listesi,
+  ticker'ın hangi borsada işlem gördüğünü umursamıyor — yeni kaynak gerekmedi.
+- **Kripto:** CoinGecko, anahtarsız, tek istekte tüm semboller. **Alpaca
+  kullanılmadı**: XAUT listesinde yok (73 sembol tarandı) ve iki pozisyon için
+  iki kaynak çalıştırmak tek kaynaktan kötü. Sembol→id haritası elle kurulu,
+  çünkü CoinGecko'da onlarca coin aynı ticker'ı paylaşıyor ve sembolle arama
+  sessizce başka bir varlığı döndürebilir.
+- **Kur:** `getRates()` USD ve EUR'yu tek seferde getiriyor — bir pozisyonun para
+  birimi satırlar okunmadan belli değil, pozisyon başına sormak satır başına bir
+  istek demekti. `buyRate` kolonunun anlamı genişledi ("bu pozisyonun para
+  birimi → TRY, alındığı gün"), şema değişmedi.
+
+**Renk:** `--alloc-1..4`. Beşinci renk yok — `dataviz` doğrulayıcısıyla ölçüldü,
+yeşil ve kırmızı dışarıdayken (burada kâr/zarar demek) beşli hiçbir set ayrışma
+eşiğini geçmiyor. Bu yüzden BİST ve fon **her yerde** tek grup: "Borsa İstanbul
+ve Fon". Bir sınıf panelin her yerinde tek renk ve tek isim (`GROUP_COLOR`).
+
+**Kaldırılanlar:** `costBasisTRY` / `currentValueTRY` sunucuda hesaplanıyordu ama
+istemcide hiç okunmuyordu; aynı parayı iki yerde hesaplamak zaten risk.
+
+Yolda çıkan iki zaman dilimi hatası (ikisi de üretimde UTC olduğu için
+görünmüyordu, ikisi de sunucunun saat dilimine bağlı çalışıyordu):
+
+1. `buy_date`/`sell_date` okurken ham cast ediliyordu; `Date` olarak JSON'a
+   gidip takvim gününü kaydırıyordu — 18 Haziran'da alınan pozisyon 17 Haziran
+   görünüyordu. Artık `last_updated` ile aynı normalleştirmeden geçiyorlar.
+2. **Daha kötüsü, kendi açtığım:** `writePrice` fiyatı yazmak için satırın
+   tamamını geri yazıyordu. `toISOString()` zone'suz değeri yeniden çapaladığı
+   için her fiyat yenilemesi alış tarihini yerel fark kadar geriye yürüttü;
+   19 pozisyon bir gün kaydı, geri alındı. Kural: **bir fiyat yazması yalnızca
+   `current_price` ve `last_updated`'a dokunur** (`updatePrice`).

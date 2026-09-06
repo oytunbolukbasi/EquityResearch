@@ -521,7 +521,11 @@ function CloseForm({
         <div className="border-faint2 mb-3 flex items-center justify-between rounded-lg border px-3 py-2">
           <span className="text-mid text-[12px]">Gerçekleşecek K/Z</span>
           <span className="num text-[13px] font-semibold" style={{ color: plColor(preview.pl) }}>
-            {fmtMoney(preview.pl, unit)} · {fmtPct(preview.pct)}
+            {/* Signed, like the percentage beside it — one line should not
+                announce a gain twice and a sign once. */}
+            {/* Two decimals, as this line always had: it is a single trade being
+                checked before it becomes permanent, not a portfolio total. */}
+            {fmtSignedMoney(preview.pl, unit, 2)} · {fmtPct(preview.pct)}
           </span>
         </div>
       )}
