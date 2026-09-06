@@ -298,8 +298,13 @@ tr[data-selected='true'] .eqr-pin-r {
   half: the clipped card IS the affordance. The fade stops that reading as a
   broken layout rather than as "more to the right".
 */
+/*
+  No scroll-snap. The rail overflows by about a card's width, so the only snap
+  point within reach is the start — a short drag was pulled straight back to it,
+  which felt like the row refusing to move. Free scrolling is right when the
+  whole journey is one card long.
+*/
 .eqr-kpi-rail {
-  scroll-snap-type: x proximity;
   /* The scrollbar would sit under the cards and jitter the row's height. */
   scrollbar-width: none;
 }
@@ -314,18 +319,7 @@ tr[data-selected='true'] .eqr-pin-r {
 */
 .eqr-kpi-rail > * {
   flex: 1 0 264px;
-  scroll-snap-align: start;
 }
-.eqr-kpi-fade {
-  position: absolute;
-  top: 0;
-  bottom: 4px;
-  right: 0;
-  width: 56px;
-  pointer-events: none;
-  background: linear-gradient(to right, transparent, var(--bg) 78%);
-}
-
 /* ── header logo ────────────────────────────────────────────────────────── */
 
 /* One turn on load — the EQR bot's greeting. */

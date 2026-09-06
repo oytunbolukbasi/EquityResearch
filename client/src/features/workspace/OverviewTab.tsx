@@ -11,6 +11,7 @@ import type {
 import { useApi } from '@/lib/use-api'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
+import { ScrollRail } from '@/components/ui/scroll-rail'
 import { ActionBadge, Loading, Notice, PillTabs } from './shared'
 import {
   fmtMoney,
@@ -455,31 +456,28 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
         instead of a grid: the last card is deliberately cut off, because a
         clipped card is the only honest way to say "there is more to the right".
       */}
-      <div className="relative mb-5">
-        <div className="eqr-kpi-rail flex gap-3 overflow-x-auto pb-1">
+      <ScrollRail className="eqr-kpi-rail mb-5 gap-3 pb-1">
+        <KpiCard
+          label="Toplam portföy değeri"
+          hint="TL bazında"
+          bucket={{
+            value: totals.totalValue,
+            cost: totals.totalCost,
+            pl: totals.unrealized,
+            plPercent: totals.unrealizedPercent,
+          }}
+          footer="Açık pozisyon K/Z"
+        />
+        {totals.byGroup.map((g) => (
           <KpiCard
-            label="Toplam portföy değeri"
-            hint="TL bazında"
-            bucket={{
-              value: totals.totalValue,
-              cost: totals.totalCost,
-              pl: totals.unrealized,
-              plPercent: totals.unrealizedPercent,
-            }}
-            footer="Açık pozisyon K/Z"
+            key={g.id}
+            label={g.label}
+            hint={GROUP_HINT[g.id] ?? ''}
+            bucket={g.bucket}
+            footer={rateFooter(g.id, summary)}
           />
-          {totals.byGroup.map((g) => (
-            <KpiCard
-              key={g.id}
-              label={g.label}
-              hint={GROUP_HINT[g.id] ?? ''}
-              bucket={g.bucket}
-              footer={rateFooter(g.id, summary)}
-            />
-          ))}
-        </div>
-        <div className="eqr-kpi-fade" aria-hidden="true" />
-      </div>
+        ))}
+      </ScrollRail>
 
       <SplitPane splitKey="overview" a={portfolioPanel} b={rightPanel} />
     </div>
