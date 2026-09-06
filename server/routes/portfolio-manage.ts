@@ -5,6 +5,7 @@ import { portfolioWriteRepo } from '../db/portfolio-write'
 import { requireSession } from '../lib/auth'
 import { getHistoricalExchangeRate } from '../services/exchange-rate'
 import {
+  bareSymbol,
   CURRENCY_FOR_TYPE,
   POSITION_TYPES,
   PRICE_SOURCE_FOR_TYPE,
@@ -92,7 +93,9 @@ portfolioManageRouter.post('/positions', async (req, res) => {
   }
 
   const created = await portfolioWriteRepo.createPosition({
-    symbol: d.symbol,
+    // Stored bare: "FRA:SAP" typed into the form becomes "SAP". The exchange
+    // belongs to the type, and the sheet keys its answers bare anyway.
+    symbol: bareSymbol(d.symbol).toUpperCase(),
     name: d.name ?? null,
     type: d.type,
     quantity: d.quantity,

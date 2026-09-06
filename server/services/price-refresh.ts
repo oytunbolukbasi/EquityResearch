@@ -3,7 +3,7 @@ import { portfolioWriteRepo } from '../db/portfolio-write'
 import { fetchFundPrice } from './fund-price'
 import { fetchSharePrices, PriceSourceUnavailable, registerSymbol } from './price-source'
 import { CryptoSourceUnavailable, fetchCryptoPrices } from './crypto-price'
-import { PRICE_SOURCE_FOR_TYPE, type PositionType } from '../../shared/asset-types'
+import { bareSymbol, PRICE_SOURCE_FOR_TYPE, type PositionType } from '../../shared/asset-types'
 
 export interface RefreshResult {
   updated: { symbol: string; price: number }[]
@@ -41,7 +41,9 @@ export async function refreshSharePrices(force = false): Promise<RefreshResult> 
   }
 
   for (const p of shares) {
-    const price = sheet[p.symbol.toUpperCase()]
+    // The sheet keys its answers by the bare ticker even when the cell is
+    // exchange-qualified, so "FRA:SAP" has to be looked up as "SAP".
+    const price = sheet[bareSymbol(p.symbol).toUpperCase()]
     if (price == null) {
       result.skipped.push({ symbol: p.symbol, reason: 'fiyat kaynağında yok' })
       continue
@@ -154,7 +156,7 @@ export async function refreshOnePrice(id: string, force = true): Promise<number 
             await fetchSharePrices(force, { attempts: 1 }).catch(
               () => ({}) as Record<string, number>,
             )
-          )[position.symbol.toUpperCase()]
+          )[bareSymbol(position.symbol).toUpperCase()]
 
   if (price == null) return null
   await writePrice(id, price)

@@ -18,11 +18,14 @@ import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
 import {
-  fmtMoney,
   fmtN,
   fmtPct,
   fmtQty,
+  fmtQtyOf,
+  fmtPriceOf,
+  fmtPlOf,
   fmtSignedMoney,
+  fmtValueOf,
   plColor,
   UNIT_FOR_TYPE,
 } from './portfolio-calc'
@@ -352,6 +355,10 @@ function PositionForm({
     } else {
       toast.success(`${form.symbol} portföye eklendi`)
     }
+    // Clearing matters most on a NEW position: fields still holding what was
+    // just saved read as "it didn't go through". An edit keeps its values —
+    // that form stays bound to the position it is editing.
+    if (!editing) setForm(EMPTY_FORM)
     onDone(created?.pricePending)
   }
 
@@ -596,13 +603,13 @@ function PositionCard({ p, onOpen }: { p: PortfolioPosition; onOpen: () => void 
       <span className="flex shrink-0 items-center gap-2">
         <span className="text-right">
           <span className="num block text-[15px] font-medium whitespace-nowrap">
-            {fmtMoney(p.currentValue, unit, 0)}
+            {fmtValueOf(p.currentValue, p.type, unit)}
           </span>
           <span
             className="num mt-0.5 block text-[12px] whitespace-nowrap"
             style={{ color: plColor(p.plAmount) }}
           >
-            {fmtSignedMoney(p.plAmount, unit)} · {fmtPct(p.plPercent)}
+            {fmtPlOf(p.plAmount, p.type, unit)} · {fmtPct(p.plPercent)}
           </span>
         </span>
         <ChevronRight className="text-faint size-4 shrink-0" aria-hidden="true" />
@@ -634,13 +641,13 @@ function ClosedCard({
       <span className="flex shrink-0 items-center gap-2">
         <span className="text-right">
           <span className="num block text-[15px] font-medium whitespace-nowrap">
-            {fmtMoney(c.sellPrice * c.quantity, unit, 0)}
+            {fmtValueOf(c.sellPrice * c.quantity, c.type, unit)}
           </span>
           <span
             className="num mt-0.5 block text-[12px] whitespace-nowrap"
             style={{ color: plColor(c.pl) }}
           >
-            {fmtSignedMoney(c.pl, unit)} · {fmtPct(c.plPercent)}
+            {fmtPlOf(c.pl, c.type, unit)} · {fmtPct(c.plPercent)}
           </span>
         </span>
         <ChevronRight className="text-faint size-4 shrink-0" aria-hidden="true" />
@@ -951,21 +958,21 @@ export function VirtualPortfolioTab() {
                         {p.name ? ` · ${p.name}` : ''}
                       </div>
                     </td>
-                    <td className="num px-2 text-right whitespace-nowrap">{fmtQty(p.quantity)}</td>
+                    <td className="num px-2 text-right whitespace-nowrap">{fmtQtyOf(p.quantity, p.type)}</td>
                     <td className="num px-2 text-right whitespace-nowrap">
-                      {fmtMoney(p.buyPrice, unit)}
+                      {fmtPriceOf(p.buyPrice, p.type, unit)}
                     </td>
                     <td className="num px-2 text-right whitespace-nowrap">
-                      {fmtMoney(p.currentPrice, unit)}
+                      {fmtPriceOf(p.currentPrice, p.type, unit)}
                     </td>
                     <td className="num px-2 text-right whitespace-nowrap">
-                      {fmtMoney(p.currentValue, unit, 0)}
+                      {fmtValueOf(p.currentValue, p.type, unit)}
                     </td>
                     <td
                       className="num px-2 text-right font-medium whitespace-nowrap"
                       style={{ color: plColor(p.plAmount) }}
                     >
-                      {fmtSignedMoney(p.plAmount, unit)}
+                      {fmtPlOf(p.plAmount, p.type, unit)}
                     </td>
                     <td
                       className="num px-2 text-right whitespace-nowrap"
@@ -1030,14 +1037,14 @@ export function VirtualPortfolioTab() {
                     {c.name ? ` · ${c.name}` : ''}
                   </div>
                 </td>
-                <td className="num px-2 text-right whitespace-nowrap">{fmtQty(c.quantity)}</td>
-                <td className="num px-2 text-right whitespace-nowrap">{fmtMoney(c.buyPrice, unit)}</td>
-                <td className="num px-2 text-right whitespace-nowrap">{fmtMoney(c.sellPrice, unit)}</td>
+                <td className="num px-2 text-right whitespace-nowrap">{fmtQtyOf(c.quantity, c.type)}</td>
+                <td className="num px-2 text-right whitespace-nowrap">{fmtPriceOf(c.buyPrice, c.type, unit)}</td>
+                <td className="num px-2 text-right whitespace-nowrap">{fmtPriceOf(c.sellPrice, c.type, unit)}</td>
                 <td
                   className="num px-2 text-right font-medium whitespace-nowrap"
                   style={{ color: plColor(c.pl) }}
                 >
-                  {fmtSignedMoney(c.pl, unit)}
+                  {fmtPlOf(c.pl, c.type, unit)}
                 </td>
                 <td
                   className="num px-2 text-right whitespace-nowrap"
@@ -1133,13 +1140,13 @@ export function VirtualPortfolioTab() {
           {TYPE_LABEL[sheetPos.type] ?? sheetPos.type}
           {sheetPos.name ? ` · ${sheetPos.name}` : ''}
         </p>
-        <DetailRow label="Adet" value={fmtQty(sheetPos.quantity)} />
-        <DetailRow label="Değer" value={fmtMoney(sheetPos.currentValue, unit, 0)} />
-        <DetailRow label="Alış fiyatı" value={fmtMoney(sheetPos.buyPrice, unit)} />
-        <DetailRow label="Güncel fiyat" value={fmtMoney(sheetPos.currentPrice, unit)} />
+        <DetailRow label="Adet" value={fmtQtyOf(sheetPos.quantity, sheetPos.type)} />
+        <DetailRow label="Değer" value={fmtValueOf(sheetPos.currentValue, sheetPos.type, unit)} />
+        <DetailRow label="Alış fiyatı" value={fmtPriceOf(sheetPos.buyPrice, sheetPos.type, unit)} />
+        <DetailRow label="Güncel fiyat" value={fmtPriceOf(sheetPos.currentPrice, sheetPos.type, unit)} />
         <DetailRow
           label="K/Z"
-          value={fmtSignedMoney(sheetPos.plAmount, unit)}
+          value={fmtPlOf(sheetPos.plAmount, sheetPos.type, unit)}
           color={plColor(sheetPos.plAmount)}
         />
         <DetailRow
@@ -1175,10 +1182,10 @@ export function VirtualPortfolioTab() {
           {TYPE_LABEL[c.type] ?? c.type}
           {c.name ? ` · ${c.name}` : ''}
         </p>
-        <DetailRow label="Adet" value={fmtQty(c.quantity)} />
-        <DetailRow label="Alış fiyatı" value={fmtMoney(c.buyPrice, unit)} />
-        <DetailRow label="Satış fiyatı" value={fmtMoney(c.sellPrice, unit)} />
-        <DetailRow label="K/Z" value={fmtSignedMoney(c.pl, unit)} color={plColor(c.pl)} />
+        <DetailRow label="Adet" value={fmtQtyOf(c.quantity, c.type)} />
+        <DetailRow label="Alış fiyatı" value={fmtPriceOf(c.buyPrice, c.type, unit)} />
+        <DetailRow label="Satış fiyatı" value={fmtPriceOf(c.sellPrice, c.type, unit)} />
+        <DetailRow label="K/Z" value={fmtPlOf(c.pl, c.type, unit)} color={plColor(c.pl)} />
         <DetailRow label="K/Z %" value={fmtPct(c.plPercent)} color={plColor(c.pl)} />
         <DetailRow label="Alış tarihi" value={fmtDay(c.buyDate)} />
         <DetailRow label="Satış tarihi" value={fmtDay(c.sellDate)} />

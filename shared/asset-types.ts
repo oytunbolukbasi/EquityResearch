@@ -88,3 +88,31 @@ export function groupOf(type: string): AssetGroupId {
   }
   return 'tr'
 }
+
+/**
+ * The exchange GOOGLEFINANCE has to be told about.
+ *
+ * SAP forced this: it trades in Frankfurt AND in the US, and a bare "SAP" in a
+ * GOOGLEFINANCE cell resolves to the US listing — so a German position quietly
+ * showed an American price. Qualifying the ticker fixes the cell.
+ *
+ * The panel stores the BARE ticker either way and adds the prefix only when
+ * talking to the sheet, because the sheet answers keyed by the bare ticker.
+ * (One consequence worth knowing: the sheet can hold one row per ticker, so
+ * holding SAP in both Frankfurt and New York at once is not representable.)
+ */
+export const EXCHANGE_FOR_TYPE: Partial<Record<PositionType, string>> = {
+  de_stock: 'FRA',
+}
+
+/** "SAP" from "FRA:SAP"; anything already bare is returned unchanged. */
+export function bareSymbol(symbol: string): string {
+  return symbol.replace(/^[A-Za-z]+:/, '').trim()
+}
+
+/** What the sheet's GOOGLEFINANCE cell should say: "FRA:SAP", "AKBNK". */
+export function sheetSymbol(symbol: string, type: string): string {
+  const bare = bareSymbol(symbol).toUpperCase()
+  const exchange = EXCHANGE_FOR_TYPE[type as PositionType]
+  return exchange ? `${exchange}:${bare}` : bare
+}

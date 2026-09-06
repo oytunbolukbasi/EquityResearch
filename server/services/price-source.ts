@@ -1,3 +1,5 @@
+import { sheetSymbol } from '../../shared/asset-types'
+
 /**
  * Share prices for BIST and US positions.
  *
@@ -150,7 +152,8 @@ export async function registerSymbol(symbol: string, type: string): Promise<void
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbol: symbol.toUpperCase(), type, action: 'register' }),
+      // Qualified for the cell ("FRA:SAP"); the sheet answers keyed bare.
+      body: JSON.stringify({ symbol: sheetSymbol(symbol, type), type, action: 'register' }),
       redirect: 'follow',
       signal: AbortSignal.timeout(15_000),
     })

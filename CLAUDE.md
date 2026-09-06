@@ -83,6 +83,11 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 
 **Tipografi:**
 - Tek font: **Inter** (400/500/600/700, latin + latin-ext — Türkçe karakter tam desteği).
+- **Ondalık basamak sayısı türe göre** (`portfolio-calc.ts` → `DECIMALS`):
+  kripto adet 8, fiyat 0–8, değer ve K/Z 2 basamak; diğer türler adet 4, fiyat
+  tam 2, değer ve K/Z 0. Kripto kesirlerini kırpmak girilmemiş bir sayı basıyor
+  (0,32831331 → "0,3283") ve 14 sentlik bir pozisyonu "$0" gösteriyordu; hisse
+  fiyatının alt sınırı 2'de tutulur, yoksa "₺69,60" → "₺69,6" olur. (GÖREV 38)
 - Sayısal değerlerde (fiyat, yüzde, miktar) mono font YOK; bunun yerine `font-variant-numeric: tabular-nums` ile sütun hizalaması korunuyor. CSS utility class: `.num` ve `.tnum`.
 - **Taban punto 12px.** Okunacak her metin — kart etiketleri, K/Z satırları, tablo alt
   satırları, form etiketleri, takvim hücreleri — en az 12px. 12px altı yalnızca *işaret*
@@ -208,6 +213,13 @@ maliyeti çok farklı:
 - **Elle "Hisse fiyatlarını yenile" butonu yalnızca hisseleri yeniler.** Fon fiyatı
   günde bir değişir ve kazıma kotalıdır; her tıklamada değişmesi imkânsız bir sayıyı
   yeniden okumak için kota harcanmaz.
+- **Borsa ön eki türden gelir, sembolden değil.** SAP hem Frankfurt'ta hem ABD'de
+  işlem görüyor; GOOGLEFINANCE'a çıplak `SAP` verilince Amerikan fiyatını
+  döndürüyordu. `sheetSymbol()` Alman hisselerine `FRA:` ekliyor, `bareSymbol()`
+  yanıtı çıplak ticker'la eşliyor — sheet cevaplarını çıplak anahtarla veriyor.
+  Pozisyonlar DB'de her zaman çıplak saklanır. Sınır: sheet ticker başına tek
+  satır tuttuğu için aynı sembolü iki borsada birden taşımak temsil edilemiyor.
+  (GÖREV 38)
 - **Fiyatı alınamayan sembol ATLANIR, sıfırlanmaz.** Ulaşılamayan bir kaynağın panelin
   dayandığı bir rakamı silebilmesi kabul edilemez.
 - **Fiyatlandırma bir YAZMAYI asla bloklamaz.** Pozisyon kaydedilir kaydedilmez
@@ -951,3 +963,24 @@ görünmüyordu, ikisi de sunucunun saat dilimine bağlı çalışıyordu):
    için her fiyat yenilemesi alış tarihini yerel fark kadar geriye yürüttü;
    19 pozisyon bir gün kaydı, geri alındı. Kural: **bir fiyat yazması yalnızca
    `current_price` ve `last_updated`'a dokunur** (`updatePrice`).
+
+GÖREV 38 — Almanya/kripto testinden çıkan üç düzeltme
+
+1. **Borsa ön eki.** SAP hem Frankfurt'ta hem ABD'de işlem görüyor; çıplak
+   `SAP` GOOGLEFINANCE'ta Amerikan fiyatını veriyordu. `FRA:SAP` olarak eklenince
+   sheet doğru fiyatı getirdi ama panel "Sheet'te bulunamadı" dedi — çünkü Apps
+   Script ön eki kırpıp satırı `SAP` anahtarıyla döndürüyor.
+   Ön ek artık TÜRDEN geliyor (`EXCHANGE_FOR_TYPE`): kayıt `FRA:SAP` gönderiyor,
+   arama `bareSymbol()` ile `SAP`'a bakıyor, DB her zaman çıplak saklıyor.
+   Mevcut üç satır (`FRA:SAP`, `FRA:DTE`, `FRA:ENR`) çıplağa çevrildi.
+   *Sınır:* sheet ticker başına tek satır tuttuğundan aynı sembolü iki borsada
+   birden taşımak temsil edilemiyor.
+
+2. **Kripto ondalıkları kırpılmıyor.** `DECIMALS` haritası türe göre basamak
+   veriyor. Kırpma iki şeyi bozuyordu: girilmemiş bir adet basmak (0,32831331 →
+   "0,3283") ve 14 sentlik bir pozisyonu "$0" göstermek. Hisse fiyatının ALT
+   sınırı 2'de tutuldu — bunu unutunca "₺69,60" bir tur için "₺69,6" oldu.
+
+3. **Kayıttan sonra form temizleniyor.** Alanlarda kaydedilen veri durunca
+   "girmedim galiba" hissi veriyordu. Düzenleme formu değerlerini koruyor;
+   o form düzenlediği pozisyona bağlı kalmalı.

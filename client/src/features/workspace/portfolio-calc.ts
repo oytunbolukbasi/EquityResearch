@@ -33,10 +33,63 @@ export function fmtSignedMoney(n: number | null | undefined, unit: Unit = '', de
  * "6" and "1" — the second one not just imprecise but wrong by 24%. Shows up to
  * 4 decimals and drops trailing zeros, so 1000 still reads as "1.000".
  */
-export function fmtQty(n: number | null | undefined): string {
+export function fmtQty(n: number | null | undefined, maxDecimals = 4): string {
   if (n == null) return '—'
-  return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 4 })
+  return n.toLocaleString('tr-TR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDecimals,
+  })
 }
+
+/**
+ * How many decimals a type's quantity, price and value deserve.
+ *
+ * Crypto is the exception the defaults could not carry: holdings run to eight
+ * places (0,32831331) and unit prices to four or more (1,4110), so the shared
+ * 4-and-2 crop printed numbers nobody had entered — and a 0,142 position value
+ * rendered as "$0". Trailing zeros are still dropped, so 24 stays "24".
+ */
+interface Decimals {
+  qty: number
+  /** Upper bound on a unit price. */
+  price: number
+  /** Lower bound — 2 keeps "₺69,60" from collapsing to "₺69,6". */
+  priceMin: number
+  value: number
+  pl: number
+}
+
+const DECIMALS: Record<string, Decimals> = {
+  crypto: { qty: 8, price: 8, priceMin: 0, value: 2, pl: 2 },
+}
+const DEFAULT_DECIMALS: Decimals = { qty: 4, price: 2, priceMin: 2, value: 0, pl: 0 }
+
+const decimalsFor = (type: string) => DECIMALS[type] ?? DEFAULT_DECIMALS
+
+/** Quantity, with the precision its asset type is actually held in. */
+export const fmtQtyOf = (n: number | null | undefined, type: string) =>
+  fmtQty(n, decimalsFor(type).qty)
+
+/** Unit price, with the precision its asset type is actually quoted in. */
+export const fmtPriceOf = (n: number | null | undefined, type: string, unit: Unit = '') => {
+  if (n == null) return '—'
+  const d = decimalsFor(type)
+  return `${unit}${n.toLocaleString('tr-TR', {
+    minimumFractionDigits: d.priceMin,
+    maximumFractionDigits: d.price,
+  })}`
+}
+
+/**
+ * Signed profit and loss. Crypto gets cents: a position worth fourteen cents
+ * has a real gain that whole lira rounds to "+$0".
+ */
+export const fmtPlOf = (n: number | null | undefined, type: string, unit: Unit = '') =>
+  fmtSignedMoney(n, unit, decimalsFor(type).pl)
+
+/** Position value — whole lira for shares, cents for crypto. */
+export const fmtValueOf = (n: number | null | undefined, type: string, unit: Unit = '') =>
+  fmtMoney(n, unit, decimalsFor(type).value)
 
 export function fmtPct(n: number | null | undefined): string {
   if (n == null) return '—'
