@@ -984,3 +984,34 @@ GÖREV 38 — Almanya/kripto testinden çıkan üç düzeltme
 3. **Kayıttan sonra form temizleniyor.** Alanlarda kaydedilen veri durunca
    "girmedim galiba" hissi veriyordu. Düzenleme formu değerlerini koruyor;
    o form düzenlediği pozisyona bağlı kalmalı.
+
+GÖREV 39 — Piyasa Nabzı'nda Avrupa bölümü + talimatnamenin Frankfurt'a açılması
+
+Portföyde artık EUR bazlı pozisyonlar var (GÖREV 37). Bunların değeri iki şeye
+bağlı — hissenin kendi hikâyesi ve EUR/TRY — ve ikisi de genel makro
+maddelerinin arasına serpiştirilmiş halde geliyordu. Almanya tarafına bakmak
+isteyen okuyucu her sabah metin taramak zorundaydı.
+
+**Panel:** `morning_notes.europe_bullets` (jsonb, nullable —
+`drizzle/0005_add_morning_note_europe.sql`). `macroBullets` ile birebir aynı
+`{label, detail}` biçimi. Alan boş ya da yoksa bölüm hiç çizilmez, dolayısıyla
+mevcut bültenler etkilenmedi.
+
+- Kicker `noteSections.ts`'te **tek yerde** kararlaştırılıyor. Makale gövdesi
+  eskiden kendi dizin numarasını türetiyordu; içindekiler ile gövdenin bir
+  bölümün adı konusunda ayrı ayrı anlaşması gerekiyordu.
+- Avrupa girdileri numaranın yanında **kelimeyi de taşıyor** ("Avrupa 01").
+  GÖREV 33 makro girdilerinden "Makro" kelimesini kaldırmıştı; burada kelime
+  bölüm sınırını işaretlediği için duruyor.
+
+**Talimatname (`cowork-instructions-final.md`):**
+- Almanya hisseleri birincil kaynak `yfinance` + `.DE` (`SAP.DE`); fallback
+  Twelve Data `TICKER:XETR`. `.DE` yalnız sorgu içindir — panele **çıplak**
+  ticker ve `exchange: "XETRA"` gider, `FRA:` ön ekini panel kendi ekler.
+- ADIM 2 ikiye bölündü: genel makro → `macroBullets`, Avrupa/Almanya →
+  `europeBullets`. O gün kayda değer bir şey yoksa `[]`; yer doldurulmaz.
+- ADIM 3'te Frankfurt dipnot olmaktan çıkıp birinci sınıf av sahası oldu.
+  Fiyatlar EUR verilir, dolara çevrilmez.
+- **Kripto açıkça kapsam dışı.** Panelde varlık sınıfı olarak var ama haber
+  taraması, fikir veya trade planı üretilmiyor; fiyatı panel kendi kaynağından
+  çekiyor.
