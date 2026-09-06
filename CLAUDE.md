@@ -127,7 +127,7 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
   - Para ve adet Postgres'e **string** gider; kolonlar `decimal` ve float
     round-trip'i kesirli adetlerde hassasiyet kaybediyor (portföyde 0,809883524
     adetlik bir pozisyon var).
-- İçerik JSON şeması ve alan isimleri: bu klasördeki cowork-instructions-final.md.
+- İçerik JSON şeması ve alan isimleri: bu klasördeki panel-icerik-talimatnamesi.md.
 - Sanal Portföy taşıma planı ve fazları: bu klasördeki **SANAL-PORTFOY-PLAN.md**.
 
 ## Sekmeler (6 aktif)
@@ -251,7 +251,7 @@ kaydedilir (`x-admin-key` korumalı; her tablo bağımsız hata izolasyonlu upse
 *(GÖREV 40'a kadar içerik claude.ai'daki ayrı bir "cowork agent"ta üretiliyordu; skill'ler
 o projenin plugin'inde yaşıyordu ve talimatnamede ikinci bir kopyası duruyordu.)*
 
-- Tam görev akışı, statü yaşam döngüsü ve JSON şeması: bu klasördeki cowork-instructions-final.md.
+- Tam görev akışı, statü yaşam döngüsü ve JSON şeması: bu klasördeki panel-icerik-talimatnamesi.md.
 
 ## Deployment Notları
 - Neon: proje oluştur, **pooled** connection string'i al, `DATABASE_URL` olarak Railway env'ine ekle.
@@ -1013,7 +1013,7 @@ mevcut bültenler etkilenmedi.
   GÖREV 33 makro girdilerinden "Makro" kelimesini kaldırmıştı; burada kelime
   bölüm sınırını işaretlediği için duruyor.
 
-**Talimatname (`cowork-instructions-final.md`):**
+**Talimatname (`panel-icerik-talimatnamesi.md`):**
 - Almanya hisseleri birincil kaynak `yfinance` + `.DE` (`SAP.DE`); fallback
   Twelve Data `TICKER:XETR`. `.DE` yalnız sorgu içindir — panele **çıplak**
   ticker ve `exchange: "XETRA"` gider, `FRA:` ön ekini panel kendi ekler.
@@ -1058,3 +1058,12 @@ tahvil faizinin bir yılın zirvesine çıkışını anlattı.
 
 *Sınır:* oturum içinde eklenen skill'ler yeniden başlatılana kadar `Skill`
 aracına görünmüyor.
+
+Yan iş: `cowork-instructions-final.md` → **`panel-icerik-talimatnamesi.md`**. Adı
+artık var olmayan bir ajanı işaret ediyordu. Referanslar (CLAUDE.md'de üç, iki
+`SKILL.md`'de birer) güncellendi.
+
+**İçerik yüklemek deploy GEREKTİRMEZ.** İkisi ayrı yol: içerik `POST /api/admin/bulk-import`
+ile doğrudan çalışan uygulamaya gider, deploy yalnızca panel KODU değiştiğinde gerekir.
+GÖREV 39'da ikisi aynı turda oldu — içerik yüklendi *ve* Avrupa bölümünü çizen kod
+deploy edildi — ama bağlı oldukları için değil, aynı gün yapıldıkları için.

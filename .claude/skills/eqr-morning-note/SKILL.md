@@ -41,7 +41,7 @@ ekle: *"(Veriler 4 Eylül Cuma kapanışına aittir.)"*
 
 ## Yazım tonu — sade Türkçe zorunlu
 
-Tam jargon tablosu talimatnamede (`cowork-instructions-final.md` → ADIM 4 →
+Tam jargon tablosu talimatnamede (`panel-icerik-talimatnamesi.md` → ADIM 4 →
 "Yazım tonu"). Tek kopya orada duruyor; buraya çoğaltılmadı. Özet kural:
 
 - **İngilizce finans jargonu yasak.** "upside" değil yükseliş payı, "re-rating" değil

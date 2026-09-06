@@ -56,7 +56,7 @@ Yukarıdaki eşikler ABD şablonudur. Körü körüne uygulama:
 `yfinance` birincil kaynak. Sembol biçimi: BİST `TICKER.IS` · ABD çıplak ·
 Almanya `TICKER.DE`. Uzantı yalnız sorgu içindir, panele **çıplak ticker** gider.
 
-Fallback sırası ve deneme bütçesi talimatnamede (`cowork-instructions-final.md`,
+Fallback sırası ve deneme bütçesi talimatnamede (`panel-icerik-talimatnamesi.md`,
 "VERİ KAYNAKLARI VE BAŞARISIZLIK KURALI"). Bulamadığın veriyi uydurma; atla ve logla.
 
 ## Adım 4 — Eleme
