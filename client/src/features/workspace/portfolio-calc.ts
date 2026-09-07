@@ -44,10 +44,18 @@ export function fmtQty(n: number | null | undefined, maxDecimals = 4): string {
 /**
  * How many decimals a type's quantity, price and value deserve.
  *
- * Crypto is the exception the defaults could not carry: holdings run to eight
- * places (0,32831331) and unit prices to four or more (1,4110), so the shared
- * 4-and-2 crop printed numbers nobody had entered — and a 0,142 position value
- * rendered as "$0". Trailing zeros are still dropped, so 24 stays "24".
+ * Two types the defaults could not carry:
+ *
+ * Crypto — holdings run to eight places (0,32831331) and unit prices to four or
+ * more (1,4110), so the shared 4-and-2 crop printed numbers nobody had entered,
+ * and a 0,142 position value rendered as "$0".
+ *
+ * Funds — TEFAS quotes a fund's daily value to six places and the number lives
+ * near 1, so two decimals throw away most of it: 0,904355 became "₺0,90", which
+ * is not a price anyone can check against TEFAS. A gold fund can move a full
+ * day inside those dropped digits.
+ *
+ * Trailing zeros are still dropped, so 24 stays "24".
  */
 interface Decimals {
   qty: number
@@ -61,6 +69,9 @@ interface Decimals {
 
 const DECIMALS: Record<string, Decimals> = {
   crypto: { qty: 8, price: 8, priceMin: 0, value: 2, pl: 2 },
+  // Value and P/L stay whole lira: a fund holding is a large TRY number, and
+  // only the unit price carries the six places.
+  fund: { qty: 4, price: 6, priceMin: 2, value: 0, pl: 0 },
 }
 const DEFAULT_DECIMALS: Decimals = { qty: 4, price: 2, priceMin: 2, value: 0, pl: 0 }
 

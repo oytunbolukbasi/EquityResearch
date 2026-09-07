@@ -17,7 +17,8 @@ import {
   fmtMoney,
   fmtN,
   fmtPct,
-  fmtQty,
+  fmtPriceOf,
+  fmtQtyOf,
   fmtSignedMoney,
   plColor,
   GROUP_COLOR,
@@ -138,7 +139,7 @@ function PositionsTable({
                 {p.name && <div className="text-mid text-[12px]">{p.name}</div>}
               </td>
               <td className="num px-3 text-right whitespace-nowrap">
-                {fmtMoney(p.currentPrice, unit)}
+                {fmtPriceOf(p.currentPrice, p.type, unit)}
               </td>
               <td
                 className="num px-3 text-right whitespace-nowrap"
@@ -241,17 +242,17 @@ function DetailPanel({
       <div className="min-h-0 flex-1 overflow-auto px-[18px] pt-2 pb-[19px]">
         <Chip>{unitLabel}</Chip>
         <div className="num mt-3.5 mb-3 text-[28px] font-medium tracking-[-1px]">
-          {fmtMoney(position.currentPrice, unit)}
+          {fmtPriceOf(position.currentPrice, position.type, unit)}
         </div>
 
         <div className="border-faint mb-4 grid grid-cols-2 gap-4 border-t border-b py-4">
-          <Metric label="Ortalama maliyet" value={fmtMoney(position.buyPrice, unit)} />
+          <Metric label="Ortalama maliyet" value={fmtPriceOf(position.buyPrice, position.type, unit)} />
           <Metric
             label="Pozisyon K/Z"
             value={`${fmtPct(position.plPercent)}`}
             color={plColor(position.plPercent)}
           />
-          <Metric label="Miktar" value={fmtQty(position.quantity)} />
+          <Metric label="Miktar" value={fmtQtyOf(position.quantity, position.type)} />
           <Metric label="Not tarihi" value={action ? noteDate : '—'} />
         </div>
 
