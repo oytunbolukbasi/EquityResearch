@@ -84,10 +84,11 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 **Tipografi:**
 - Tek font: **Inter** (400/500/600/700, latin + latin-ext — Türkçe karakter tam desteği).
 - **Ondalık basamak sayısı türe göre** (`portfolio-calc.ts` → `DECIMALS`):
-  kripto adet 8, fiyat 0–8, değer ve K/Z 2 basamak; diğer türler adet 4, fiyat
-  tam 2, değer ve K/Z 0. Kripto kesirlerini kırpmak girilmemiş bir sayı basıyor
-  (0,32831331 → "0,3283") ve 14 sentlik bir pozisyonu "$0" gösteriyordu; hisse
-  fiyatının alt sınırı 2'de tutulur, yoksa "₺69,60" → "₺69,6" olur. (GÖREV 38)
+  kripto adet 8, fiyat 0–8, değer ve K/Z 2; **fon fiyatı 2–6** (TEFAS'ın kotasyon
+  hassasiyeti), değer ve K/Z tam lira; diğer türler adet 4, fiyat tam 2, değer ve
+  K/Z 0. Kripto kesirlerini kırpmak girilmemiş bir sayı basıyor (0,32831331 →
+  "0,3283") ve 14 sentlik bir pozisyonu "$0" gösteriyordu; hisse fiyatının alt
+  sınırı 2'de tutulur, yoksa "₺69,60" → "₺69,6" olur. (GÖREV 38, 41)
 - Sayısal değerlerde (fiyat, yüzde, miktar) mono font YOK; bunun yerine `font-variant-numeric: tabular-nums` ile sütun hizalaması korunuyor. CSS utility class: `.num` ve `.tnum`.
 - **Taban punto 12px.** Okunacak her metin — kart etiketleri, K/Z satırları, tablo alt
   satırları, form etiketleri, takvim hücreleri — en az 12px. 12px altı yalnızca *işaret*
@@ -1067,3 +1068,28 @@ artık var olmayan bir ajanı işaret ediyordu. Referanslar (CLAUDE.md'de üç, 
 ile doğrudan çalışan uygulamaya gider, deploy yalnızca panel KODU değiştiğinde gerekir.
 GÖREV 39'da ikisi aynı turda oldu — içerik yüklendi *ve* Avrupa bölümünü çizen kod
 deploy edildi — ama bağlı oldukları için değil, aynı gün yapıldıkları için.
+
+
+GÖREV 41 — Fon fiyatı altı basamak, Genel bakış tipe duyarlı oldu
+
+YKT "₺0,90" görünüyordu; DB'deki değer **0,904355**. Değeri 1 civarında olan bir
+fon için iki basamak bilginin neredeyse tamamını atıyor: kullanıcı paneldeki sayıyı
+TEFAS ile karşılaştıramıyor, ve bir altın fonu tam bir günlük hareketi o atılan
+basamakların içinde yapabiliyor.
+
+- `DECIMALS`'a `fund` eklendi: `price 6` · `priceMin 2` (GÖREV 38 dersi — yoksa
+  "₺1,00" bir tur "₺1" olur). Değer ve K/Z tam lira kalıyor; fon pozisyonu büyük
+  bir TL sayısı.
+- **Haritayı düzeltmek tek başına yetmedi.** `OverviewTab` tipe duyarlı değildi,
+  çıplak `fmtMoney`/`fmtQty` çağırıyordu. Dört çağrı `fmtPriceOf`/`fmtQtyOf`'a
+  çevrildi — bu ikinci bir hatayı da kapattı: **kripto adedi orada da kırpılıyordu**
+  (SOL 3,14034628 → "3,1403"). Ders: tür bazlı bir kural varsa, o türü gösteren
+  HER çağrı yerinin ortak fonksiyondan geçtiği kontrol edilmeli.
+
+*Doğrulanamayan:* kazımanın TEFAS ile birebir aynı olduğu teyit edilemedi —
+yerelde `SCRAPER_API_KEY` yok, Fintables doğrudan erişimi 403 veriyor. Depolanan
+değerin tam hassasiyette olduğu ve zamanlayıcının 10:00'da çalıştığı doğrulandı.
+
+*Açık soru (kullanıcıya bırakıldı):* fon 17 Şubat alışından bu yana −%7,91, ama
+aynı dönemde TL bazında altın +%1,54 (ons 4.882,90→4.476,60 $, kur 43,72→48,42).
+Fonun hareketi TL altına değil, **dolar bazlı altına** (−%8,32) yakın duruyor.
