@@ -185,10 +185,29 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
       yeni hisse fiyatsız kalırdı (BSX'in sheet'te olması bu mekanizmanın kanıtı)
 
 ### Faz 3 — Eski app'in kapatılması
-- [ ] Fiyatların EQR'den güncellendiği teyit edilir
-- [ ] PortfoyTakip Railway servisi durdurulur
-- [ ] Repo arşivlenir
-- [ ] EQR `CLAUDE.md` güncellenir (portföy artık salt-okunur değil)
+- [x] **Fiyatların EQR'den güncellendiği teyit edildi** (7 Eylül 2026) — beş varlık
+      türünün beşi de:
+      · *Almanya + kripto* — eski app'te varlık sınıfı olarak yok, yani o yedi
+        pozisyonu fiyatlayan kesinlikle EQR. BİST ve ABD aynı `refreshLivePrices`
+        çağrısından geçiyor.
+      · *Fon* — belirsiz olan tek türdü, çünkü iki app de 09:00/10:00'da çekiyordu.
+        Railway logu ayırdı: EQR `[price] 1 fon güncellendi` satırını **10:00:09**'da
+        bastı, DB'deki `lastUpdated` **10:00:09.48**. Eski app 10:00:02'de yazmıştı,
+        yani son yazan EQR. `updated` sayacı hem başarılı kazımayı hem `writePrice`
+        tamamlanmasını gerektiriyor (`price-refresh.ts:61-77`), dolayısıyla satır
+        "denedi" değil "çekti ve yazdı" demek.
+      · Bağımsız ikinci teyit: eski app'ten `SCRAPER_API_KEY` kaldırıldı (7 Eylül
+        akşamı); 8 Eylül'de fon tarihinin ilerlemesi beklenir.
+- [ ] PortfoyTakip Railway servisi durdurulur *(kullanıcı aksiyonu)*
+- [ ] Repo arşivlenir *(kullanıcı aksiyonu)*
+- [x] EQR `CLAUDE.md` güncellendi (portföy artık salt-okunur değil) — GÖREV 28
+
+> **Silmeden önce:** Railway servisi silinince ortam değişkenlerinin değerleri de
+> gider. `SHEETS_PRICE_URL` gibi değerlerin EQR'de kopyası var, ama bir yedeğini
+> almadan silmeyin.
+>
+> **Kapanmamış tek özellik:** BİST sembol otomatik tamamlama (Faz 5). Veri
+> kaybolmuyor — `bist_symbols` tablosu paylaşılan veritabanında.
 
 ### Faz 3.5 — Tablo tamamlama (istek üzerine, tamamlandı)
 - [x] Açık pozisyonlar tablosu eski app'le birebir: Varlık · Adet · Alış · Güncel ·
