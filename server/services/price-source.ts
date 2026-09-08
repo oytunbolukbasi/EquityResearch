@@ -32,7 +32,7 @@ let cache: { at: number; prices: Record<string, number> } | null = null
  * out waiting for the first. Callers share a single read instead. (This is the
  * collision that made a symbol registration and a refresh knock each other out.)
  */
-let inFlight: Promise<Record<string, number>> | null = null
+let inFlight: Promise<PriceMap> | null = null
 
 function sheetsUrl(): string | null {
   const url = process.env.SHEETS_PRICE_URL
@@ -56,6 +56,19 @@ function sheetsUrl(): string | null {
 export interface FetchOptions {
   attempts?: number
   timeoutMs?: number
+}
+
+/**
+ * Prices plus whether they are second-hand.
+ *
+ * `stale` is the difference between "the source answered" and "the source did
+ * not, so here is what it last said". Callers need to tell those apart: writing
+ * cached figures back to the database stamps `last_updated` with a time no read
+ * actually happened at, which is exactly what the panel's freshness label reads.
+ */
+export interface PriceMap {
+  prices: Record<string, number>
+  stale: boolean
 }
 
 /** Thrown when the sheet could not be read at all and no cache can stand in. */
@@ -97,8 +110,10 @@ async function readSheet(url: string, timeoutMs: number): Promise<Record<string,
 export async function fetchSharePrices(
   force = false,
   { attempts = 3, timeoutMs = DEFAULT_TIMEOUT_MS }: FetchOptions = {},
-): Promise<Record<string, number>> {
-  if (!force && cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.prices
+): Promise<PriceMap> {
+  // A cache hit inside the TTL is not stale: a read succeeded seconds ago.
+  if (!force && cache && Date.now() - cache.at < CACHE_TTL_MS)
+    return { prices: cache.prices, stale: false }
 
   const url = sheetsUrl()
   if (!url) throw new PriceSourceUnavailable('SHEETS_PRICE_URL tanımlı değil')
@@ -110,17 +125,13 @@ export async function fetchSharePrices(
   return inFlight
 }
 
-async function read(
-  url: string,
-  attempts: number,
-  timeoutMs: number,
-): Promise<Record<string, number>> {
+async function read(url: string, attempts: number, timeoutMs: number): Promise<PriceMap> {
   let last: unknown
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
       const prices = await readSheet(url, timeoutMs)
       cache = { at: Date.now(), prices }
-      return prices
+      return { prices, stale: false }
     } catch (e) {
       last = e
       console.warn(`[price] sheet okunamadı (deneme ${attempt}/${attempts}) —`, e)
@@ -131,7 +142,7 @@ async function read(
   // A stale cache still beats failing outright — those prices were real.
   if (cache) {
     console.warn('[price] kaynak yanıt vermedi, önbellekteki fiyatlar kullanılıyor')
-    return cache.prices
+    return { prices: cache.prices, stale: true }
   }
   console.error('[price] hisse fiyatları alınamadı —', last)
   throw new PriceSourceUnavailable(last)

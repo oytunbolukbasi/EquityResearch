@@ -78,12 +78,25 @@ function extractPrice(html: string): number | null {
   return Number.isFinite(price) && price > 0 && price < 10_000 ? price : null
 }
 
-/** Today's price for one fund, or null when it can't be resolved. */
-export async function fetchFundPrice(symbol: string, force = false): Promise<number | null> {
+/** One fund's price, or null when it can't be resolved at all. */
+export interface FundPrice {
+  price: number
+  /** True when the scrape failed and this came from an earlier fetch. */
+  stale: boolean
+}
+
+/**
+ * Today's price for one fund.
+ *
+ * A cache hit inside the day's TTL is NOT stale — the scrape succeeded, and a
+ * fund's unit price only moves once a day. `stale` marks the other case: the
+ * scrape failed and this is the last figure we managed to read.
+ */
+export async function fetchFundPrice(symbol: string, force = false): Promise<FundPrice | null> {
   const upper = symbol.toUpperCase()
   if (!force) {
     const cached = getCached(upper)
-    if (cached != null) return cached
+    if (cached != null) return { price: cached, stale: false }
   }
 
   try {
@@ -91,13 +104,14 @@ export async function fetchFundPrice(symbol: string, force = false): Promise<num
     const price = extractPrice(html)
     if (price != null) {
       cache.set(upper, { price, fetchedAt: new Date() })
-      return price
+      return { price, stale: false }
     }
     console.warn(`[fund] ${upper}: price not found in page`)
   } catch (e) {
     console.warn(`[fund] ${upper}: fetch failed —`, e)
   }
   // Stale beats blank: an older cached figure is closer to the truth than
-  // wiping the stored price would be.
-  return cache.get(upper)?.price ?? null
+  // wiping the stored price would be — but it must say so.
+  const fallback = cache.get(upper)?.price
+  return fallback == null ? null : { price: fallback, stale: true }
 }

@@ -48,8 +48,16 @@ let lastFundSlot: string | null = null
 async function runShares() {
   try {
     // Crypto rides this sweep: one free request, same cadence.
-    const { updated, skipped } = await refreshLivePrices(true)
-    if (skipped.length) {
+    const { updated, skipped, stale } = await refreshLivePrices(true)
+    if (stale) {
+      // Naming all 21 symbols here would bury the one fact that matters: the
+      // source is down, so the stored prices and their timestamps stand.
+      console.warn(
+        `[price] kaynak yanıt vermedi — ${skipped.length} pozisyonun kayıtlı fiyatı ve ` +
+          'tazelik damgası korundu' +
+          (updated.length ? `, ${updated.length} fiyatsız pozisyon dolduruldu` : ''),
+      )
+    } else if (skipped.length) {
       console.log(
         `[price] ${updated.length} hisse güncellendi, ${skipped.length} atlandı: ` +
           skipped.map((s) => s.symbol).join(', '),

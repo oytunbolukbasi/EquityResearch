@@ -8,6 +8,8 @@
  * them), and running two sources for two positions is worse than running one.
  */
 
+import type { PriceMap } from './price-source'
+
 /**
  * Symbol → CoinGecko id.
  *
@@ -57,17 +59,14 @@ export function isKnownCryptoSymbol(symbol: string): boolean {
  * the share source follows, so a dead source is never mistaken for "none of
  * your symbols are tracked".
  */
-export async function fetchCryptoPrices(
-  symbols: string[],
-  force = false,
-): Promise<Record<string, number>> {
+export async function fetchCryptoPrices(symbols: string[], force = false): Promise<PriceMap> {
   const wanted = [...new Set(symbols.map((s) => s.toUpperCase()))].filter(
     (s) => s in COINGECKO_IDS,
   )
-  if (wanted.length === 0) return {}
+  if (wanted.length === 0) return { prices: {}, stale: false }
 
   if (!force && cache && Date.now() - cache.at < CACHE_TTL_MS) {
-    if (wanted.every((s) => s in cache!.prices)) return cache.prices
+    if (wanted.every((s) => s in cache!.prices)) return { prices: cache.prices, stale: false }
   }
 
   const ids = wanted.map((s) => COINGECKO_IDS[s]).join(',')
@@ -87,12 +86,13 @@ export async function fetchCryptoPrices(
     if (Object.keys(prices).length === 0) throw new Error('kaynak boş döndü')
 
     cache = { at: Date.now(), prices }
-    return prices
+    return { prices, stale: false }
   } catch (e) {
-    // Stale prices were real; they beat failing outright.
+    // Stale prices were real; they beat failing outright — but they must be
+    // labelled, or the panel's freshness label reports a read that never happened.
     if (cache) {
       console.warn('[crypto] kaynak yanıt vermedi, önbellekteki fiyatlar kullanılıyor —', e)
-      return cache.prices
+      return { prices: cache.prices, stale: true }
     }
     console.error('[crypto] fiyatlar alınamadı —', e)
     throw new CryptoSourceUnavailable(e)

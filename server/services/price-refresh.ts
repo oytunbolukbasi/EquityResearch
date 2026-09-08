@@ -2,6 +2,7 @@ import { portfolioRepo } from '../db/portfolio-client'
 import { portfolioWriteRepo } from '../db/portfolio-write'
 import { fetchFundPrice } from './fund-price'
 import { fetchSharePrices, PriceSourceUnavailable, registerSymbol } from './price-source'
+import type { PriceMap } from './price-source'
 import { CryptoSourceUnavailable, fetchCryptoPrices } from './crypto-price'
 import { bareSymbol, PRICE_SOURCE_FOR_TYPE, type PositionType } from '../../shared/asset-types'
 
@@ -10,7 +11,25 @@ export interface RefreshResult {
   skipped: { symbol: string; reason: string }[]
   /** Set when the price source itself was unreachable — not the symbols' fault. */
   sourceError?: string
+  /** True when some prices came from a cache because the source did not answer. */
+  stale?: boolean
 }
+
+/**
+ * A price we already hold must not be rewritten just because the source went
+ * quiet. `updatePrice` stamps `last_updated = now()`, and that column is what
+ * the panel's "az önce güncellendi" label reads — so writing a cached figure
+ * back reports a read that never happened, and the freshness warning that
+ * exists to stop the panel showing a frozen price silently loses its meaning.
+ *
+ * Rewriting also buys nothing: a cached figure was written when it was fresh,
+ * so the row already holds it. The one exception is a position that has no
+ * price at all yet — there, a stale figure is strictly better than a blank.
+ */
+const keepsStoredPrice = (stale: boolean, currentPrice: number | string | null) =>
+  stale && currentPrice != null
+
+const STALE_REASON = 'kaynak yanıt vermedi, kayıtlı fiyat korunuyor'
 
 /**
  * Shares and funds refresh on completely different rhythms, so they are two
@@ -30,7 +49,7 @@ export async function refreshSharePrices(force = false): Promise<RefreshResult> 
   const result: RefreshResult = { updated: [], skipped: [] }
   if (shares.length === 0) return result
 
-  let sheet: Record<string, number>
+  let sheet: PriceMap
   try {
     sheet = await fetchSharePrices(force)
   } catch (e) {
@@ -43,15 +62,19 @@ export async function refreshSharePrices(force = false): Promise<RefreshResult> 
   for (const p of shares) {
     // The sheet keys its answers by the bare ticker even when the cell is
     // exchange-qualified, so "FRA:SAP" has to be looked up as "SAP".
-    const price = sheet[bareSymbol(p.symbol).toUpperCase()]
+    const price = sheet.prices[bareSymbol(p.symbol).toUpperCase()]
     if (price == null) {
       result.skipped.push({ symbol: p.symbol, reason: 'fiyat kaynağında yok' })
+      continue
+    }
+    if (keepsStoredPrice(sheet.stale, p.currentPrice)) {
+      result.skipped.push({ symbol: p.symbol, reason: STALE_REASON })
       continue
     }
     await writePrice(p.id, price)
     result.updated.push({ symbol: p.symbol, price })
   }
-  return result
+  return { ...result, stale: sheet.stale }
 }
 
 /**
@@ -64,16 +87,22 @@ export async function refreshFundPrices(force = false): Promise<RefreshResult> {
 
   // Sequential on purpose — parallel scrapes burn quota faster and are more
   // likely to trip rate limiting.
+  let anyStale = false
   for (const p of funds) {
-    const price = await fetchFundPrice(p.symbol, force)
-    if (price == null) {
+    const quote = await fetchFundPrice(p.symbol, force)
+    if (quote == null) {
       result.skipped.push({ symbol: p.symbol, reason: 'fon fiyatı alınamadı' })
       continue
     }
-    await writePrice(p.id, price)
-    result.updated.push({ symbol: p.symbol, price })
+    if (quote.stale) anyStale = true
+    if (keepsStoredPrice(quote.stale, p.currentPrice)) {
+      result.skipped.push({ symbol: p.symbol, reason: STALE_REASON })
+      continue
+    }
+    await writePrice(p.id, quote.price)
+    result.updated.push({ symbol: p.symbol, price: quote.price })
   }
-  return result
+  return { ...result, stale: anyStale }
 }
 
 /**
@@ -87,9 +116,9 @@ export async function refreshCryptoPrices(force = false): Promise<RefreshResult>
   const result: RefreshResult = { updated: [], skipped: [] }
   if (coins.length === 0) return result
 
-  let prices: Record<string, number>
+  let coingecko: PriceMap
   try {
-    prices = await fetchCryptoPrices(
+    coingecko = await fetchCryptoPrices(
       coins.map((p) => p.symbol),
       force,
     )
@@ -99,15 +128,19 @@ export async function refreshCryptoPrices(force = false): Promise<RefreshResult>
   }
 
   for (const p of coins) {
-    const price = prices[p.symbol.toUpperCase()]
+    const price = coingecko.prices[p.symbol.toUpperCase()]
     if (price == null) {
       result.skipped.push({ symbol: p.symbol, reason: 'kripto listesinde tanımlı değil' })
+      continue
+    }
+    if (keepsStoredPrice(coingecko.stale, p.currentPrice)) {
+      result.skipped.push({ symbol: p.symbol, reason: STALE_REASON })
       continue
     }
     await writePrice(p.id, price)
     result.updated.push({ symbol: p.symbol, price })
   }
-  return result
+  return { ...result, stale: coingecko.stale }
 }
 
 /** Both at once — what the manual "Fiyatları yenile" button runs. */
@@ -119,6 +152,7 @@ export async function refreshAllPrices(force = false): Promise<RefreshResult> {
     updated: [...shares.updated, ...crypto.updated, ...funds.updated],
     skipped: [...shares.skipped, ...crypto.skipped, ...funds.skipped],
     sourceError: shares.sourceError ?? crypto.sourceError,
+    stale: Boolean(shares.stale || crypto.stale || funds.stale),
   }
 }
 
@@ -134,6 +168,7 @@ export async function refreshLivePrices(force = false): Promise<RefreshResult> {
     updated: [...shares.updated, ...crypto.updated],
     skipped: [...shares.skipped, ...crypto.skipped],
     sourceError: shares.sourceError ?? crypto.sourceError,
+    stale: Boolean(shares.stale || crypto.stale),
   }
 }
 
@@ -142,23 +177,32 @@ export async function refreshOnePrice(id: string, force = true): Promise<number 
   const position = await portfolioWriteRepo.getPosition(id)
   if (!position) return null
 
+  const empty: PriceMap = { prices: {}, stale: true }
   const source = sourceOf(position.type)
-  const price =
-    source === 'fund'
-      ? await fetchFundPrice(position.symbol, force)
-      : source === 'crypto'
-        ? (
-            await fetchCryptoPrices([position.symbol], force).catch(
-              () => ({}) as Record<string, number>,
-            )
-          )[position.symbol.toUpperCase()]
-        : (
-            await fetchSharePrices(force, { attempts: 1 }).catch(
-              () => ({}) as Record<string, number>,
-            )
-          )[bareSymbol(position.symbol).toUpperCase()]
+
+  let price: number | undefined
+  let stale: boolean
+  if (source === 'fund') {
+    const quote = await fetchFundPrice(position.symbol, force)
+    price = quote?.price
+    stale = quote?.stale ?? true
+  } else {
+    const map =
+      source === 'crypto'
+        ? await fetchCryptoPrices([position.symbol], force).catch(() => empty)
+        : await fetchSharePrices(force, { attempts: 1 }).catch(() => empty)
+    const key =
+      source === 'crypto'
+        ? position.symbol.toUpperCase()
+        : bareSymbol(position.symbol).toUpperCase()
+    price = map.prices[key]
+    stale = map.stale
+  }
 
   if (price == null) return null
+  // Report the figure we hold, but don't restamp the row with a read that
+  // didn't happen.
+  if (keepsStoredPrice(stale, position.currentPrice)) return price
   await writePrice(id, price)
   return price
 }

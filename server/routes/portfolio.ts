@@ -70,10 +70,13 @@ portfolioRouter.get('/price-source', async (_req, res) => {
   }
   const started = Date.now()
   try {
-    const prices = await fetchSharePrices(true)
+    const { prices, stale } = await fetchSharePrices(true)
     res.json({
       configured: true,
-      ok: Object.keys(prices).length > 0,
+      // A cached answer means the source did NOT respond; reporting it as ok
+      // would be the health check lying about the thing it exists to check.
+      ok: !stale && Object.keys(prices).length > 0,
+      stale,
       symbolCount: Object.keys(prices).length,
       ms: Date.now() - started,
     })
