@@ -223,6 +223,9 @@ maliyeti çok farklı:
   (GÖREV 38)
 - **Fiyatı alınamayan sembol ATLANIR, sıfırlanmaz.** Ulaşılamayan bir kaynağın panelin
   dayandığı bir rakamı silebilmesi kabul edilemez.
+- **Bayat önbellek tazelik damgasını tazelemez.** Üç kaynak da çökünce önbellekteki
+  fiyatı döndürür, ama cevabın ikinci el olduğunu `stale` ile bildirir; zaten fiyatı
+  olan satır yeniden YAZILMAZ, `last_updated` olduğu gibi kalır. (GÖREV 42)
 - **Fiyatlandırma bir YAZMAYI asla bloklamaz.** Pozisyon kaydedilir kaydedilmez
   yanıt döner (`pricePending: true`); sembol kaydı ve ilk fiyat okuması arka
   plandaki `ensurePriceSoon`'a bırakılır (3/20/60/120 sn). Sıra korunur — önce
@@ -1093,3 +1096,41 @@ değerin tam hassasiyette olduğu ve zamanlayıcının 10:00'da çalıştığı 
 *Açık soru (kullanıcıya bırakıldı):* fon 17 Şubat alışından bu yana −%7,91, ama
 aynı dönemde TL bazında altın +%1,54 (ons 4.882,90→4.476,60 $, kur 43,72→48,42).
 Fonun hareketi TL altına değil, **dolar bazlı altına** (−%8,32) yakın duruyor.
+
+
+GÖREV 42 — Bayat önbellek artık tazelik damgasını tazelemiyor
+
+Panelin fiyat göstergesinin varlık sebebi CLAUDE.md'de yazılıydı: *"Fiyat akışı
+durursa panel sessizce yanlış göstermesin diye."* O koruma çalışmıyordu.
+
+Kaynak çökünce üçü de (sheet · CoinGecko · Fintables) önbellekteki fiyatı
+döndürüyordu — bu doğru, "bayat gerçek fiyat, boşluktan iyidir". Ama `refreshX`
+bu değerleri `writePrice` ile geri yazıyor, `updatePrice` de her yazmada
+`last_updated = now()` yapıyordu. Sonuç: panel "az önce güncellendi" diyor,
+fiyat saatler öncesinin. Uzun bir kesintide kullanıcı hiçbir uyarı almazdı.
+
+8 Eylül 2026'da Railway logunda görüldü: sheet aralıklı `HTTP 404` veriyordu
+(Apps Script'in yönlendirdiği geçici adresin süresi doluyor, ~40 GOOGLEFINANCE
+hücresi yeniden hesaplanırken). Üç deneme de düşünce önbellek yolu devreye
+girmişti.
+
+- **Kaynaklar artık cevabın ikinci el olduğunu bildiriyor** — `PriceMap
+  { prices, stale }` ve `FundPrice { price, stale }`. TTL içindeki önbellek
+  isabeti bayat DEĞİL: birkaç saniye önce başarılı bir okuma var.
+- **Bayat cevapta zaten fiyatı olan satır yeniden yazılmaz** (`keepsStoredPrice`);
+  damga korunur ve satır "kayıtlı fiyat korunuyor" diye atlanmış raporlanır.
+  Hiç fiyatı olmayan yeni pozisyon istisna — orada bayat bir sayı boşluktan iyi.
+- **Yeniden yazmak zaten hiçbir şey kazandırmıyordu:** önbellekteki değer
+  tazeyken o satıra yazılmıştı. Tek yaptığı saati yalanlamaktı.
+- `/api/portfolio/price-source` sağlık ucu önbellekten gelen cevaba artık
+  `ok: true` demiyor — kontrol etmesi gereken şeyi yanlış raporluyordu.
+- Zamanlayıcı kesintide 21 sembolü tek tek listelemek yerine tek satır yazıyor;
+  önemli olan tek olgu kaynağın düştüğü.
+
+**Test:** sahte bir sheet sunucusu önbelleğe kasten yanlış fiyatlar (1,11 / 2,22 /
+3,33) yazdı, sonra 404'e döndü; canlı DB'ye karşı çalıştırıldı → bayat bildirildi,
+**0 yazma, 21 koruma, değişen satır yok.** Eski kodda 21 satırın hepsi damgalanırdı.
+
+*Ders:* bir düşme yolu (fallback) sessizce doğru veriyi bozmasa bile, o verinin
+**ne kadar güvenilir olduğunu söyleyen sinyali** bozabiliyor. Fallback eklerken
+"hangi değer dönüyor" kadar "bu değer nasıl etiketleniyor" da sorulmalı.
