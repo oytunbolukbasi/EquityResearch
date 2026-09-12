@@ -288,11 +288,8 @@ ve şema bu adımın kendi sözleşmesidir; skill oraya işaret eder.
 - `summary` + `bullets` ikilisi, bültenin `topCall` + `macroBullets` yapısının
   aynısıdır. Bilerek: okuyucu o biçime zaten alışkın, ikinci bir şekil
   öğrenmesine gerek yok.
-- `summary` **giriş** yapar, özet geçmez — maddeleri tekrar etmez, onlara açılır.
-- **3-6 madde.** Azı bölmeyi anlamsız kılar, fazlası listeyi yine duvara çevirir.
-- **Madde başına tek fikir.** Panelde tam genişlikte tek satır hedefle; iki satırı
-  aşan madde ikiye bölünmelidir. (Bu alan 12 Eylül 2026'da eklendi çünkü analiz
-  tek blok paragraf olarak yazılıyordu ve okunmuyordu.)
+- **Nasıl yazılacağı ADIM 5'te** ("Çıktı — analiz MADDE MADDE yazılır"). Analiz
+  orada üretiliyor; kuralı iki yere kopyalamak ikisinin ayrışmasını beklemek olur.
 - `bullets` boş gönderilirse ya da hiç gönderilmezse panel yalnızca `summary`'yi
   paragraf olarak basar — eski kayıtlar bu yüzden bozulmadı.
 
@@ -374,7 +371,35 @@ Hangi temalar güçleniyor/zayıflıyor? Her pozisyon hangi temada? Konsantrasyo
 
 **Her açık pozisyon için:** K/Z tez ile tutarlı mı? Tema gücüne göre net aksiyon: `BEKLE` / `KISMİ KÂR AL` / `SAT` / `POZİSYON ARTIR`. Ticker trade_plans/ideas'ta da varsa seviyelerle tutarlı öneri ver.
 
-Çıktıyı ADIM 4 şemasındaki `portfolio_insight` alanına yaz: `summary` kısa genel görünüm, `actions` her açık pozisyon için bir kayıt.
+### Çıktı — analiz MADDE MADDE yazılır, paragraf olarak DEĞİL
+
+Çıktı ADIM 4 şemasındaki `portfolio_insight` alanına yazılır ve üç parçası var:
+
+| Alan | Ne yazılır |
+|---|---|
+| `summary` | **Tek cümle giriş**, iki nokta üst üste ile biter. Maddeleri özetlemez, onlara açılır. |
+| `bullets` | **3-6 madde.** Günün portföye dair olgularını taşır. |
+| `actions` | Her açık pozisyon için bir kayıt (yukarıdaki kurallar). |
+
+**Madde başına tek fikir.** Panelde tam genişlikte tek satır hedefle; iki satırı
+aşan madde ikiye bölünmelidir. Maddeleri bir paragrafı noktalarla kesmek için
+değil, **okunabilir olsun diye** kuruyorsun — her madde kendi başına anlaşılmalı.
+
+Örnek (11 Eylül 2026):
+
+```json
+"summary": "Hafta iki merkez bankası kararıyla kapandı ve ikisini de petrol belirledi:",
+"bullets": [
+  "Merkez Bankamız faizi %37'de sabit tuttu, Avrupa Merkez Bankası 25 baz puan artırdı.",
+  "Brent iki günde 97'den 107 dolara çıktı — ağustos başından beri yükseliş %30'a yakın.",
+  "Portföyün tek net kazananı ConocoPhillips: %16,7 kârda, ilk hedefine 2,40 dolar kaldı."
+]
+```
+
+> **Neden bu kural var:** analiz 12 Eylül 2026'ya kadar tek blok paragraf olarak
+> yazılıyordu ve kullanıcı okumuyordu — "wall of text gibi duruyor" dedi, haklıydı.
+> Panelde de bir sekmenin arkasında saklıydı; ikisi birlikte düzeltildi (GÖREV 43).
+> Paragrafa geri dönersen aynı sorun geri gelir, çünkü blok artık her gün açık.
 
 ---
 
