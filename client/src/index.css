@@ -98,6 +98,16 @@
   /* lightweight-charts */
   --chart-grid: var(--faint2);
   --chart-axis: #9a9a94;
+  /* Trade-plan bar colour — deliberately NOT a colour.
+     Green/red said "closed up", which the bar's own shape already says, while
+     the SAME two colours a few pixels away mean profit and loss on the
+     position. A single accent was tried next (amber) and dropped: the chart
+     already carries three meaningful colours — TP green, entry blue, hard SL
+     red — so a fourth competed with the only marks that carry meaning.
+     Neutral bars leave the level lines as the only coloured thing on the plot.
+     Mirrors --ink per theme; written concretely because cssVar() reads the
+     specified value and a var() alias would come back unresolved. (GÖREV 44) */
+  --chart-bar: #1a1a18;
 }
 
 /*
@@ -152,6 +162,7 @@
   --scrim: rgba(0, 0, 0, 0.5);
 
   --chart-axis: #8a847a;
+  --chart-bar: #f0ede8;
 }
 
 @theme inline {

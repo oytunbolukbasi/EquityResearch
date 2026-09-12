@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import {
   createChart,
-  CandlestickSeries,
+  BarSeries,
   LineSeries,
   LineStyle,
   type IChartApi,
@@ -92,10 +92,10 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
     // Resolve the active theme's palette from CSS custom properties. The .dark
     // class is applied synchronously by ThemeProvider before this effect runs,
     // so these reads reflect the current theme even right after a toggle.
-    const green = cssVar(container, '--green')
-    const red   = cssVar(container, '--red')
-    const grid  = cssVar(container, '--faint2')
-    const axis  = cssVar(container, '--chart-axis')
+    // One colour for every bar — see --chart-bar in index.css for why, and why
+    // it carries a different value per theme.
+    const bar  = cssVar(container, '--chart-bar')
+    const axis = cssVar(container, '--chart-axis')
 
     const chart = createChart(container, {
       autoSize: true,
@@ -104,9 +104,11 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
         textColor: axis,
         fontFamily: INTER,
       },
+      // No grid. The level lines (giriş bandı, TP merdiveni, hard SL) are the
+      // only horizontals worth reading here, and a full grid competed with them.
       grid: {
-        vertLines: { color: grid, style: LineStyle.Solid },
-        horzLines: { color: grid, style: LineStyle.Solid },
+        vertLines: { visible: false },
+        horzLines: { visible: false },
       },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
@@ -115,14 +117,12 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
 
     chartRef.current = chart
 
-    // ─── Candlestick series ──────────────────────────────────────────────────
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor:         green,
-      downColor:       red,
-      borderUpColor:   green,
-      borderDownColor: red,
-      wickUpColor:     green,
-      wickDownColor:   red,
+    // ─── Bar series ──────────────────────────────────────────────────────────
+    const candleSeries = chart.addSeries(BarSeries, {
+      upColor:     bar,
+      downColor:   bar,
+      openVisible: true,
+      thinBars:    false,
     })
 
     // lightweight-charts requires ascending time order and silently fails to
