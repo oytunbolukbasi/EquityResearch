@@ -147,7 +147,10 @@ Sanal Portföy ayrıca tabloyu bırakıp kart listesine geçer (GÖREV 30).
    sınıfına göre bölümlü** (kalın renkli çizgi + ad + pozisyon sayısı) ↔ Piyasa
    Nabzı özeti. Portföy
    satırına tıklayınca sağ panel o varlığın detayına döner; makro başlığına tıklamak
-   bültenin **tam o bölümüne** atlar.
+   bültenin **tam o bölümüne** atlar. KPI şeridi ile paneller arasında **tam
+   genişlikte günlük analiz bloğu** (varsayılan açık, × ile kapanır, tercih
+   `eqr2:overview-analysis`'te). Portföy panelinin sekmeleri **Aktif | Geçmiş**.
+   (GÖREV 43)
 2. **Piyasa Nabzı** — İçindekiler ↔ tam metin makale. Üstte ‹ tarih › adımlayıcı;
    yalnızca kaydı olan bültenler arasında gezer (datepicker yok).
 3. **Pozisyon Fikirleri** — fikir tablosu (Aktif/Geçmiş, Risk/Getiri mini-bar, tarih
@@ -1134,3 +1137,50 @@ girmişti.
 *Ders:* bir düşme yolu (fallback) sessizce doğru veriyi bozmasa bile, o verinin
 **ne kadar güvenilir olduğunu söyleyen sinyali** bozabiliyor. Fallback eklerken
 "hangi değer dönüyor" kadar "bu değer nasıl etiketleniyor" da sorulmalı.
+
+
+GÖREV 43 — Günlük analiz panelden çıkıp tam genişliğe taşındı
+
+Analiz, Portföy panelinde "Hisse notları" ve "Geçmiş"in yanında **üçüncü bir
+sekmeydi**. O ikisi aynı listenin iki hâli (açık / kapanmış pozisyonlar); analiz
+ise bütüne dair bir metin. Üçünü kardeş yapmak "bunlar aynı türden seçim"
+diyordu — değiller. İki bedeli vardı: ilk okunması gereken şey bir sekmenin
+arkasında saklıydı, ve açınca pozisyon tablosu ekrandan kayboluyordu.
+
+**Yerleşim:** blok KPI şeridi ile panellerin arasına, **tam genişliğe** alındı.
+Önce paneli aşağı iteceği için çekince koymuştum; maddeli yazım bu hesabı
+değiştirdi — bu genişlikte her madde tek satır, dar panelde her biri ikiye sarardı.
+Yani tam genişlik israf değil, maddelerin çalışma koşulu.
+
+- Sekmeler ikiye indi: **Aktif | Geçmiş** — panelin geri kalanının dili zaten bu
+  (Pozisyon Fikirleri, Trade Planı, Sanal Portföy hepsi ikili). Üstelik eski
+  isimler paralel bile değildi: biri içeriğin türünü, diğeri zaman durumunu
+  söylüyordu.
+- **Varsayılan açık.** Günün paranıza dair tek cümlesi bir tıklamayı hak etmemeli.
+- **Tetikleyici yalnız blok kapalıyken görünür** — açıkken blok kendi ×'ini
+  taşıdığı için iki ayrı kapatma noktası olurdu.
+
+**İçerik:** `portfolio_insights.bullets` (jsonb, nullable —
+`drizzle/0006_add_portfolio_insight_bullets.sql`). Analiz artık `summary` +
+`bullets`, yani bültenin `topCall` + `macroBullets` yapısının **aynısı**;
+okuyucu o biçime alışkın, ikinci bir şekil öğrenmesi gerekmiyor. Tek blok
+paragraf olarak yazıldığı için okunmuyordu. Talimatnamede kural: 3-6 madde,
+madde başına tek fikir, `summary` özet geçmez giriş yapar.
+
+**Geriye uyumluluk ölçüldü:** `bullets` null bırakılıp render kontrol edildi —
+blok yine çizildi, 0 madde, paragraf basıldı. Eski 23 kayıt bozulmuyor.
+
+*Elenen seçenekler:* analizi **sağ panele** koymak (portföyün yazısını piyasa
+tarafına taşır ve pozisyon detayı açılınca kaybolur); panel içinde **satır içi
+açılır** yapmak (dar panelde maddeler sarar).
+
+*Geri çevrilen istek:* analize Piyasa Nabzı'ndaki gibi **tarih adımlayıcısı**.
+Kullanıcı sordu, birlikte vazgeçildi: rozetler de aynı kayıttan geldiği için
+onların da geriye gitmesi gerekir, o zaman sağdaki Piyasa Nabzı bugünde kalır,
+onun da gitmesi gerekir — zincir KPI kartlarına kadar uzuyor. Arşiv duruyor
+(24 kayıt), istenirse ayrı bir yüzeyde ele alınır.
+
+*Yan iş:* `origin` HTTPS'ten **SSH'a** çevrildi. Klasik/ince ayarlı token iki kez
+403 verdi; sebebi token'ın kendisi değil, macOS Keychain'in eski bir kimlikle
+cevap verip yeni token'a hiç uzanmamasıydı (GitHub'da "Never used" yazıyordu).
+SSH'ta süre dolma derdi yok.
