@@ -77,7 +77,9 @@ köşeli kartlar (radius ~14px), bol boşluk — her iki temada da.
 
 **Grafik dark mode (lightweight-charts):** Kütüphane canvas tabanlı olup CSS değişkeni
 okuyamaz; renkler effect içinde `getComputedStyle` ile aktif temanın *concrete* token'larından
-(`--green`/`--red`/`--faint2`/`--chart-axis`/`--tp1..3`/`--blue`) somut string'e çözülür.
+(`--chart-bar`/`--chart-axis`/`--tp1..3`/`--blue`/`--red`) somut string'e çözülür.
+Bu yüzden `--chart-bar` iki temada da **somut hex** yazılır; `var(--ink)` alias'ı
+çözülmemiş döner.
 `theme`, effect deps'inde (`[plan, theme]`) — grafik her değişimde tamamen yeniden
 kurulduğundan toggle'da doğru renklerle rebuild olur.
 
@@ -1184,3 +1186,38 @@ onun da gitmesi gerekir — zincir KPI kartlarına kadar uzuyor. Arşiv duruyor
 403 verdi; sebebi token'ın kendisi değil, macOS Keychain'in eski bir kimlikle
 cevap verip yeni token'a hiç uzanmamasıydı (GitHub'da "Never used" yazıyordu).
 SSH'ta süre dolma derdi yok.
+
+
+GÖREV 44 — Trade planı grafiği: ızgara kalktı, mum yerine bar, barlar nötr
+
+Okunurluk turu. Üç değişiklik, üçü de aynı sebeple: grafikte **anlam taşıyan
+şeyler öne çıksın**.
+
+- **Kanvas ızgarası kaldırıldı.** Burada okunacak yatay çizgiler seviyelerdir:
+  giriş bandı, TP merdiveni, hard SL. Izgara onlarla yarışıyordu; gidince
+  seviyeler kendiliğinden öne çıktı.
+- **`CandlestickSeries` → `BarSeries`** (açılış/kapanış çentikli OHLC barı).
+- **Barlar tek renk ve nötr** — `--chart-bar`: açıkta `#1a1a18`, koyuda `#f0ede8`.
+
+**Renk neden nötr:** yeşil/kırmızı "bu gün yükselerek kapandı" diyordu, ki barın
+kendi şekli zaten söylüyor — üstelik **AYNI iki renk birkaç piksel ötede kâr ve
+zarar demek**. Tek palet, iki anlam.
+
+Yolda tek bir vurgu rengi (amber, sonra kullanıcının istediği `#FFDB58`) denendi
+ve bırakıldı: grafik zaten **üç anlamlı renk** taşıyor (TP yeşili, giriş mavisi,
+SL kırmızısı); dördüncüsü onlarla yarışıyordu. Kullanıcının ifadesiyle "renk
+cümbüşü oldu".
+
+**Ölçüm karara girdi:** `#FFDB58` koyu kartta 12,5:1 ama beyaz kartta **1,35:1** —
+açık temada barlar kaybolurdu (grafik markı tabanı 3:1). Nötr değerler 17,4:1 ve
+14,5:1. Renk isteği ölçülmeden uygulanmadı, sayılar kullanıcıya verilip karar
+birlikte değişti.
+
+*Tarihçe:* GÖREV 6 bar'a geçmiş, GÖREV 12 mum'a dönmüştü. Bu üçüncü tur ve
+gerekçesi öncekilerden farklı: mum/bar tercihi değil, ızgara ve kontrast
+okunurluğu.
+
+*Bilinen, dokunulmadı:* off-chart TP rozeti fiyat skalası etiketiyle çakışabiliyor
+(GÖREV 5'ten beri var). Izgara gidince daha görünür oldu ama sebebi bu değil;
+rozet grafiğin köşesine, etiket kendi yerine sabitleniyor ve ikisi birbirini
+bilmiyor.
