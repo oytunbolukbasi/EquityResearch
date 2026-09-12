@@ -20,6 +20,7 @@ const portfolioInsightInput = z.object({
   date: z.string(),
   body: z.string().optional(),
   summary: z.string().optional(),
+  bullets: z.array(z.string()).nullish(),
   actions: z.array(portfolioActionSchema).nullish(),
 })
 
@@ -309,6 +310,7 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
       const values = {
         date: d.date,
         body: bodyText,
+        bullets: d.bullets?.length ? d.bullets : null,
         actions: d.actions ?? null,
       }
       const existing = await db

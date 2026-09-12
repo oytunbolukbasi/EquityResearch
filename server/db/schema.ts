@@ -87,7 +87,14 @@ export type PortfolioAction = { ticker: string; action: string; reason: string }
 export const portfolioInsights = pgTable('portfolio_insights', {
   id: serial('id').primaryKey(),
   date: date('date').notNull(),
+  /** Lead sentence. Kept as the whole analysis for rows written before bullets. */
   body: text('body').notNull(),
+  /**
+   * The analysis as scannable points, mirroring how the bulletin is written
+   * (`topCall` + macroBullets). Nullable on purpose: rows from before this
+   * column existed have only `body`, and the panel still renders those.
+   */
+  bullets: jsonb('bullets').$type<string[]>(),
   actions: jsonb('actions').$type<PortfolioAction[]>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })

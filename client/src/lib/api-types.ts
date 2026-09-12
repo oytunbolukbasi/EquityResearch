@@ -106,7 +106,9 @@ export interface PortfolioAction {
 export interface PortfolioInsight {
   id: number
   date: string
+  /** Lead sentence — or, for rows written before `bullets`, the whole analysis. */
   body: string
+  bullets: string[] | null
   actions: PortfolioAction[] | null
   createdAt: string
 }

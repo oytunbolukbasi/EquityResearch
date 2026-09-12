@@ -265,7 +265,8 @@ ve şema bu adımın kendi sözleşmesidir; skill oraya işaret eder.
 
   "portfolio_insight": {
     "date": "BUGÜN",
-    "summary": "2-3 cümle genel görünüm",
+    "summary": "Tek cümle giriş, iki nokta üst üste ile biter:",
+    "bullets": ["...", "...", "..."],
     "actions": [
       {"ticker": "...", "action": "BEKLE|KISMİ KÂR AL|SAT|POZİSYON ARTIR", "reason": "1 cümle"}
     ]
@@ -282,6 +283,18 @@ ve şema bu adımın kendi sözleşmesidir; skill oraya işaret eder.
 - **Kripto bu talimatın kapsamı dışında.** Panelde kripto pozisyonları var ama
   onlar equity research kapsamına girmiyor: kripto için haber tarama, fikir
   üretme veya trade planı YOK. Fiyatları panel kendi kaynağından çekiyor.
+
+**portfolio_insight kuralları:**
+- `summary` + `bullets` ikilisi, bültenin `topCall` + `macroBullets` yapısının
+  aynısıdır. Bilerek: okuyucu o biçime zaten alışkın, ikinci bir şekil
+  öğrenmesine gerek yok.
+- `summary` **giriş** yapar, özet geçmez — maddeleri tekrar etmez, onlara açılır.
+- **3-6 madde.** Azı bölmeyi anlamsız kılar, fazlası listeyi yine duvara çevirir.
+- **Madde başına tek fikir.** Panelde tam genişlikte tek satır hedefle; iki satırı
+  aşan madde ikiye bölünmelidir. (Bu alan 12 Eylül 2026'da eklendi çünkü analiz
+  tek blok paragraf olarak yazılıyordu ve okunmuyordu.)
+- `bullets` boş gönderilirse ya da hiç gönderilmezse panel yalnızca `summary`'yi
+  paragraf olarak basar — eski kayıtlar bu yüzden bozulmadı.
 
 **ideas kuralları:**
 - SADECE şunlar girer: (a) status değişen pozisyonlar, (b) yeni fikirler.

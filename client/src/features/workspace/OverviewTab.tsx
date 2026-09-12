@@ -1,4 +1,5 @@
 import { Fragment, useState } from 'react'
+import { IoClose, IoDocumentTextOutline } from 'react-icons/io5'
 
 import type {
   PortfolioAction,
@@ -28,11 +29,14 @@ import { computeAnalytics, type Bucket } from './analytics-calc'
 import { ASSET_GROUPS, groupOf } from '@shared/asset-types'
 import { fmtNoteDate, noteSections, readMinutes } from './note-sections'
 
-type PortSub = 'notes' | 'analysis' | 'history'
+type PortSub = 'notes' | 'history'
 
 const PORT_SUBS = [
-  { id: 'notes' as const, label: 'Hisse notları' },
-  { id: 'analysis' as const, label: 'Günlük analiz' },
+  // Two views of one list. The daily analysis used to sit here as a third
+  // sibling, which said "these are the same kind of choice" — it is not: those
+  // two are positions filtered by state, it is a paragraph about the whole
+  // portfolio. It now sits above, at the level it actually belongs to.
+  { id: 'notes' as const, label: 'Aktif' },
   { id: 'history' as const, label: 'Geçmiş' },
 ]
 
@@ -379,11 +383,91 @@ function PulseBrief({
   )
 }
 
+// ─── günlük analiz ───────────────────────────────────────────────────────────
+
+const ANALYSIS_KEY = 'eqr2:overview-analysis'
+
+function readOpen(): boolean {
+  try {
+    // Open by default: this is the day's one sentence about your own money,
+    // and it should not cost a click. A reader who closes it means it.
+    return localStorage.getItem(ANALYSIS_KEY) !== 'closed'
+  } catch {
+    return true
+  }
+}
+
+/**
+ * The daily portfolio analysis, full width between the KPI rail and the panels.
+ *
+ * It lived as a third pill inside the Portfolio panel, next to "Aktif" and
+ * "Geçmiş" — but those two are one list filtered by state and this is prose
+ * about the aggregate, so the grouping claimed a kinship that isn't there. It
+ * also meant the piece you want to read first was hidden behind a tab, and
+ * opening it made the position table disappear.
+ *
+ * Full width rather than inside the panel because the analysis is written as
+ * points: at this width each one is a line, where the narrow panel would wrap
+ * every one of them onto two.
+ */
+function DailyAnalysis({ insight, onClose }: { insight: PortfolioInsight | null; onClose: () => void }) {
+  const bullets = insight?.bullets ?? []
+  return (
+    <section className="bg-card border-faint mb-5 rounded-[14px] border px-[18px] py-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <h2 className="m-0 text-[15px] font-medium">Günlük portföy analizi</h2>
+        <div className="flex shrink-0 items-center gap-2.5">
+          <span className="text-mid num text-[12px]">{fmtNoteDate(insight?.date)}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Günlük analizi gizle"
+            className="text-mid hover:text-ink -mr-1 cursor-pointer border-0 bg-transparent p-1 leading-none"
+          >
+            <IoClose size={16} />
+          </button>
+        </div>
+      </div>
+
+      {!insight ? (
+        <p className="text-mid m-0 text-[13px]">Henüz analiz eklenmedi.</p>
+      ) : (
+        <>
+          {/* pre-line so an older single-block analysis keeps its own breaks. */}
+          <p className="m-0 whitespace-pre-line text-[13px] leading-[1.75]">{insight.body}</p>
+          {bullets.length > 0 && (
+            <ul className="mt-2.5 mb-0 flex list-none flex-col gap-2 p-0">
+              {bullets.map((b, i) => (
+                <li key={i} className="flex gap-2.5 text-[13px] leading-[1.6]">
+                  <span aria-hidden="true" className="text-faint select-none">
+                    •
+                  </span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
+  )
+}
+
 // ─── tab ─────────────────────────────────────────────────────────────────────
 
 export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string) => void }) {
   const [sub, setSub] = useState<PortSub>('notes')
   const [detail, setDetail] = useState<string | null>(null)
+  const [analysisOpen, setAnalysisOpen] = useState(readOpen)
+
+  function toggleAnalysis(open: boolean) {
+    setAnalysisOpen(open)
+    try {
+      localStorage.setItem(ANALYSIS_KEY, open ? 'open' : 'closed')
+    } catch {
+      /* private mode — the choice still holds for this session */
+    }
+  }
 
   const { data: summary, loading, error } = useApi<PortfolioSummary>('/api/portfolio/summary')
   const { data: closed } = useApi<PortfolioClosedPosition[]>('/api/portfolio/closed')
@@ -435,18 +519,6 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
             />
           </div>
         )
-      ) : sub === 'analysis' ? (
-        <div className="border-faint2 border-t px-[18px] pt-1.5 pb-[18px]">
-          <div className="flex items-center justify-between pt-3 pb-2">
-            <h3 className="m-0 text-[13px] font-medium">Günlük portföy analizi</h3>
-            <span className="text-mid num text-[12px]">{fmtNoteDate(insight?.date)}</span>
-          </div>
-          {/* pre-line so a multi-paragraph analysis keeps its breaks, matching
-              how the bulletin article renders its sections. */}
-          <p className="m-0 whitespace-pre-line text-[13px] leading-[1.75]">
-            {insight?.body ?? 'Henüz analiz eklenmedi.'}
-          </p>
-        </div>
       ) : !closed?.length ? (
         <PanelEmpty>Kapatılan pozisyon yok.</PanelEmpty>
       ) : (
@@ -473,6 +545,20 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
       <TabHeading
         title="Genel bakış"
         subtitle="Portföyün, araştırman ve işlem planların bir arada."
+        // Only offered while the block is hidden: with it open there would be
+        // two controls for one thing, and the block carries its own ×.
+        right={
+          analysisOpen ? undefined : (
+            <button
+              type="button"
+              onClick={() => toggleAnalysis(true)}
+              className="text-info hover:border-info flex cursor-pointer items-center gap-1.5 rounded-[9px] border border-transparent bg-transparent px-2 py-1 text-[13px]"
+            >
+              <IoDocumentTextOutline size={15} />
+              Günlük analizi göster
+            </button>
+          )
+        }
       />
 
       {/*
@@ -500,6 +586,8 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
           />
         ))}
       </ScrollRail>
+
+      {analysisOpen && <DailyAnalysis insight={insight ?? null} onClose={() => toggleAnalysis(false)} />}
 
       <SplitPane splitKey="overview" a={portfolioPanel} b={rightPanel} />
     </div>
