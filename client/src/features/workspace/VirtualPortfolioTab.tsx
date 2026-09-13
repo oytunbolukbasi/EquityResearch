@@ -1225,11 +1225,21 @@ function RowActions({ children }: { children: React.ReactNode }) {
   return (
     <span
       aria-hidden="false"
-      className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[18px] pl-10 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
+      className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[18px] pl-[88px] opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
       style={{
-        background:
-          'linear-gradient(to left, var(--card) 68%, color-mix(in srgb, var(--card) 60%, transparent))',
+        background: 'var(--card)',
         backdropFilter: 'blur(6px)',
+        // The mask is what makes the left edge soft. A background gradient
+        // alone was not enough: `backdrop-filter` applies evenly across the
+        // element's whole box and stops dead at its boundary, so the blur cut
+        // a straight line through the row however gently the fill faded.
+        // Masking the element fades the filtered result with it.
+        //
+        // Measured in px, not %, because this strip is as wide as the buttons
+        // inside it — three on an open position, one on a closed one — and a
+        // percentage would move the fade every time that count changed.
+        WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 80px)',
+        maskImage: 'linear-gradient(to right, transparent 0, #000 80px)',
       }}
     >
       <span className="flex gap-1.5 whitespace-nowrap">{children}</span>

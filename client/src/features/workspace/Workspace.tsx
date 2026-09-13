@@ -75,6 +75,10 @@ export function Workspace() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
 
+  // `authenticated` is in the deps on purpose. The login gate below returns
+  // early while the session is still loading, so on the first pass the sentinel
+  // is not in the DOM yet — with an empty dep list this ran once against a null
+  // ref, bailed, and never attached. The header then stayed open on scroll.
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -86,7 +90,7 @@ export function Workspace() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [authenticated]);
 
   // One door for the whole panel. Hooks above run either way — a conditional
   // return must not sit above them.
