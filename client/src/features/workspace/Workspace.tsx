@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BotMessageSquare } from "lucide-react";
+import { BotMessageSquare, X } from "lucide-react";
 
 import { OverviewTab } from "./OverviewTab";
 import { PulseTab } from "./PulseTab";
@@ -10,10 +10,11 @@ import { AnalyticsTab } from "./AnalyticsTab";
 import { useLayoutPersistence } from "./useLayoutPersistence";
 import { ProfileMenu } from "./ProfileMenu";
 import { LoginScreen } from "./LoginScreen";
+import { NotesTab } from "../notes/NotesTab";
 import { useSession } from "@/lib/session";
 
 type TabId =
-  "overview" | "reader" | "ideas" | "paper" | "virtual" | "analytics";
+  "overview" | "reader" | "ideas" | "paper" | "virtual" | "analytics" | "notes";
 
 /**
  * `short` is what a phone shows: six full labels need 580px of strip, so on a
@@ -29,12 +30,29 @@ const TABS: { id: TabId; label: string; short: string }[] = [
 ];
 
 const TAB_KEY = "eqr2:tab";
+const NOTES_OPEN_KEY = "eqr2:notes-open";
+
+/**
+ * Notes is a tab you open, not one that is always there. Remembered so it
+ * survives a reload — but closing it is a decision, so a closed notebook stays
+ * closed until it is opened from the menu again. (GÖREV 50)
+ */
+function readNotesOpen(): boolean {
+  try {
+    return localStorage.getItem(NOTES_OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /** Reopen on the tab last used, falling back to the overview. */
 function readTab(): TabId {
   try {
     const saved = localStorage.getItem(TAB_KEY);
     if (TABS.some((t) => t.id === saved)) return saved as TabId;
+    // Notes is not in TABS — it is the one tab that can be closed — so it has
+    // to be allowed back explicitly, and only while it is actually open.
+    if (saved === "notes" && readNotesOpen()) return "notes";
   } catch {
     /* private mode — start on the overview */
   }
@@ -55,6 +73,22 @@ export function Workspace() {
   const [pendingJump, setPendingJump] = useState<string | null>(null);
 
   const { save, reset, saved } = useLayoutPersistence();
+  const [notesOpen, setNotesOpen] = useState(readNotesOpen);
+
+  function toggleNotes() {
+    setNotesOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem(NOTES_OPEN_KEY, next ? "1" : "0");
+      } catch {
+        /* private mode — the choice still holds for this session */
+      }
+      // Opening it should show it; closing it must not strand you on a tab
+      // that is no longer in the strip.
+      setTab(next ? "notes" : "overview");
+      return next;
+    });
+  }
 
   useEffect(() => {
     try {
@@ -138,6 +172,8 @@ export function Workspace() {
                     onResetLayout={reset}
                     onSaveLayout={save}
                     layoutSaved={saved}
+                    notesOpen={notesOpen}
+                    onToggleNotes={toggleNotes}
                   />
                 </div>
               </div>
@@ -162,6 +198,39 @@ export function Workspace() {
                 <span className="hidden sm:inline">{t.label}</span>
               </button>
             ))}
+
+            {/* Notes sits apart from TABS because it is the only one that can
+                leave. Its × lives in the strip rather than inside the page: a
+                tab you can close should say so where you switch tabs. Two
+                elements, not one — a button inside a button is not valid. */}
+            {notesOpen && (
+              <span
+                className="flex shrink-0 items-center gap-1 border-b-2 pb-[13px] transition-colors"
+                style={{
+                  borderBottomColor: tab === "notes" ? "var(--info)" : "transparent",
+                }}
+              >
+                <button
+                  onClick={() => setTab("notes")}
+                  aria-current={tab === "notes" ? "page" : undefined}
+                  className="cursor-pointer border-0 bg-transparent px-0 py-0 text-[13px] transition-colors"
+                  style={{
+                    color: tab === "notes" ? "var(--info)" : "var(--mid)",
+                    fontWeight: tab === "notes" ? 500 : 400,
+                  }}
+                >
+                  Notlar
+                </button>
+                <button
+                  onClick={toggleNotes}
+                  title="Notlar sekmesini kapat"
+                  aria-label="Notlar sekmesini kapat"
+                  className="text-mid hover:text-ink -mr-1 cursor-pointer border-0 bg-transparent p-0.5 leading-none"
+                >
+                  <X className="size-[13px]" />
+                </button>
+              </span>
+            )}
           </nav>
         </div>
       </header>
@@ -179,6 +248,7 @@ export function Workspace() {
         {tab === "paper" && <PaperTab />}
         {tab === "virtual" && <VirtualPortfolioTab />}
         {tab === "analytics" && <AnalyticsTab />}
+        {tab === "notes" && notesOpen && <NotesTab />}
       </main>
 
       <footer className="border-faint border-t">

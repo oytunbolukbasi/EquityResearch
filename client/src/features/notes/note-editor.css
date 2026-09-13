@@ -1,0 +1,52 @@
+/*
+  BlockNote ships its own palette. These map its variables onto the panel's, so
+  the editor reads as part of the app rather than an embedded widget — the same
+  reason the charts resolve their colours from the theme tokens.
+
+  Only the surface-level variables are set. Chasing every internal class would
+  mean re-styling the editor on each upgrade, and the point of taking the
+  library was to not maintain an editor.
+
+  The selector is deliberately over-qualified. BlockNote sets its own palette in
+  two rules: `.bn-root` and `.bn-root[data-color-scheme="dark"]`. A bare
+  `.eqr-note-editor` only ties with the first — it was winning on source order
+  alone — and LOSES to the second outright, so the dark editor kept the
+  library's own #1f1f1f/#cfcfcf instead of the panel's card and ink. Matching
+  the attribute puts this at 0,3,0 and the result no longer depends on which
+  stylesheet Vite emits last.
+*/
+.eqr-note-editor.bn-root[data-color-scheme] {
+  --bn-colors-editor-text: var(--ink);
+  --bn-colors-editor-background: transparent;
+  --bn-colors-menu-text: var(--ink);
+  --bn-colors-menu-background: var(--card);
+  --bn-colors-tooltip-text: var(--ink);
+  --bn-colors-tooltip-background: var(--card);
+  --bn-colors-hovered-text: var(--ink);
+  --bn-colors-hovered-background: var(--faint2);
+  --bn-colors-selected-text: var(--card);
+  --bn-colors-selected-background: var(--info);
+  --bn-colors-disabled-text: var(--mid);
+  --bn-colors-disabled-background: var(--faint2);
+  --bn-colors-border: var(--faint);
+  --bn-colors-side-menu: var(--mid);
+  --bn-font-family: var(--font-sans);
+  --bn-border-radius: 9px;
+}
+
+/*
+  BlockNote's default page padding (54px each side) is not decoration: the drag
+  handle and + button are positioned in the 48px strip to the LEFT of the block,
+  so the padding is the room they live in. Zeroing it pushed them out past the
+  card's edge and over the divider.
+
+  The right side genuinely has nothing to make room for, so only the left is
+  kept, and 48px is the value that lands the strip on the panel's own grid: the
+  panel body supplies 18px, so the + button's left edge sits at 48+18-48 = 18px
+  inside the card — the same inset as every other row in the panel. 36px was
+  enough to stop the overflow but left the + only 6px from the border, which
+  still read as crowded. The number is measured, not chosen; don't trim it.
+*/
+.eqr-note-editor .bn-editor {
+  padding-inline: 48px 0;
+}

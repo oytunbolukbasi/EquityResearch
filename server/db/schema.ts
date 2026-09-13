@@ -1,6 +1,9 @@
 import {
+  boolean,
   date,
   doublePrecision,
+  integer,
+  index,
   jsonb,
   pgTable,
   serial,
@@ -116,3 +119,42 @@ export type TradePlan = typeof tradePlans.$inferSelect
 export type Heatmap = typeof heatmaps.$inferSelect
 export type PortfolioInsight = typeof portfolioInsights.$inferSelect
 export type LayoutRow = typeof layouts.$inferSelect
+
+// ─── notes ───────────────────────────────────────────────────────────────────
+// The panel's own notebook (GÖREV 50). Lives in the main DB rather than the
+// portfolio one: this is panel content, like the bulletins, not position data.
+
+export const noteSections = pgTable('note_sections', {
+  id: serial('id').primaryKey(),
+  title: text('title').notNull(),
+  /** Manual order in the sidebar. Ties break on id, so a fresh section lands last. */
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+export const notePages = pgTable(
+  'note_pages',
+  {
+    id: serial('id').primaryKey(),
+    /** Cascades: deleting a section takes its pages with it, in one statement. */
+    sectionId: integer('section_id')
+      .notNull()
+      .references(() => noteSections.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    /**
+     * The editor's own document — an array of blocks. Stored verbatim and never
+     * parsed here: the shape belongs to BlockNote, and a server that understood
+     * it would have to be updated every time the editor gained a block type.
+     */
+    content: jsonb('content').$type<unknown[]>(),
+    /** Pinned pages sort above every section in the sidebar. */
+    pinned: boolean('pinned').notNull().default(false),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('note_pages_section_idx').on(t.sectionId, t.position)],
+)
+
+export type NoteSectionRow = typeof noteSections.$inferSelect
+export type NotePageRow = typeof notePages.$inferSelect

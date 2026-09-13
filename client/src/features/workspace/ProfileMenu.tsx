@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronDown, LogOut, Moon, RotateCcw, Save, Rows3, User } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  LogOut,
+  Moon,
+  NotebookPen,
+  RotateCcw,
+  Rows3,
+  Save,
+  User,
+} from 'lucide-react'
 
 import { useSession } from '@/lib/session'
 import { useTheme } from '@/lib/theme'
@@ -27,11 +37,15 @@ export function ProfileMenu({
   onResetLayout,
   onSaveLayout,
   layoutSaved,
+  notesOpen,
+  onToggleNotes,
 }: {
   onResetLayout: () => void
   onSaveLayout: () => void
   /** True for a moment after a save, so the row can confirm it landed. */
   layoutSaved: boolean
+  notesOpen: boolean
+  onToggleNotes: () => void
 }) {
   const { authenticated, username, logout } = useSession()
   const { theme, toggle: toggleTheme } = useTheme()
@@ -111,6 +125,18 @@ export function ProfileMenu({
             className="border-faint bg-card min-w-[248px] rounded-xl border p-1.5 shadow-lg"
           >
             <div className="text-mid truncate px-2.5 pt-1.5 pb-2 text-[12px]">{username}</div>
+
+            {/* Notes live here rather than in the tab strip: with nothing else
+                queued for it, a seventh permanent tab would hold the row open
+                for something opened occasionally. (GÖREV 50) */}
+            <MenuItem
+              icon={<NotebookPen className="size-[15px] shrink-0" />}
+              label="Notlar"
+              right={<Switch on={notesOpen} />}
+              onClick={onToggleNotes}
+            />
+
+            <div className="bg-faint my-1.5 h-px" />
 
             {/* Actions close the menu: they are one-shot and the result shows
                 elsewhere on the page. */}

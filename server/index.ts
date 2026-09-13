@@ -13,6 +13,7 @@ import { portfolioManageRouter } from './routes/portfolio-manage'
 import { paperTradingRouter } from './routes/paper-trading'
 import { layoutsRouter } from './routes/layouts'
 import { authRouter } from './routes/auth'
+import { notesRouter } from './routes/notes'
 import { requireSession } from './lib/auth'
 import { startPriceScheduler } from './services/price-scheduler'
 
@@ -52,6 +53,7 @@ api.use('/portfolio', portfolioRouter)
 api.use('/portfolio/manage', portfolioManageRouter)
 api.use('/paper-trading', paperTradingRouter)
 api.use('/layouts', layoutsRouter)
+api.use('/notes', notesRouter)
 app.use('/api', api)
 
 // In production this single service also serves the built client.
