@@ -161,11 +161,11 @@ Sanal Portföy ayrıca tabloyu bırakıp kart listesine geçer (GÖREV 30).
    senkron olmayan `trade_plans.status`'a güvenilmez).
 4. **Paper Trading** — tek panel, split yok. Alpaca kâğıt hesabı; 4 özet kart +
    Açık/Kapatılan (FIFO)/Emirler. **Sadece NYSE/NASDAQ, BİST hariç.**
-5. **Sanal Portföy** — pozisyon ekle / düzenle / sat / sil. **Giriş ister**
-   (bkz. Kimlik Doğrulama). Kısmi satış destekli. Sütunlar sıralanabilir; Varlık ve
+5. **Sanal Portföy** — pozisyon ekle / düzenle / sat / sil. Kısmi satış destekli. Sütunlar sıralanabilir; Varlık ve
    İşlem sütunları sabitlenmiştir (panel daraldığında butonlar kaybolmasın diye).
    **≤640px'te tablo yerine kart listesi + bottom sheet** — sekiz sütun telefona
-   sığmıyordu (GÖREV 30).
+   sığmıyordu (GÖREV 30). Satır işlemleri (Düzenle/Sat/Sil) kendi sütunlarında
+   değil, **hover'da satırın üzerinde** belirir (GÖREV 47).
 6. **Analiz** — portföy özeti, kâr/zarar özeti, performans metrikleri, **Dağılım**
    (yığılmış şerit + pay lejantı) ve kâr/zarar dağılımı. Günlük/Aylık/Tümü preset'li
    takvim seçici; başlığın hemen altında **dönem özeti şeridi** — seçili dönemde kaç
@@ -181,14 +181,18 @@ react-grid-layout satırları geri yüklemede yok sayılır). **Sıfırla** vars
 döner. Son açık sekme de hatırlanır (`eqr2:tab`).
 
 **Header:** scroll'da kimlik satırı katlanır, yalnızca sekme adları kalır (102→46px).
-Kontroller: Sıfırla · Kaydet · satır aralığı (yoğunluk) · tema · **profil menüsü**
-(`ProfileMenu`, en sonda; yalnızca oturum varken görünür — kullanıcı adı + Çıkış yap).
-Telefonda tetikleyici yalnız ikon, ad menünün içinde. (GÖREV 35)
+Görünen tek şey **tarih ve profil menüsü**; panelin bütününe ait her ayar menünün
+içinde (Düzeni kaydet · Düzeni sıfırla · Koyu tema · Satır aralığı · Çıkış yap).
+Menüde eylemler menüyü kapatır, açma/kapama anahtarları açık bırakır.
+(GÖREV 35, 46)
 
 ## Kimlik Doğrulama
 
-Panelin geri kalanı açıktır; **yalnızca Sanal Portföy sekmesi giriş ister** ve portföyü
-DEĞİŞTİREN her route oturum zorunlu kılar.
+**Panelin tamamı giriş ister** (GÖREV 45). `/api` altındaki her şey oturum
+arkasında; kapının önünde yalnızca iki şey var ve bilerek:
+- `/auth` — oturum isteyen bir kapıdan giriş yapılamaz.
+- `/admin` — içerik hattının kendi kapısı, `x-admin-key` ile. İki mekanizma
+  karıştırılmaz: admin anahtarı paneli açmaz, oturum da içe aktarıcıyı açmaz.
 
 - Yeni bağımlılık yok: `node:crypto` ile scrypt hash + HMAC imzalı çerez.
 - Parola **asla koda yazılmaz**. `PORTFOLIO_AUTH_HASH` env'de tutulur; hash'i sahibi
@@ -1221,3 +1225,98 @@ okunurluğu.
 (GÖREV 5'ten beri var). Izgara gidince daha görünür oldu ama sebebi bu değil;
 rozet grafiğin köşesine, etiket kendi yerine sabitleniyor ve ikisi birbirini
 bilmiyor.
+
+
+GÖREV 45 — Oturum panelin tamamına yayıldı
+
+Panel URL'i bilen herkese açıktı; yalnızca yazmalar korunuyordu. Tek kullanıcı,
+tek kapı: `/api` altındaki her şey artık oturum istiyor. Bir odaya kilit takmak,
+evin geri kalanı açıkken iş görmüyordu.
+
+Kapının ÖNÜNDE kalan iki şey var ve yalnızca bu ikisi: `/auth` (oturum isteyen
+bir kapıdan giriş yapılamaz) ve `/admin` (içerik hattının kendi kapısı). İki
+mekanizma bilerek ayrı — admin anahtarı paneli açmaz, oturum da içe aktarıcıyı
+açmaz.
+
+Ölçüldü: oturumsuz `portfolio` / `ideas` / `morning-notes` / `trade-plans` /
+`paper-trading` / `layouts` → **401**; `health` ve `auth/me` → 200;
+`bulk-import` anahtarsız 401, anahtarlı 200 — **içerik akışı etkilenmedi.**
+
+İstemcide giriş ekranı Sanal Portföy sekmesinden panel köküne taşındı
+(`LoginScreen`). `/admin` sayfası bilerek açık bırakıldı: `x-admin-key` ile
+korunuyor ve o ayrı mekanizma (kullanıcıyla mutabık kalındı).
+
+GÖREV 46 — Header ayarları profil menüsüne toplandı
+
+Header'da ad'ın yanında dört etiketsiz ikon buton vardı: sıfırla, kaydet, satır
+aralığı, tema. Dört glif hangisinin ne olduğunu hatırlamayı gerektiriyordu ve
+hemen üstündeki sekme şeridiyle aynı ağırlıktaydı — gereç, gezinmeyle yarışıyordu.
+
+Dördü de **panelin bütününe ait ayarlar**, yani hesap menüsünün zaten olduğu şey.
+Header'da yalnızca görünce anlaşılması gereken kaldı: tarih ve kim girmiş.
+
+- Eylemler (kaydet/sıfırla) menüyü **kapatır** — tek seferlik, sonucu başka yerde
+  görünür. Açma/kapama anahtarları **açık bırakır** — birini çevirip görmek için.
+- `IconToggle` bileşeninin tek kullanıcısı bu dört butondu, silindi.
+
+GÖREV 47 — Satır işlemleri hover'a geçti
+
+Düzenle/Sat/Sil kendi sabitlenmiş "İşlem" sütunundaydı: 24 satırın hepsinde aynı
+genişliği harcıyordu, oysa anında yalnızca bir satırda kullanılıyor. Dar panelde
+o sütun Değer ve K/Z'yi — sekmeyi açma sebebini — görünür alanın dışına itiyordu.
+
+- Butonlar satırın sonunda hover'da beliriyor; blur ve sola doğru solan geçiş
+  alttaki sayıyı okunur bırakıyor. Hem açık hem kapanan pozisyon tablosunda.
+- **Son hücreye bağlandı, satıra değil:** `<tr>` mutlak konumlu çocuk için
+  güvenilir bir kapsayıcı değil, `<td>` öyle.
+- **Maske piksel cinsinden, yüzde değil.** Şerit içindeki buton sayısı kadar
+  geniş (açık pozisyonda üç, kapananda bir); yüzdeyle geçiş her tabloda başka
+  yere kayardı. Ölçüldü: ilk buton 88px'de başlıyor, maske 80px'de tam opak.
+- `backdrop-filter` elemanın kutusu boyunca eşit uygulanıp kenarında birden
+  bitiyor — arka plan gradyanı ne kadar yumuşak olsa da blur düz bir çizgi
+  çiziyordu. Çözüm elemanın kendisini maskelemek; maske filtrelenmiş sonucu da
+  birlikte soldurur.
+- Boşta kalan `.eqr-pin-r` CSS'i silindi.
+
+*Yolda çıkan hata:* GÖREV 45'in giriş kapısı `IntersectionObserver` efektini
+kırdı. Oturum yüklenirken `null` döndüğümüz için sentinel ilk render'da DOM'da
+yok; efekt boş bağımlılık listesiyle bir kez çalışıp boş referans görüp çıkıyor,
+oturum gelince bir daha çalışmıyordu — header scroll'da açık kalıyordu.
+`[authenticated]` bağımlılığa eklendi.
+
+GÖREV 48 — Piyasa Nabzı'ndan "EQR / GÜNLÜK ARAŞTIRMA" etiketi kaldırıldı
+
+Sekmenin adı Piyasa Nabzı, panelin adı EQR, ve hemen altındaki başlık zaten aynı
+şeyi söylüyor. Üç kez tekrarlanan bir şey bilgi taşımıyor.
+
+GÖREV 49 — Panel takasına kısa bir kaydırma animasyonu
+
+Paneller birbirinin yerine anında geçiyordu. Kullanıcının deyimiyle "kütük gibi".
+
+**Kütüphane alınmadı** (dnd-kit önerilmişti, gerekmedi). İşin zorluğu şu:
+`order` CSS ile geçişlenemez, ve takasın bir `order` değişimi olması GÖREV 27'de
+bilinçli bir seçimdi — DOM sırası sabit kaldığı için panel remount olmuyor,
+grafik ve scroll hayatta kalıyor. O kısıtı bozmadan animasyon yapmanın yolu
+**FLIP**: panelin nereden gittiğini ölç, gideceği yere bıraksın, `transform` ile
+geri koy, serbest bırak. 220ms, ~50 satır, bağımlılık sıfır.
+
+**Çift `requestAnimationFrame` şart:** tek karede tarayıcı iki stil değişimini
+tek hesaplamaya katlar ve hiçbir şey animasyon olmaz.
+
+**CSS kuralı daraltıldı, kaldırılmadı — bu satırı okuyan dikkat etsin:**
+```css
+.eqr-split > * { transition: none !important; }   /* GÖREV 27 */
+```
+Animasyon ilk denemede hiç oynamadı, sebebi buydu. Gerekçesi yazılıydı: divider
+sürüklenirken genişlik geçişli olursa panel imlecin gerisinde kalır ("sloppy
+drift"). `!important` düşürüldü — genişlik hâlâ geçişsiz (bu sarmalayıcılara
+kimse `transition` vermiyor, flex-basis'leri satır içi stilden geliyor), ama
+satır içi `transform` geçişi artık geçebiliyor. **`!important`'ı geri koyan
+animasyonu sessizce öldürür.**
+
+Ölçüldü: takasta iki panelde de `transform` geçişi 0,22s (start + end),
+sonrasında `transform: none`; divider sürüklemesinde **0 geçiş olayı**, snap
+%75'e oturuyor; `prefers-reduced-motion` açıksa animasyon atlanıyor.
+
+*Geri alma:* tek commit (`dab51ad`) — `useSwapAnimation` kancası, iki ref ve
+`index.css`'te tek satır.
