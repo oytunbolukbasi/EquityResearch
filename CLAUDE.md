@@ -13,6 +13,9 @@ Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u
 - **Yerleşim:** 6 sekmeli çalışma alanı, her sekmede en fazla iki panel. Kütüphane
   yok — `features/workspace/split.tsx` (~340 satır) divider'ı, %25/50/75 snap'ini ve
   panel takasını kendisi yönetir. *(react-grid-layout GÖREV 27'de kaldırıldı.)*
+- **Not editörü:** BlockNote (`@blocknote/core` + `react` + `mantine`) — yalnız
+  ücretsiz katman. `@blocknote/xl-*` paketleri GPL-3.0/ticari lisanslı, **kurulu
+  değil**. Çekirdek MPL-2.0. Modül `React.lazy` ile ayrılır. (GÖREV 50)
 - **Animasyon:** Saf CSS keyframe. *(Framer Motion GÖREV 27'de kaldırıldı — tek bir
   0,9 sn logo dönüşü için ~120 kB'a değmiyordu.)*
 - **Backend:** Node.js + Express — tek servis, build edilmiş React static dosyalarını da serve eder
@@ -119,7 +122,12 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
   (`updatePrice`); satırın tamamını geri yazmak alış tarihini her yenilemede
   yerel fark kadar geriye yürütüyordu. (GÖREV 37)
 - Ana DB tabloları: `morning_notes`, `ideas`, `trade_plans`, `portfolio_insights`,
-  `layouts` (+ arayüzde kullanılmayan ama korunan `heatmaps`).
+  `layouts`, `note_sections`, `note_pages` (+ arayüzde kullanılmayan ama korunan
+  `heatmaps`).
+- **Not gövdesi sunucuda hiç ayrıştırılmaz** (`note_pages.content`, jsonb):
+  BlockNote'un belge biçimi olduğu gibi saklanır. Ayrıştıran bir sunucu editör her
+  blok türü kazandığında güncellenmek zorunda kalırdı ve hiçbir sorgu notun içine
+  bakmıyor. `note_pages.section_id` **cascade** siler. (GÖREV 50)
 - Portföy pozisyonları AYRI bir DB'de (`PORTFOLIO_DATABASE_URL`): `positions`,
   `closed_positions`, `users`, `bist_symbols`.
   **Bu DB artık salt-okunur DEĞİL** — GÖREV 28 ile yazma yolu açıldı:
@@ -171,6 +179,12 @@ Sanal Portföy ayrıca tabloyu bırakıp kart listesine geçer (GÖREV 30).
    takvim seçici; başlığın hemen altında **dönem özeti şeridi** — seçili dönemde kaç
    pozisyon açıldı, kaç tanesi kapatıldı. *(Yarım daire donut GÖREV 29'da kaldırıldı.)*
 
+**Notlar — sekme değil, açılıp kapanan bir yüzey (GÖREV 50).** Profil menüsündeki
+anahtarla açılır, şeritte ×'i olan bir sekme olarak belirir. Kalıcı yedinci sekme
+yapılmadı: şeridi ara sıra açılan bir şey için sürekli meşgul ederdi. Tercih
+`eqr2:notes-open`'da; kapatılmışsa açılışta gelmez ve `eqr2:tab` "notes" diyorsa
+bile o sekmeye dönülmez.
+
 > **Kaldırılanlar:** BIST + ABD Heatmap (GÖREV 17; `heatmaps` tablosu korundu),
 > widget ekle/kaldır menüsü, serbest sürükle-bırak canvas (GÖREV 27).
 
@@ -182,7 +196,8 @@ döner. Son açık sekme de hatırlanır (`eqr2:tab`).
 
 **Header:** scroll'da kimlik satırı katlanır, yalnızca sekme adları kalır (102→46px).
 Görünen tek şey **tarih ve profil menüsü**; panelin bütününe ait her ayar menünün
-içinde (Düzeni kaydet · Düzeni sıfırla · Koyu tema · Satır aralığı · Çıkış yap).
+içinde (Notlar · Düzeni kaydet · Düzeni sıfırla · Koyu tema · Satır aralığı ·
+Çıkış yap).
 Menüde eylemler menüyü kapatır, açma/kapama anahtarları açık bırakır.
 (GÖREV 35, 46)
 
@@ -1320,3 +1335,84 @@ sonrasında `transform: none`; divider sürüklemesinde **0 geçiş olayı**, sn
 
 *Geri alma:* tek commit (`dab51ad`) — `useSwapAnimation` kancası, iki ref ve
 `index.css`'te tek satır.
+
+GÖREV 50 — Notlar: panelin içinde bir not defteri
+
+Panel okunacak bir yerdi; artık üzerinde çalışılan bir yer. Panel güncelleme
+özetleri, fikirler ve kendi notları aynı yüzeyde duruyor — başka bir uygulamaya
+geçip bağlamı orada yeniden kurmak gerekmiyor.
+
+**Yüzey.** Profil menüsündeki anahtarla açılan, şeritte ×'i olan bir sekme.
+Kalıcı sekme yapılmadı — arkasında kuyrukta başka bir şey yokken yedinci bir
+sekme, ara sıra açılan bir şey için şeridi sürekli meşgul ederdi. Kapatma
+hatırlanıyor (`eqr2:notes-open`): `readTab()` "notes"u yalnız açıkken geri verir,
+yoksa kapatılan sekme her açılışta geri gelirdi.
+
+**Editör: BlockNote, yalnız ücretsiz katman.** Çekirdek MPL-2.0; `@blocknote/xl-*`
+(çoklu kullanıcı, AI, dışa aktarma) GPL-3.0/ticari ve **kurulmadı** —
+bağımlılıkta yoksa yanlışlıkla import edilemez.
+
+- **`React.lazy` ile ayrıldı.** Ölçüldü: editör **271,86 kB gzip**, uygulamanın
+  geri kalanı **164,17 kB**. Yani en ağır parça paneldeki her şeyin toplamından
+  büyük; sekme açılana kadar hiç inmiyor, ilk boyama değişmedi. *Bu modül ilk
+  boyamada çalışan bir yerden import edilirse kazanç biter.*
+- **`@blocknote/core/fonts/inter.css` bilerek import EDİLMİYOR** — panel Inter'ı
+  zaten yüklüyor, o stil sayfası aynı aileyi ~200 kB woff2 olarak tekrar çekiyor.
+- **Token eşlemesi aşırı nitelikli bir seçiciyle yazılıyor**
+  (`.eqr-note-editor.bn-root[data-color-scheme]`, özgüllük 0,3,0). Kütüphane
+  paletini iki kuralda veriyor: `.bn-root` ve `.bn-root[data-color-scheme="dark"]`.
+  Çıplak `.eqr-note-editor` birincisiyle **berabere** kalıp yalnızca kaynak
+  sırasından kazanıyordu, ikincisine ise düpedüz kaybediyordu — koyu temada editör
+  panelin kartı ve ink'i yerine kütüphanenin kendi `#1f1f1f`/`#cfcfcf`'ini
+  taşıyordu. **Seçiciyi kısaltan koyu temayı geri kırar.**
+- **`.bn-editor` sol iç boşluğu 48px, süs değil.** Sürükle ve `+` düğmeleri bloğun
+  SOLUNDAKİ 48px'lik şeritte duruyor; o boşluk onların yaşadığı yer. Sıfırlanınca
+  ikisi kartın dışına taştı. 48'de `+`'nın sol kenarı kartın 18px içinde — paneldeki
+  diğer her satırla aynı hizada. (36px taşmayı durduruyordu ama kenardan 6px
+  kalıyordu.) Sağ tarafta yer açılacak bir şey yok, o yüzden yalnız sol.
+
+**Kenar çubuğu.** Bölümler ve içlerindeki sayfalar; sabitlenenler en üstte ayrı bir
+grupta. Satır fiilleri (yeniden adlandır · sabitle · sil) hover'da beliriyor —
+GÖREV 47 ile aynı kalıp.
+
+- **Sayfa yeniden adlandırmanın kendi tetikleyicisi var, bölümünkinin yok.** Bir
+  bölümün başlığı yalnızca başlıktır (aç/kapa'yı chevron yapar), dolayısıyla
+  doğrudan yazılabilir bir kutu olabilir. Bir **sayfanın başlığı ise sayfayı açan
+  düğmenin kendisi**; aynı muamele tek tıklamayı iki anlama sokardı — notu açmaya
+  nişan alırken adının içine imleç düşerdi. Bu yüzden kalem düğmesi + başlığa çift
+  tıklama, ve düzenleme sırasında satır tıklamayla açılmıyor.
+- Düzenleme açılınca ad **tamamen seçili** geliyor; kutu var olan bir adın üzerinde
+  açılıyor ve çoğu zaman yapılan şey üzerine yazmak.
+- **Silme `window.confirm` değil, panelin kendi modalı** (`useConfirm`). GÖREV 28'de
+  yazılmış sebep: tarayıcıya "başka iletişim kutusu gösterme" denmişse `confirm()`
+  hiçbir şey göstermeden `false` döner, silme hiç denenmez ve buton ölü görünür.
+
+**Enter bir odak olayına bağlı olamaz.** `InlineTitle` yalnızca blur'da kaydediyordu
+ve Enter da sadece blur tetikliyordu. **Pencere odakta değilken tarayıcı
+blur/focusout'u hiç ateşlemiyor** — `document.hasFocus()` false iken yeniden
+adlandırma sessizce düşüyordu, istek bile gitmiyordu. Enter artık doğrudan commit
+ediyor; blur "başka yere tıklayıp çıkma" yolu olarak duruyor. Bir mandal ikisinin
+aynı düzenlemeyi iki kez kaydetmesini engelliyor; mandalı **hem odak hem yazma**
+sıfırlıyor — odak olayının gelmediği durum zaten bu mandalın var oluş sebebi.
+
+**Otomatik kayıt.** Yazma durunca 800 ms sonra. `SavedFlash` "Kaydedildi" yazıp
+soluyor: kalıcı bir etiket okunmaz hale gelir ve o zaman bir hatayı da bildiremez.
+`at` boolean değil **zaman damgası** — art arda iki kayıtta solma yeniden başlamalı,
+true→true React'in görebileceği bir değişiklik değil.
+
+**API.** `GET /api/notes` kenar çubuğunun tamamını tek istekte verir ama **gövdeleri
+dışarıda bırakır**: liste küçük, gövde değil; başlıkları çizmek için her notu
+yüklemek yanıtı yazılan her sayfayla büyütürdü. Gövde `GET /pages/:id` ile tek tek
+gelir. Başlık/gövde/sabitleme **tek PATCH**'te — otomatik kayıt her yazma molasında
+ateşleniyor, üç ayrı route editörün tek sayfa saydığı şey için üç gidiş-dönüş olurdu.
+
+**Test edildi (yerelde, canlı DB'ye karşı):** bölüm/sayfa oluşturma · içerik otomatik
+kaydı · `SavedFlash` 1467 ms görünür · yeniden adlandırma (kalem, çift tıklama,
+Enter, Escape; bölümde üst üste iki kez) · sabitleme · sayfa silme · bölüm silme +
+cascade · "Vazgeç" hiçbir satıra dokunmuyor · açık ve koyu temada token'lar.
+
+*Ölçüm dersi:* testin kendisi üç kez yanlış rapor verdi — `innerText` CSS
+`uppercase`'i uyguladığı için "Sabitlenenler" bulunamadı (Türkçe'de "SABİTLENENLER"),
+ayrı script çağrıları arasında seçim dağıldığı için yazılan metin ortaya düştü, ve
+odaksız pencerede blur ateşlenmedi. Üçü de ölçüm aracının kusuruydu; ikincisi
+düzeltildikten sonra üçüncüsü gerçek bir ürün kırılganlığını açığa çıkardı.
