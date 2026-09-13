@@ -395,11 +395,18 @@ tr[data-selected='true'] .eqr-pin-l {
 }
 
 /*
-  Swap and resize must land in the same frame the pointer crosses the divider —
-  any transition here reads as the "sloppy" drift the redesign is replacing.
+  Resize must land in the same frame the pointer moves — a transition on the
+  flex basis makes the panel lag the divider, which is the "sloppy" drift the
+  redesign replaced.
+
+  `!important` was dropped in GÖREV 49 so the swap animation can opt in: it
+  animates `transform`, sets it from script, and an inline declaration is the
+  only thing that can now override this. Width still cannot transition, because
+  nothing sets one — these wrappers carry no transition class, and their flex
+  basis comes from the inline style the resize updates every frame.
 */
 .eqr-split > * {
-  transition: none !important;
+  transition: none;
 }
 
 /*

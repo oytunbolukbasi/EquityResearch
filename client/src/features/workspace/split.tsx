@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 
 import { useMediaQuery } from '@/lib/use-media-query'
 
@@ -144,6 +152,70 @@ function capturePointer(
   return finish
 }
 
+/**
+ * A short slide when the two panels trade places.
+ *
+ * `order` is not animatable, and the swap is deliberately an order change
+ * rather than a DOM move — that is what keeps the panels from remounting, so
+ * scroll position and chart instances survive it (GÖREV 27). That constraint
+ * rules out a CSS transition, which leaves FLIP: measure where each panel was,
+ * let it land where it belongs, put it back with a transform, then release it.
+ *
+ * The panels keep their widths across a swap (A holds `split%` on either side),
+ * so the whole move is horizontal and one translateX covers it.
+ *
+ * Nothing here runs while the divider is being dragged: that changes widths
+ * continuously, and a FLIP on every frame would fight the drag.
+ */
+function useSwapAnimation(
+  swapped: boolean,
+  refs: readonly [React.RefObject<HTMLDivElement | null>, React.RefObject<HTMLDivElement | null>],
+) {
+  const before = useRef<number[] | null>(null)
+
+  // Recorded on the frame the swap is requested, read on the frame after it
+  // lands. Two layout effects would both run post-paint and see the same thing.
+  const capture = useCallback(() => {
+    const l = refs.map((r) => r.current?.getBoundingClientRect().left)
+    before.current = l.every((v) => typeof v === 'number') ? (l as number[]) : null
+  }, [refs])
+
+  useLayoutEffect(() => {
+    const prev = before.current
+    before.current = null
+    if (!prev) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const moves = refs.map((r, i) => {
+      const el = r.current
+      if (!el) return null
+      const delta = prev[i] - el.getBoundingClientRect().left
+      return Math.abs(delta) < 1 ? null : ([el, delta] as const)
+    })
+
+    for (const m of moves) {
+      if (!m) continue
+      m[0].style.transition = 'none'
+      m[0].style.transform = `translateX(${m[1]}px)`
+    }
+    // Two frames: the first commits the inverted position, the second starts
+    // the transition from it. One frame and the browser collapses both into a
+    // single style recalculation, which animates nothing.
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        for (const m of moves) {
+          if (!m) continue
+          m[0].style.transition = 'transform 220ms cubic-bezier(0.2, 0, 0, 1)'
+          m[0].style.transform = ''
+        }
+      }),
+    )
+    return () => cancelAnimationFrame(id)
+  }, [swapped, refs])
+
+  return capture
+}
+
 // ─── swap handle plumbing ────────────────────────────────────────────────────
 // SplitPane publishes a grab handler; the Panel headers inside it consume one.
 // Keeps Panel free of any knowledge about which split it lives in.
@@ -205,6 +277,11 @@ export function SplitPane({ splitKey, a, b, swappable = true }: SplitPaneProps) 
   // Pointer handlers run inside listener closures that outlive a render, so they
   // read live values through refs rather than the captured state.
   const splitRef = useRef(split)
+  const aRef = useRef<HTMLDivElement | null>(null)
+  const bRef = useRef<HTMLDivElement | null>(null)
+  const panelRefs = useRef([aRef, bRef] as const).current
+  const captureBeforeSwap = useSwapAnimation(swapped, panelRefs)
+
   const swappedRef = useRef(swapped)
   splitRef.current = split
   swappedRef.current = swapped
@@ -266,6 +343,7 @@ export function SplitPane({ splitKey, a, b, swappable = true }: SplitPaneProps) 
           const grabbedIsLeft = side === 'a' ? !swappedRef.current : swappedRef.current
           const crossed = grabbedIsLeft ? frac > dividerPos : frac < dividerPos
           if (!crossed) return
+          captureBeforeSwap()
           setSwapped((prev) => {
             const next = !prev
             const all = readStore(SWAPPED_KEY, DEFAULT_SWAPPED)
@@ -276,7 +354,7 @@ export function SplitPane({ splitKey, a, b, swappable = true }: SplitPaneProps) 
         end: () => document.body.classList.remove('eqr-dragging'),
       })
     },
-    [fractionAt, splitKey, stacked, swappable],
+    [captureBeforeSwap, fractionAt, splitKey, stacked, swappable],
   )
 
   // A stray class left behind by an unmount mid-drag would lock text selection.
@@ -310,6 +388,7 @@ export function SplitPane({ splitKey, a, b, swappable = true }: SplitPaneProps) 
     <SwapCtx.Provider value={{ enabled: swappable, onGrab }}>
       <div ref={containerRef} className="eqr-split relative flex items-stretch">
         <div
+          ref={aRef}
           className="min-w-0"
           style={{ flex: `0 0 calc(${split}% - 6px)`, order: swapped ? 3 : 1 }}
         >
@@ -328,7 +407,7 @@ export function SplitPane({ splitKey, a, b, swappable = true }: SplitPaneProps) 
           <div className="eqr-divider-grip h-11 w-[3px] rounded-full" />
         </div>
 
-        <div className="min-w-0" style={{ flex: 1, order: swapped ? 1 : 3 }}>
+        <div ref={bRef} className="min-w-0" style={{ flex: 1, order: swapped ? 1 : 3 }}>
           {b}
         </div>
 
