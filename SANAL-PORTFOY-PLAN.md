@@ -3,10 +3,10 @@
 > Amaç: `oytunbolukbasi/PortfoyTakip` uygulamasını **tamamen kapatmak** ve portföy
 > yönetimini EQR paneli içindeki "Sanal Portföy" sekmesine taşımak.
 >
-> Durum: **Faz 1, 2, 3.5, 4 ve 5 kapandı.** Faz 3'ün teknik yarısı da bitti —
-> fiyatları EQR'nin güncellediği 7 Eylül 2026'da teyit edildi. Geriye yalnızca iki
-> **kullanıcı aksiyonu** kaldı: PortfoyTakip Railway servisinin durdurulması ve
-> repo'nun arşivlenmesi. Kod tarafında bu plandan bekleyen iş yok.
+> Durum: **PLAN TAMAMLANDI — her faz kapandı, açık madde yok.**
+> PortfoyTakip emekliye ayrıldı: servis durduruldu, repo arşivlendi, parola
+> değiştirildi (13 Eylül 2026). Portföy yönetimi tamamen EQR'nin Sanal Portföy
+> sekmesinde. Bu dosya artık bir yapılacaklar listesi değil, **kayıt**.
 > Son güncelleme: 13 Eylül 2026.
 
 ---
@@ -45,11 +45,16 @@ yeni okumaları engeller; iki repo'nun git geçmişi parolayı hâlâ taşıyor.
 çözüm parolayı değiştirmek.
 
 **Yapılması gerekenler (kod işi değil, hesap işi — kullanıcı tarafından):**
+✅ **Üçü de tamamlandı** (kullanıcı teyidi, 13 Eylül 2026).
 
-- [ ] Bu parolanın kullanıldığı **her yerde** parolayı değiştir (parola tekrar
+- [x] Bu parolanın kullanıldığı **her yerde** parola değiştirildi (parola tekrar
       kullanıldıysa diğer hesaplar dahil)
-- [ ] Repoyu private yap veya arşivle
-- [ ] Yeni parola **asla** kaynak koda yazılmayacak — bkz. Faz 1 kimlik doğrulama
+- [x] Repo arşivlendi ve herkese açık okunabilir olmaktan çıktı — anonim GitHub
+      API artık `PortfoyTakip` için "Not Found" dönüyor. Git geçmişindeki eski
+      parola da böylece dışarıdan erişilemez hale geldi; zaten değiştirilmişti.
+- [x] Yeni parola **asla** kaynak koda yazılmıyor: EQR'de `PORTFOLIO_AUTH_HASH`
+      env'de duruyor, hash'i sahibi kendi terminalinde `scripts/hash-password.mjs`
+      ile üretiyor (parola ekrana basılmaz, diske yazılmaz, argüman geçilmez)
 
 Ayrıca öğrenilenler:
 - Parola hiçbir yerde **hash'lenmiyor**, düz metin karşılaştırması yapılıyor.
@@ -208,8 +213,8 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
         "denedi" değil "çekti ve yazdı" demek.
       · Bağımsız ikinci teyit: eski app'ten `SCRAPER_API_KEY` kaldırıldı (7 Eylül
         akşamı); 8 Eylül'de fon tarihinin ilerlemesi beklenir.
-- [ ] PortfoyTakip Railway servisi durdurulur *(kullanıcı aksiyonu)*
-- [ ] Repo arşivlenir *(kullanıcı aksiyonu)*
+- [x] PortfoyTakip Railway servisi durduruldu *(kullanıcı teyidi, 13 Eylül 2026)*
+- [x] Repo arşivlendi *(doğrulandı: anonim API "Not Found" dönüyor)*
 - [x] EQR `CLAUDE.md` güncellendi (portföy artık salt-okunur değil) — GÖREV 28
 
 > **Silmeden önce:** Railway servisi silinince ortam değişkenlerinin değerleri de
