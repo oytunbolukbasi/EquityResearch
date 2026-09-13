@@ -527,3 +527,34 @@ ekranda verilen değerler birebir uygulanır. Başlık hücrelerine `styles: { b
 
 **Sıfır fikir çıkan günlerde de yazılır** — eleme tablosu taramanın yapıldığının
 tek kanıtı (bkz. `Skill(eqr-idea-generation)`, Adım 5).
+
+### 8c — İzleme listesinin yaşam döngüsü (giren / çıkan)
+
+Sayfanın **en üstünde**, arşivden önce, korunan bir tablo durur:
+
+`Şu an izlenenler` → `Sembol · Tez (tek cümle) · Eklendiği tarih · Bekleyen koşul`
+
+Bu tablo arşiv değil, **canlı liste**. Her tur şu üç iş yapılır:
+
+1. **Giren.** Taramadan çıkan ama barı geçemeyen yeni aday tabloya eklenir.
+   "Bekleyen koşul" sütunu, fikir olması için NE olması gerektiğini yazar —
+   "geri çekilme", "katalizör", "oran 2,0'a çıksın" gibi. Bu sütun boşsa aday
+   izleme listesine değil çöpe gider; neyi beklediğini yazamıyorsan izlemiyorsun.
+2. **Çıkan — panele girdi.** Bir isim `ideas`'a girdiği gün canlı tablodan
+   **silinir** ve o günün tarama bölümüne tek satır düşülür:
+   `MUV2 izleme listesinden çıktı → panele fikir olarak girdi.`
+   Ayrıca ismin ilk göründüğü arşiv tablosundaki satırın "Neden takıldı"
+   hücresinin sonuna ` → [TARİH]'te panele girdi` eklenir. Arşiv böylece
+   sonucu olan bir kayda döner; aksi hâlde hangi adayın işe yaradığı hiç
+   görünmez ve `Skill(eqr-idea-generation)`'ın "tarama isabet oranını takip et"
+   uyarısı ölçülemez kalır.
+3. **Çıkan — vazgeçildi.** Tez bozulduysa yine silinir, aynı biçimde gerekçesiyle
+   düşülür: `ALV izleme listesinden çıktı → zirveye yaklaştı, oran daha da bozuldu.`
+
+**Arşiv bölümleri asla silinmez**, yalnızca yukarıdaki tek hücre eklemesiyle
+güncellenir. Canlı tablo ise tamamen yeniden yazılır — onun geçmişi arşivde zaten
+duruyor.
+
+> Kural neden var: 8b tek başına sayfayı biriktiriyordu ama hiçbir satırın sonunu
+> yazmıyordu. Sayfayı açma sebebi "şu an neyi izliyorum" sorusu; o cevap tarihli
+> bölümlerin arasına dağılırsa sayfa arşiv olur, araç olmaz.
