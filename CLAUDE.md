@@ -82,7 +82,7 @@ köşeli kartlar (radius ~14px), bol boşluk — her iki temada da.
     `--neutral-tint` (light'ta pale hex, dark'ta translucent rgba)
   - TP merdiveni: `--tp1..3` + `--tp1..3-tint`
   - Cam modal + scrim: `--glass-bg` / `--glass-border` / `--scrim`
-  - Grafik: `--chart-axis` / `--chart-bar`
+  - Grafik: `--chart-axis` / `--chart-bar` (açıkta `#4a4a46`, koyuda `#f0ede8`)
   - Dağılım serisi: **`--alloc-1..4`** — mavi (Borsa İstanbul ve Fon) · turuncu
     (ABD) · mor (Almanya) · turkuaz (Kripto). **Kendi skalası**, çünkü
     `--up`/`--warn` bu panelde anlam taşıyor; yeşil bir dilim hemen üstündeki K/Z
@@ -95,6 +95,14 @@ köşeli kartlar (radius ~14px), bol boşluk — her iki temada da.
     eklenirse önce bu ölçüm tekrarlanmalı. (GÖREV 34, 37)
     *(GÖREV 34 üç renkli ve gül kurusu içeren bir skala kurmuştu; GÖREV 37 Almanya
     ve kripto gelince dördüne çıkardı ve gül kurusunu mor+turkuaz ile değiştirdi.)*
+
+**Portföy tablosu satırları (`.eqr-row`, GÖREV 51):** hover ve seçili durum
+**aynı** görünümü paylaşır — soldan `--bg`, %55'e kadar düz, sağ uçta şeffaf.
+İkisi de "bu satır" diyor; iki ayrı görünüm tabloyu aynı soruya iki ağızdan
+cevap verdiriyordu. Sağa doğru sönmesinin sebebi süs değil: satır aksiyonlarının
+bulanık şeridi (GÖREV 47) ve satırı okuma sebebin olan sayılar o tarafta.
+Satır arka planı **asla satır içi stille** yazılmaz — inline stil stylesheet
+kuralını yener ve `hover:` hiç uygulanmaz.
 
 **Tema state + toggle (`client/src/lib/theme.tsx`):**
 - İlk açılışta OS tercihini (`prefers-color-scheme`) izler; **profil menüsündeki
@@ -1447,3 +1455,81 @@ cascade · "Vazgeç" hiçbir satıra dokunmuyor · açık ve koyu temada token'l
 ayrı script çağrıları arasında seçim dağıldığı için yazılan metin ortaya düştü, ve
 odaksız pencerede blur ateşlenmedi. Üçü de ölçüm aracının kusuruydu; ikincisi
 düzeltildikten sonra üçüncüsü gerçek bir ürün kırılganlığını açığa çıkardı.
+
+GÖREV 51 — Grafikte sağ boşluk, açık temada daha yumuşak bar, satırlarda solan yıkama
+
+Üç okunurluk düzeltmesi. İkisi grafikte, biri portföy tablolarında; üçü de
+ölçülerek yapıldı, göz kararıyla değil.
+
+**A — Seviye etiketleri artık barların üstünü örtmüyor.**
+
+Bir `createPriceLine` başlığı fiyat skalasına değil, **panelin içine**, sağ
+kenarına çizilir — kütüphane ona yer ayırmaz. `fitContent()` barları tüm
+genişliğe yayınca en yeni barlar, yani bakmak için grafiği açtığın barlar,
+"Giriş — 101,50" ve "Hard SL — 93,00"un arkasında kalıyordu.
+
+Mantıksal aralık artık son barın ötesine, en geniş etiketi geçecek kadar
+uzatılıyor. Etiket genişliği karakter sayısından **tahmin edilmiyor, kanvasla
+ölçülüyor**: metinler Türkçe ve değişken ("TP1 — 116,00" ile "Hard SL — 93,00"
+uzunluklarının ima ettiğinden fazla farklı), panel de yeniden boyutlanabiliyor.
+
+*Yolda yapılan hata, ölçüm yakaladı:* dolgu ilk sürümde **mevcut** bar
+aralığına göre hesaplanıyordu. Ama dolguyu uygulamak grafiği sıkıştırıyor, yani
+hesap kendi yarattığı sıkışma kadar eksik kalıyor — 18 pikselin 18'i duruyordu.
+Dolgu artık **nihai** ölçeğe göre çözülüyor:
+`barSayısı × gereken ÷ (panelGenişliği − gereken)`.
+Ölçüm: son barın sağ kenarı 360 px → **345,5 px**, en geniş etiket kutusu
+342 px'de başlıyor. Kalan ~3 px'in görsel karşılığı yok; o kutu ("Hard SL")
+panelin dibinde, son barlar ise ortada.
+
+*Sınır:* dar panelde dolgu grafiğin yarısıyla sınırlanır — sıkıştırılmış bir
+grafik, örtülmüş bir etiketten kötüdür.
+
+**B — Açık temada bar rengi `#1a1a18` → `#4a4a46`.**
+
+Neredeyse siyah barlar göz yoruyordu. Kontrast **17,43:1 → 8,90:1**: yarı
+yarıya yumuşuyor ama grafik markları için gereken 3:1 tabanının çok üstünde
+(GÖREV 44'te ölçülmüştü). Renk dışarıdan gelmiyor — panelin sıcak gri
+rampasında `--ink` ile `--mid`'in tam ortasına düşüyor. **Koyu tema
+değişmedi**; orası `#f0ede8` ve 14,5:1.
+
+**C — Portföy satırlarında solan yıkama (`.eqr-row`).**
+
+Bildirilen şikâyet "hover rengi sadece hisse adı kutusunda kalıyor ve orada
+keskin kesiliyor"du. Kesilmiyormuş — **boyanan tek yer orasıymış.**
+
+`<tr>`'ye satır içi `background` veriliyordu; **satır içi stil stylesheet
+kuralını yener**, dolayısıyla `hover:bg-bg` hiç uygulanmıyordu. Ekranda görünen
+renk yalnızca `.eqr-pin-l`'in kendi kuralından geliyordu ve o da sabitlenmiş
+hücrenin sınırında bitiyordu. Arka plan CSS'e taşındı.
+
+> Bu, günlükte artık **üçüncü** kez karşılaşılan tuzak: GÖREV 47'de blur
+> şeridi, GÖREV 49'da takas animasyonu, burada satır yıkaması. Kural:
+> **etkileşimle değişen bir görsel özellik satır içi stile yazılmaz.**
+
+- **Hover ve seçili tek görünüm.** Önce ikisini ayırmıştım (hover solan, seçili
+  düz); kullanıcı tek görünüm istedi ve haklı: ikisi de "bu satır" diyor, iki
+  ayrı görünüm tabloyu aynı soruya iki ağızdan cevap verdiriyordu.
+- **Sağa doğru sönüyor**, düz dolmuyor: sağ uçta satır aksiyonlarının bulanık
+  şeridi var (GÖREV 47) ve satırı okuma sebebin olan sayılar orada.
+- **Plato %55'e kadar düz**, çünkü Sanal Portföy'ün sabitlenmiş sütunu o
+  bölgede kalmalı, yoksa düz hücre ile solmaya başlamış gradyan arasında dikiş
+  görünür. Ölçüldü: sütunun payı 1127px'de %33,7, 700px'de %20 — panel
+  daraldıkça **düşüyor**, çünkü sütun içeriğiyle boyutlanıyor.
+- Aynı sınıf **Genel bakış'taki portföy widget'ında da** kullanılıyor; orada da
+  aynı satır içi stil hatası vardı ve hover hiç çalışmıyordu.
+
+*Yanlış çıkan beklenti, ölçülüp söylendi:* bu değişikliğin `BEKLE` / `SAT`
+rozetlerini okunur kılması bekleniyordu. Kılmaz — rozetler **kendi opak
+çiplerinin** üzerinde durur, arkalarındaki satır ne yaparsa yapsın metin
+kontrastı değişmez (BEKLE metni kendi çipine karşı 5,50:1, eşiği geçiyor).
+Silik görünmelerinin sebebi çipin kendisi: karta karşı **1,11:1**, yani rozet
+bir çip gibi değil soluk bir yazı gibi okunuyor.
+
+*Açık kalan, kullanıcıya bırakıldı:* `POZİSYON ARTIR` rozeti kendi çipine karşı
+**4,30:1** — 11px metin için 4,5:1 eşiğinin altında. Diğer üçü geçiyor
+(BEKLE 5,50 · SAT 4,89 · KISMİ KÂR AL 4,75).
+
+*Yan iş:* `--chart-grid` token'ı silindi. GÖREV 44 ızgarayı kaldırmıştı ama
+tanım kalmıştı; hiçbir yerden okunmayan bir renk token'ı, yeniden uygulanmayı
+bekleyen bir karar gibi duruyor.
