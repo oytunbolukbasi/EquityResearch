@@ -91,13 +91,9 @@ export function PulseTab({
       style={{ maxHeight: '78vh' }}
     >
       <header className="mb-7">
-        <span
-          className="text-[12px] font-medium tracking-[0.7px]"
-          style={{ color: 'var(--warn)' }}
-        >
-          EQR / GÜNLÜK ARAŞTIRMA
-        </span>
-        <h1 className="mt-[11px] mb-2.5 text-[29px] leading-[1.25] font-medium tracking-[-1px]">
+        {/* No "EQR / GÜNLÜK ARAŞTIRMA" eyebrow: the tab is called Piyasa Nabzı,
+            the panel is EQR, and the heading below says it again. (GÖREV 48) */}
+        <h1 className="mb-2.5 text-[29px] leading-[1.25] font-medium tracking-[-1px]">
           Piyasa Nabzı
         </h1>
         <div className="text-mid num flex flex-wrap gap-3.5 text-[12px]">
