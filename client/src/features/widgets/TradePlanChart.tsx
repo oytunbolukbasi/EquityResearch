@@ -12,6 +12,49 @@ import { useTheme } from '@/lib/theme'
 
 const INTER = "'Inter', ui-sans-serif, system-ui, sans-serif"
 
+/**
+ * How many bar-widths of empty space the right edge needs so that no bar hides
+ * behind a level label.
+ *
+ * The label width is measured with a 2D canvas in the chart's own font instead
+ * of estimated from character count — "Giriş — 101,50" and "Hard SL — 93,00"
+ * differ by more than their length suggests, and a wrong estimate fails in the
+ * direction that puts bars back under the text.
+ */
+function rightPadBars(
+  titles: string[],
+  paneWidth: number,
+  barCount: number,
+): number {
+  if (!titles.length || paneWidth <= 0 || barCount <= 0) return 0
+
+  const ctx = document.createElement('canvas').getContext('2d')
+  if (!ctx) return 0
+  // The library draws these at 12px in the chart font.
+  ctx.font = `12px ${INTER}`
+
+  const widest = Math.max(...titles.map((t) => ctx.measureText(t).width))
+  // The label sits in a padded box. Measuring at 12px when the library draws at
+  // ~11px overshoots slightly, and that is the safe direction: too much margin
+  // is a wider gap, too little puts bars back under the text.
+  const needed = widest + 16
+
+  // Solve for the padding at the FINAL scale, not the current one. Padding the
+  // range compresses the bars, so a pad derived from today's bar spacing comes
+  // out short by exactly the compression it causes — measured at 18px of
+  // leftover overlap before this was written as a ratio.
+  //
+  // We want the data to occupy (paneWidth - needed), so the pad in bars is
+  // needed / finalBarSpacing = barCount * needed / (paneWidth - needed).
+  const usable = paneWidth - needed
+  if (usable <= 0) return Math.floor(barCount / 2)
+
+  // Never give away more than half the chart: on a very narrow panel a full
+  // clearance leaves no room for the bars, and a squeezed chart is worse than
+  // an overlapped label.
+  return Math.min(Math.ceil((barCount * needed) / usable), Math.floor(barCount / 2))
+}
+
 // lightweight-charts renders to canvas and can't consume CSS custom properties,
 // so we resolve the active theme's tokens to concrete colour strings at build
 // time. We read only *concrete* tokens (never the var()-aliased ones like --up)
@@ -168,15 +211,36 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
     chart.timeScale().fitContent()
 
     // ─── Price lines — only for levels inside the visible range ─────────────
-    for (const l of inRange) {
+    const titles = inRange.map((l) => `${l.label} — ${N2(l.price)}`)
+
+    for (const [i, l] of inRange.entries()) {
       candleSeries.createPriceLine({
         price: l.price,
         color: cssVar(container, l.colorVar),
         lineWidth: 2,
         lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
-        title: `${l.label} — ${N2(l.price)}`,
+        title: titles[i],
       })
+    }
+
+    // ─── Keep the bars out from under the level labels ──────────────────────
+    //
+    // A price line's title is drawn INSIDE the pane, pinned to its right edge —
+    // it is not part of the price scale, so the library reserves no room for it.
+    // `fitContent()` then spreads the bars across the full width and the most
+    // recent ones, the ones you actually came to look at, end up behind
+    // "Giriş — 101,50" and "Hard SL — 93,00".
+    //
+    // So we widen the logical range past the last bar by however many bars it
+    // takes to clear the widest label. Measured with the canvas rather than
+    // guessed at, because the text is Turkish and variable ("TP1 — 116,00" is
+    // not "Hard SL — 93,00"), and the panel is resizable.
+    if (candles.length) {
+      const pad = rightPadBars(titles, chart.timeScale().width(), candles.length)
+      if (pad > 0) {
+        chart.timeScale().setVisibleLogicalRange({ from: 0, to: candles.length - 1 + pad })
+      }
     }
 
     return () => {

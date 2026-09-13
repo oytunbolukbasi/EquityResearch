@@ -135,8 +135,8 @@ function PositionsTable({
                   <tr
               key={p.id}
               onClick={() => onSelect(p.symbol)}
-              className="border-faint2 hover:bg-bg cursor-pointer border-b"
-              style={{ background: selected === p.symbol ? 'var(--bg)' : 'transparent' }}
+              data-selected={selected === p.symbol}
+              className="border-faint2 eqr-row cursor-pointer border-b"
             >
               <td className="pr-3 pl-[18px]">
                 <div className="text-[13px] font-semibold">{p.symbol}</div>
@@ -190,7 +190,7 @@ function ClosedTable({ closed }: { closed: PortfolioClosedPosition[] }) {
       </thead>
       <tbody>
         {closed.map((c, i) => (
-          <tr key={`${c.symbol}-${c.sellDate}-${i}`} className="border-faint2 hover:bg-bg border-b">
+          <tr key={`${c.symbol}-${c.sellDate}-${i}`} className="border-faint2 eqr-row border-b">
             <td className="pr-3 pl-[18px]">
               <div className="text-[13px] font-semibold">{c.symbol}</div>
               <div className="num text-mid text-[12px]">{c.sellDate.slice(0, 10)}</div>

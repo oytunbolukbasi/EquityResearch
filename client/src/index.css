@@ -108,7 +108,7 @@
      Neutral bars leave the level lines as the only coloured thing on the plot.
      Mirrors --ink per theme; written concretely because cssVar() reads the
      specified value and a var() alias would come back unresolved. (GÖREV 44) */
-  --chart-bar: #1a1a18;
+  --chart-bar: #4a4a46;
 }
 
 /*
@@ -284,10 +284,53 @@ thead .eqr-pin-l {
 }
 
 /* Follow the row's own hover/selected fill so the pinned cell doesn't stay
-   card-coloured while the rest of the row lights up. */
+   card-coloured while the rest of the row lights up. Flat, not the gradient
+   below: this cell sits in the solid stretch of it, so the two meet seamlessly
+   and the fade reads as one continuous wash across the row. */
 tr:hover .eqr-pin-l,
 tr[data-selected='true'] .eqr-pin-l {
   background: var(--bg);
+}
+
+/*
+  Portfolio table rows — shared by Sanal Portföy and the Genel bakış widget, so
+  the two read as the same surface.
+
+  The background is here and NOT an inline style on the <tr>. An inline
+  background outranks a stylesheet rule, so the one that used to live there beat
+  `hover:` outright: the row never changed, and the only thing that did was the
+  pinned cell, from its own rule above. That is what made the hover colour look
+  clipped — it was not clipped, it was the only part ever painted.
+
+  The hover wash fades out to the right instead of filling the row flat. Two
+  reasons beyond taste: a flat fill would run straight into the blurred action
+  strip at the right end (GÖREV 47) and fight it, and the numbers a row is read
+  for sit on that side — a tint that thins out leaves them on near-clean paper.
+  The plateau runs to 55% so Sanal Portföy's pinned column, whichever width the
+  panel gives it, stays inside the solid part and never shows a seam. (Measured:
+  33.7% at 1127px, 20% at 700px — it narrows as the panel does, because the
+  column is sized by its content.) Genel bakış has no pinned column and does not
+  care.
+
+  What this does NOT do is make the BEKLE / SAT badges more legible: those sit on
+  their own opaque chip, so whatever the row does behind them changes nothing.
+  Measured at 5.50:1 for BEKLE's text on its chip. If they read faint it is the
+  chip itself — 1.11:1 against the card — not the row.
+*/
+.eqr-row {
+  background: var(--card);
+}
+
+/*
+  One treatment for both states, on purpose. Hovering and having picked a row
+  are the same claim — "this line" — and giving them two different looks made
+  the table answer the question twice in two voices. The row under the cursor
+  and the row loaded into the panel beside it now read identically; which is
+  which is answered by the cursor being there, and by the panel's own contents.
+*/
+.eqr-row:hover,
+.eqr-row[data-selected='true'] {
+  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 55%, transparent 100%);
 }
 
 /* ── Genel bakış KPI rail ───────────────────────────────────────────────── */

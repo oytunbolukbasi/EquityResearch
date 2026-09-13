@@ -874,12 +874,16 @@ export function VirtualPortfolioTab() {
             <tbody>
               {sortedPositions.map((p) => {
                 const unit = UNIT_FOR_TYPE[p.type] ?? ''
+                // Row background is `.eqr-row`'s job, not an inline style's. An
+                // inline background outranks any stylesheet rule, so writing one
+                // here beat `hover:` and the row never lit up — only the pinned
+                // cell did, from its own rule, which is exactly what made the
+                // colour stop dead at that cell's edge.
                 return (
                   <tr
                     key={p.id}
                     data-selected={selectedId === p.id}
-                    className="border-faint2 hover:bg-bg group border-b"
-                    style={{ background: selectedId === p.id ? 'var(--bg)' : 'var(--card)' }}
+                    className="border-faint2 eqr-row group border-b"
                   >
                     <td className="eqr-pin-l pr-3 pl-[18px]">
                       <div className="text-[13px] font-semibold">{p.symbol}</div>
@@ -956,7 +960,7 @@ export function VirtualPortfolioTab() {
             {sortedClosed.map((c) => {
               const unit = UNIT_FOR_TYPE[c.type] ?? ''
               return (
-              <tr key={c.id} className="border-faint2 hover:bg-bg group border-b" style={{ background: 'var(--card)' }}>
+              <tr key={c.id} className="border-faint2 eqr-row group border-b">
                 <td className="eqr-pin-l pr-3 pl-[18px]">
                   <div className="text-[13px] font-semibold">{c.symbol}</div>
                   <div className="text-mid text-[12px]">
