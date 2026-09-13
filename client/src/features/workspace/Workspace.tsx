@@ -1,17 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  BotMessageSquare,
-  Check,
-  FoldVertical,
-  Moon,
-  RotateCcw,
-  Save,
-  Sun,
-  UnfoldVertical,
-} from "lucide-react";
+import { BotMessageSquare } from "lucide-react";
 
-import { useTheme } from "@/lib/theme";
-import { useDensity } from "@/lib/density";
 import { OverviewTab } from "./OverviewTab";
 import { PulseTab } from "./PulseTab";
 import { IdeasTab } from "./IdeasTab";
@@ -20,6 +9,8 @@ import { VirtualPortfolioTab } from "./VirtualPortfolioTab";
 import { AnalyticsTab } from "./AnalyticsTab";
 import { useLayoutPersistence } from "./useLayoutPersistence";
 import { ProfileMenu } from "./ProfileMenu";
+import { LoginScreen } from "./LoginScreen";
+import { useSession } from "@/lib/session";
 
 type TabId =
   "overview" | "reader" | "ideas" | "paper" | "virtual" | "analytics";
@@ -57,16 +48,13 @@ const todayFmt = new Intl.DateTimeFormat("tr-TR", {
 });
 
 export function Workspace() {
+  const { authenticated, loading: sessionLoading } = useSession();
   const [tab, setTab] = useState<TabId>(readTab);
   // Set when the overview brief deep-links into a bulletin section; the reader
   // consumes it on arrival and clears it so a later manual visit starts at the top.
   const [pendingJump, setPendingJump] = useState<string | null>(null);
 
-  const { theme, toggle } = useTheme();
-  const { density, toggle: toggleDensity } = useDensity();
   const { save, reset, saved } = useLayoutPersistence();
-  const isDark = theme === "dark";
-  const isCompact = density === "compact";
 
   useEffect(() => {
     try {
@@ -100,6 +88,11 @@ export function Workspace() {
     return () => io.disconnect();
   }, []);
 
+  // One door for the whole panel. Hooks above run either way — a conditional
+  // return must not sit above them.
+  if (sessionLoading) return null;
+  if (!authenticated) return <LoginScreen />;
+
   return (
     <div className="min-h-screen">
       {/*
@@ -129,61 +122,19 @@ export function Workspace() {
                   </span>
                   EQR
                 </div>
+                {/* Date and account, nothing else. The four icon buttons that
+                    used to sit here (reset, save, density, theme) are settings
+                    for the whole panel, which is what the account menu already
+                    was — so they live there now. (GÖREV 46) */}
                 <div className="flex items-center gap-2.5">
                   <span className="text-mid num hidden text-xs sm:inline">
                     {todayFmt.format(new Date())}
                   </span>
-
-                  {/* Layout group — segmented, mirroring the old dashboard's controls. */}
-                  <div className="flex items-center">
-                    <IconToggle
-                      onClick={reset}
-                      title="Düzeni sıfırla"
-                      className="rounded-r-none border-r-0"
-                    >
-                      <RotateCcw className="size-[15px]" />
-                    </IconToggle>
-                    <IconToggle
-                      onClick={save}
-                      title="Düzeni kaydet"
-                      className="rounded-l-none"
-                    >
-                      {saved ? (
-                        <Check className="size-[15px] text-[var(--up)]" />
-                      ) : (
-                        <Save className="size-[15px]" />
-                      )}
-                    </IconToggle>
-                  </div>
-
-                  {/* The icon shows the action, not the state — same as the theme toggle. */}
-                  <IconToggle
-                    onClick={toggleDensity}
-                    title={
-                      isCompact
-                        ? "Satır aralığını genişlet"
-                        : "Satır aralığını sıklaştır"
-                    }
-                  >
-                    {isCompact ? (
-                      <UnfoldVertical className="size-[15px]" />
-                    ) : (
-                      <FoldVertical className="size-[15px]" />
-                    )}
-                  </IconToggle>
-                  <IconToggle
-                    onClick={toggle}
-                    title={isDark ? "Açık tema" : "Koyu tema"}
-                  >
-                    {isDark ? (
-                      <Sun className="size-[15px]" />
-                    ) : (
-                      <Moon className="size-[15px]" />
-                    )}
-                  </IconToggle>
-
-                  {/* Renders nothing until there is a session. */}
-                  <ProfileMenu />
+                  <ProfileMenu
+                    onResetLayout={reset}
+                    onSaveLayout={save}
+                    layoutSaved={saved}
+                  />
                 </div>
               </div>
             </div>
@@ -243,28 +194,5 @@ export function Workspace() {
         </div>
       </footer>
     </div>
-  );
-}
-
-function IconToggle({
-  onClick,
-  title,
-  children,
-  className = "",
-}: {
-  onClick: () => void;
-  title: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-      className={`border-faint bg-card text-mid hover:bg-faint2 hover:text-ink inline-flex size-8 cursor-pointer items-center justify-center rounded-lg border transition-colors ${className}`}
-    >
-      {children}
-    </button>
   );
 }

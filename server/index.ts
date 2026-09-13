@@ -13,6 +13,7 @@ import { portfolioManageRouter } from './routes/portfolio-manage'
 import { paperTradingRouter } from './routes/paper-trading'
 import { layoutsRouter } from './routes/layouts'
 import { authRouter } from './routes/auth'
+import { requireSession } from './lib/auth'
 import { startPriceScheduler } from './services/price-scheduler'
 
 const app = express()
@@ -26,16 +27,31 @@ const api = Router()
 api.get('/health', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() })
 })
+
+// ─── open, by necessity ──────────────────────────────────────────────────────
+// Two things mount BEFORE the session gate, and only these two.
+//
+//   /auth   — you cannot log in through a door that requires being logged in.
+//   /admin  — the content pipeline's own door, held by `x-admin-key`. It is a
+//             separate mechanism on purpose and the two are never mixed: an
+//             admin key does not open the panel, and a session does not open
+//             the importer.
+api.use('/auth', authRouter)
+api.use('/admin/bulk-import', bulkImportRouter)
+
+// ─── everything past here needs a session ────────────────────────────────────
+// The panel used to be readable by anyone who knew the URL; only writes were
+// guarded. One user, one door — so the read routes are behind it too, and a
+// locked front door is not worth much if the windows still open.
+api.use(requireSession)
+
 api.use('/morning-notes', morningNotesRouter)
 api.use('/ideas', ideasRouter)
 api.use('/trade-plans', tradePlansRouter)
-api.use('/admin/bulk-import', bulkImportRouter)
 api.use('/portfolio', portfolioRouter)
-// Mounted under /portfolio/manage — every route there requires a session.
 api.use('/portfolio/manage', portfolioManageRouter)
 api.use('/paper-trading', paperTradingRouter)
 api.use('/layouts', layoutsRouter)
-api.use('/auth', authRouter)
 app.use('/api', api)
 
 // In production this single service also serves the built client.

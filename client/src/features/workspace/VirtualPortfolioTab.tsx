@@ -182,66 +182,6 @@ function freshnessLabel(positions: PortfolioPosition[]): { text: string; stale: 
   return { text: `${days} gün önce güncellendi`, stale: days >= 2 }
 }
 
-// ─── login ───────────────────────────────────────────────────────────────────
-
-function LoginForm() {
-  const { login } = useSession()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    setBusy(true)
-    setError(await login(username, password))
-    setBusy(false)
-  }
-
-  return (
-    <div className="flex justify-center pt-6">
-      <form
-        onSubmit={submit}
-        className="bg-card border-faint w-full max-w-sm rounded-xl border p-6"
-      >
-        <h2 className="m-0 mb-1 text-[15px] font-medium tracking-[-0.25px]">Giriş</h2>
-        <p className="text-mid mt-0 mb-5 text-xs leading-[1.6]">
-          Portföyü görüntülemek ve değiştirmek için giriş yapın.
-        </p>
-
-        <Field label="Kullanıcı adı">
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            autoFocus
-            className={inputClass}
-          />
-        </Field>
-        <Field label="Parola">
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            className={inputClass}
-          />
-        </Field>
-
-        {error && (
-          <p className="mb-3 text-xs leading-[1.6]" style={{ color: 'var(--down)' }}>
-            {error}
-          </p>
-        )}
-
-        <button type="submit" disabled={busy} className={primaryButtonClass}>
-          {busy ? 'Kontrol ediliyor…' : 'Giriş yap'}
-        </button>
-      </form>
-    </div>
-  )
-}
-
 // ─── shared form bits ────────────────────────────────────────────────────────
 
 const inputClass =
@@ -803,18 +743,9 @@ export function VirtualPortfolioTab() {
     }
   }, [authenticated, version])
 
+  // No login gate here any more: the whole panel is behind one, so reaching
+  // this tab already means a session exists (GÖREV 45).
   if (sessionLoading) return <Loading />
-  if (!authenticated) {
-    return (
-      <div>
-        <TabHeading
-          title="Sanal Portföy"
-          subtitle="Pozisyonlarını buradan ekle, düzenle ve kapat."
-        />
-        <LoginForm />
-      </div>
-    )
-  }
   if (error) return <Notice>{error}</Notice>
 
   const positions = summary?.positions ?? []
@@ -937,8 +868,7 @@ export function VirtualPortfolioTab() {
                 <SortableTh label="Güncel" sortKey="currentPrice" sort={openSort} onSort={sortOpen} className="px-2" />
                 <SortableTh label="Değer" sortKey="currentValue" sort={openSort} onSort={sortOpen} className="px-2" />
                 <SortableTh label="K/Z" sortKey="plAmount" sort={openSort} onSort={sortOpen} className="px-2" />
-                <SortableTh label="K/Z %" sortKey="plPercent" sort={openSort} onSort={sortOpen} className="px-2" />
-                <th className={`${TH} eqr-pin-r pr-[18px] pl-2 text-right`}>İşlem</th>
+                <SortableTh label="K/Z %" sortKey="plPercent" sort={openSort} onSort={sortOpen} className="px-2 pr-[18px]" />
               </tr>
             </thead>
             <tbody>
@@ -948,7 +878,7 @@ export function VirtualPortfolioTab() {
                   <tr
                     key={p.id}
                     data-selected={selectedId === p.id}
-                    className="border-faint2 hover:bg-bg border-b"
+                    className="border-faint2 hover:bg-bg group border-b"
                     style={{ background: selectedId === p.id ? 'var(--bg)' : 'var(--card)' }}
                   >
                     <td className="eqr-pin-l pr-3 pl-[18px]">
@@ -975,13 +905,11 @@ export function VirtualPortfolioTab() {
                       {fmtPlOf(p.plAmount, p.type, unit)}
                     </td>
                     <td
-                      className="num px-2 text-right whitespace-nowrap"
+                      className="num relative px-2 pr-[18px] text-right whitespace-nowrap"
                       style={{ color: plColor(p.plPercent) }}
                     >
                       {fmtPct(p.plPercent)}
-                    </td>
-                    <td className="eqr-pin-r pr-[18px] pl-2">
-                      <div className="flex justify-end gap-1.5 whitespace-nowrap">
+                      <RowActions>
                         <RowButton
                           onClick={() => {
                             setSelectedId(p.id)
@@ -1001,7 +929,7 @@ export function VirtualPortfolioTab() {
                         <RowButton onClick={() => remove(p)} danger>
                           Sil
                         </RowButton>
-                      </div>
+                      </RowActions>
                     </td>
                   </tr>
                 )
@@ -1021,15 +949,14 @@ export function VirtualPortfolioTab() {
               <SortableTh label="Satış" sortKey="sellPrice" sort={closedSort} onSort={sortClosed} className="px-2" />
               <SortableTh label="K/Z" sortKey="pl" sort={closedSort} onSort={sortClosed} className="px-2" />
               <SortableTh label="K/Z %" sortKey="plPercent" sort={closedSort} onSort={sortClosed} className="px-2" />
-              <SortableTh label="Tarih" sortKey="sellDate" sort={closedSort} onSort={sortClosed} className="px-2" />
-              <th className={`${TH} eqr-pin-r pr-[18px] pl-2 text-right`}>İşlem</th>
+              <SortableTh label="Tarih" sortKey="sellDate" sort={closedSort} onSort={sortClosed} className="px-2 pr-[18px]" />
             </tr>
           </thead>
           <tbody>
             {sortedClosed.map((c) => {
               const unit = UNIT_FOR_TYPE[c.type] ?? ''
               return (
-              <tr key={c.id} className="border-faint2 hover:bg-bg border-b" style={{ background: 'var(--card)' }}>
+              <tr key={c.id} className="border-faint2 hover:bg-bg group border-b" style={{ background: 'var(--card)' }}>
                 <td className="eqr-pin-l pr-3 pl-[18px]">
                   <div className="text-[13px] font-semibold">{c.symbol}</div>
                   <div className="text-mid text-[12px]">
@@ -1052,15 +979,13 @@ export function VirtualPortfolioTab() {
                 >
                   {fmtPct(c.plPercent)}
                 </td>
-                <td className="num text-mid px-2 text-right whitespace-nowrap">
+                <td className="num text-mid relative px-2 pr-[18px] text-right whitespace-nowrap">
                   {c.sellDate.slice(0, 10)}
-                </td>
-                <td className="eqr-pin-r pr-[18px] pl-2">
-                  <div className="flex justify-end">
+                  <RowActions>
                     <RowButton onClick={() => removeClosed(c)} danger>
                       Sil
                     </RowButton>
-                  </div>
+                  </RowActions>
                 </td>
               </tr>
               )
@@ -1280,6 +1205,38 @@ export function VirtualPortfolioTab() {
   )
 }
 
+/**
+ * Row actions that appear on hover, floating over the end of the row.
+ *
+ * They used to live in their own pinned "İşlem" column, which cost the same
+ * width on all 24 rows for three buttons you use on one row at a time — and on
+ * a narrow panel that column pushed Değer and K/Z, the reason you opened the
+ * tab, off the visible area.
+ *
+ * Anchored to the last cell rather than the row: a `<tr>` is not a reliable
+ * containing block for absolute children, a `<td>` is. The blur and the fade to
+ * its left keep the number underneath legible as something rather than letting
+ * the buttons sit on top of half a digit.
+ *
+ * `pointer-events` follow opacity, so the invisible group never swallows a
+ * click meant for the row.
+ */
+function RowActions({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      aria-hidden="false"
+      className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[18px] pl-10 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
+      style={{
+        background:
+          'linear-gradient(to left, var(--card) 68%, color-mix(in srgb, var(--card) 60%, transparent))',
+        backdropFilter: 'blur(6px)',
+      }}
+    >
+      <span className="flex gap-1.5 whitespace-nowrap">{children}</span>
+    </span>
+  )
+}
+
 function RowButton({
   children,
   onClick,
@@ -1292,8 +1249,10 @@ function RowButton({
   return (
     <button
       onClick={onClick}
-      className="border-faint hover:bg-faint2 cursor-pointer rounded-md border px-2 py-1 text-[12px] transition-colors"
-      style={{ color: danger ? 'var(--down)' : 'var(--mid)' }}
+      // Solid fill, not transparent: these now float over the row's own numbers,
+      // and a see-through button on top of a digit reads as neither.
+      className="border-faint bg-card hover:bg-faint2 hover:text-ink cursor-pointer rounded-md border px-2 py-1 text-[12px] transition-colors"
+      style={{ color: danger ? 'var(--down)' : 'var(--ink)' }}
     >
       {children}
     </button>
