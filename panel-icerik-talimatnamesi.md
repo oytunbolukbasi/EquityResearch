@@ -108,9 +108,23 @@ Tüm içerik Türkçe, tüm veriler gerçek. Dashboard her ticker'ın en son kay
 
 ## ADIM 1 — AKTİF POZİSYON TAKİBİ
 
-**Önce güncel pozisyon listesini çek:**
+**Önce güncel pozisyon listesini çek.**
 
-GET `https://equityresearch-production.up.railway.app/api/ideas`
+> ⚠️ **`/api` uçları artık oturum arkasında** (GÖREV 45) — `curl` ile çağrılan
+> `/api/ideas` **401** döner. Veriyi doğrudan veritabanından oku; aynı veri:
+>
+> ```
+> npx tsx -e 'import "dotenv/config"; import { neon } from "@neondatabase/serverless";
+> void (async () => { const sql = neon(process.env.DATABASE_URL!);
+>   const r = await sql`select distinct on (ticker) ticker, exchange, status, date,
+>     entry_low, entry_high, stop_loss, target_1, target_2
+>     from ideas order by ticker, date desc, id desc`;
+>   console.log(JSON.stringify(r, null, 2)) })()'
+> ```
+>
+> Kolon adları şemada **`target_1` / `target_2`** (ideas tablosunda `target_3` YOK;
+> üçüncü hedef yalnız `trade_plans.tp3`'te). Kapının önünde kalan tek yazma yolu
+> `POST /api/admin/bulk-import`'tur ve o `x-admin-key` ile çalışmaya devam ediyor.
 
 Dönen kayıtlardan status'u `active` veya `review` olanlar bugünün takip
 listesidir. Her kayıtta ticker, exchange, entryLow/High, stopLoss (hardSL),
@@ -329,8 +343,12 @@ ve şema bu adımın kendi sözleşmesidir; skill oraya işaret eder.
 
 ## ADIM 5 — PORTFÖY ANALİZİ (salt-okunur)
 
-GET `https://equityresearch-production.up.railway.app/api/portfolio/summary`
-GET `https://equityresearch-production.up.railway.app/api/portfolio/insight` (önceki analizi tekrarlama)
+Bu ikisi de **veritabanından** okunur (yukarıdaki aynı sebeple; HTTP uçları 401):
+
+```
+positions            → PORTFOLIO_DATABASE_URL, `where user_id = 'demo-user'`
+portfolio_insights   → DATABASE_URL, `order by date desc limit 1` (önceki analizi tekrarlama)
+```
 
 > `YKT` = TEFAS altın fonu — TP/SL üretme, altın/emtia teması olarak değerlendir.
 
@@ -358,6 +376,9 @@ GET `https://equityresearch-production.up.railway.app/api/portfolio/insight` (ö
 > ```
 > npx tsx scripts/verify-insight.ts <payload.json>
 > ```
+> *(Betik 13 Eylül 2026'ya kadar HTTP'den okuyordu ve GÖREV 45'ten beri sessizce
+> 401 alıyordu — yani göndermeden önceki tek ölçüm çalışmıyordu. Artık doğrudan
+> veritabanına bakıyor.)*
 > Eksik/fazla sembolü, aynı sembolün iki kez yazılmasını, geçersiz aksiyon
 > adını ve boş gerekçeyi yakalar; hata varsa 1 ile çıkar.
 > *(6 Eylül 2026'da, 7 Eylül tarihli not yazılırken bu kural ihlal edildi —

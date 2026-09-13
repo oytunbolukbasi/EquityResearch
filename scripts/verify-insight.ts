@@ -15,9 +15,16 @@
  *   npx tsx scripts/verify-insight.ts /path/to/payload.json   (göndermeden ÖNCE)
  *
  * Argümansız çağrılırsa panelde YAYINDA olan notu denetler.
+ *
+ * Veriyi HTTP'den değil DOĞRUDAN veritabanından okur. Eskiden
+ * /api/portfolio/summary çağırıyordu; GÖREV 45 `/api` altındaki her şeyi oturum
+ * arkasına aldı ve betik o günden beri 401 alıyordu — yani göndermeden önce
+ * çalıştırılması gereken tek kontrol sessizce çalışmaz hale gelmişti. Betiğin
+ * zaten `.env`'e erişimi var; aradaki HTTP katmanı hiçbir şey kazandırmıyordu.
  */
 
-const BASE = 'https://equityresearch-production.up.railway.app'
+import 'dotenv/config'
+import { neon } from '@neondatabase/serverless'
 
 interface Action {
   ticker: string
@@ -27,10 +34,10 @@ interface Action {
 
 const VALID_ACTIONS = new Set(['BEKLE', 'KISMİ KÂR AL', 'SAT', 'POZİSYON ARTIR'])
 
-async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`)
-  if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`)
-  return (await res.json()) as T
+function requireEnv(name: string): string {
+  const v = process.env[name]
+  if (!v) throw new Error(`${name} tanımlı değil (.env okunamadı mı?)`)
+  return v
 }
 
 async function main() {
@@ -44,13 +51,20 @@ async function main() {
     actions = payload?.portfolio_insight?.actions ?? []
     label = `dosya: ${file}`
   } else {
-    const live = await getJson<{ date: string; actions: Action[] }>('/api/portfolio/insight')
-    actions = live.actions ?? []
-    label = `yayındaki not: ${String(live.date).slice(0, 10)}`
+    const db = neon(requireEnv('DATABASE_URL'))
+    const rows = (await db`
+      select date, actions from portfolio_insights order by date desc limit 1
+    `) as { date: string; actions: Action[] | null }[]
+    if (!rows.length) throw new Error('portfolio_insights boş')
+    actions = rows[0].actions ?? []
+    label = `yayındaki not: ${String(rows[0].date).slice(0, 10)}`
   }
 
-  const positions = await getJson<{ positions: { symbol: string }[] }>('/api/portfolio/summary')
-  const held = new Set(positions.positions.map((p) => p.symbol))
+  const pf = neon(requireEnv('PORTFOLIO_DATABASE_URL'))
+  const open = (await pf`
+    select symbol from positions where user_id = 'demo-user'
+  `) as { symbol: string }[]
+  const held = new Set(open.map((p) => p.symbol))
   const noted = new Set(actions.map((a) => a.ticker))
 
   const missing = [...held].filter((s) => !noted.has(s)).sort()
