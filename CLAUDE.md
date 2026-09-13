@@ -318,6 +318,12 @@ kaydedilir (`x-admin-key` korumalı; her tablo bağımsız hata izolasyonlu upse
 *(GÖREV 40'a kadar içerik claude.ai'daki ayrı bir "cowork agent"ta üretiliyordu; skill'ler
 o projenin plugin'inde yaşıyordu ve talimatnamede ikinci bir kopyası duruyordu.)*
 
+Her turun kalıcı kaydı **Notlar sekmesine** yazılır (ADIM 8): günün özeti
+"İçerik Güncelleme Özetleri" bölümüne `14 Eylül 2026` biçiminde başlıklı bir
+sayfa olarak, eleme tablosu da "Fikirler" altındaki tek "İzleme Listesi"
+sayfasına tarihli bölüm eklenerek. Notlar API'si de oturum arkasında olduğu için
+bu yazma `note_pages` tablosuna doğrudan yapılır.
+
 - Tam görev akışı, statü yaşam döngüsü ve JSON şeması: bu klasördeki panel-icerik-talimatnamesi.md.
 
 ## Deployment Notları

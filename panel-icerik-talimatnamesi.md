@@ -194,9 +194,10 @@ Bu adımda karar verilen tek şey, taramadan çıkanın nereye gittiği:
 
 - **Panele giren fikirler** → `ideas` dizisi, 0-3 long. Skill'in risk-getiri barını
   geçemeyen fikir eklenmez; `ideas: []` normal bir sonuçtur, zorla fikir üretme.
-- **İzleme listesi** → JSON'a DEĞİL, ADIM 7 özet logunda "📋 İzleme Listesi"
-  başlığı altına.
-- **Eleme tablosu** → ADIM 7 raporunda, sıfır fikir çıkan günlerde de.
+- **İzleme listesi** → JSON'a DEĞİL: ADIM 7 özet logunda "📋 İzleme Listesi"
+  satırına, ayrıntısı da Notlar'daki "İzleme Listesi" sayfasına (ADIM 8b).
+- **Eleme tablosu** → Notlar'daki "İzleme Listesi" sayfasına tablo olarak
+  (ADIM 8b), sıfır fikir çıkan günlerde de.
 
 ---
 
@@ -477,3 +478,52 @@ elle yapıştırmıyor.
 🔄 Paper Trading: [yeni emir: TICKER listesi] / [kapatılan: TICKER listesi] / [değişiklik yok]
 ⚠️ Uyarılar: [başarısız kaynaklar, atlanan ticker'lar, eksik OHLC]
 ```
+
+Bu blok sohbete yazılır **ve** panelin Notlar bölümüne kaydedilir.
+
+---
+
+## ADIM 8 — NOTLAR BÖLÜMÜNE YAZ
+
+Panelin Notlar sekmesi (GÖREV 50) turun kalıcı kaydıdır. İki sayfa güncellenir.
+
+> **Nasıl yazılır:** `/api/notes` de oturum arkasında (ADIM 1'deki aynı sebep),
+> dolayısıyla `note_sections` / `note_pages` tablolarına **doğrudan** yazılır.
+> `note_pages.content` BlockNote'un blok dizisidir ve sunucu onu hiç
+> ayrıştırmaz — şekil bozuksa hata vermez, sayfa boş görünür. Yazdıktan sonra
+> panelde açıp gerçekten çizildiğini **gör**.
+
+### 8a — Günün özeti → bölüm "İçerik Güncelleme Özetleri"
+
+- Sayfa başlığı **günün tarihi**, tam olarak bu biçimde: `14 Eylül 2026`
+  (gün sayısı başında sıfır yok · ay adı Türkçe ve büyük harfle · yıl dört hane).
+- İçerik: ADIM 7 bloğunun **aynısı** — tek paragraf, sekiz satır, satır sonlarıyla
+  ayrılmış, emoji ön ekleri korunmuş. Maddeleri ayrı paragraflara bölme, kod bloğu
+  yapma; kullanıcı bu biçimi seçti.
+- Aynı tarihli sayfa zaten varsa içeriğini **değiştirme** — kullanıcı elle
+  düzenlemiş olabilir. Yalnızca sayfa yoksa oluştur.
+
+### 8b — İzleme listesi → bölüm "Fikirler", sayfa "İzleme Listesi"
+
+Tek bir sayfa; her tur **başa değil sona** yeni bir bölüm eklenir, eskisi arşiv
+olarak kalır:
+
+- `heading` (level 3): `[TARİH] taraması` — ör. `14 Eylül 2026 taraması`
+- `paragraph`: o gün panele fikir girip girmediği ve sebebi
+- `table`: `Aday · Fiyat · Tez · Risk-getiri · Neden takıldı`
+
+Tablo blok biçimi (BlockNote):
+```
+{ type: "table", props: { textColor: "default" }, children: [],
+  content: { type: "tableContent", headerRows: 1,
+             columnWidths: [160, 110, 300, 130, 300],
+             rows: [ { cells: [ { type: "tableCell",
+                                  props: { backgroundColor: "default", textColor: "default",
+                                           textAlignment: "left" },
+                                  content: [{ type: "text", text: "...", styles: {} }] } ] } ] } }
+```
+`columnWidths` mutlak piksel değil: panel darsa tablo orantılı sıkışır, geniş
+ekranda verilen değerler birebir uygulanır. Başlık hücrelerine `styles: { bold: true }`.
+
+**Sıfır fikir çıkan günlerde de yazılır** — eleme tablosu taramanın yapıldığının
+tek kanıtı (bkz. `Skill(eqr-idea-generation)`, Adım 5).
