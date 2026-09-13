@@ -16,12 +16,29 @@ export function Notice({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** Colour pairs for the four portfolio action verbs the cowork agent emits. */
+/**
+ * Colour pairs for the four portfolio action verbs.
+ *
+ * POZİSYON ARTIR is amber, not green. It used to borrow the TP ladder's green
+ * (`--tp3`), which is the SAME text colour as KISMİ KÂR AL — two opposite
+ * instructions, "put more in" and "take some out", saying it in one voice. The
+ * only thing separating them was the chip tint, and that tint is 1.11:1 against
+ * the card, so in practice nothing separated them.
+ *
+ * `--warn` was the one accent this map did not already spend, and it reads as
+ * "there is something to do here", which is what the verb means. Measured
+ * against its own chip: 4.81:1 light, 5.82:1 dark — both clear of the 4.5:1 an
+ * 11px label needs, where the old green was 4.30:1 in light.
+ *
+ * Both halves are tokens on purpose. A hard-coded darker amber measured better
+ * in light (5.70:1) and collapsed to 2.17:1 in dark, because a fixed hex cannot
+ * follow the theme.
+ */
 export const ACTION_STYLE: Record<string, { bg: string; color: string }> = {
   BEKLE: { bg: 'var(--info-tint)', color: 'var(--info)' },
   'KISMİ KÂR AL': { bg: 'var(--up-tint)', color: 'var(--up)' },
   SAT: { bg: 'var(--down-tint)', color: 'var(--down)' },
-  'POZİSYON ARTIR': { bg: 'var(--tp3-tint)', color: 'var(--tp3)' },
+  'POZİSYON ARTIR': { bg: 'var(--warn-tint)', color: 'var(--warn)' },
 }
 
 export function actionStyle(action: string) {

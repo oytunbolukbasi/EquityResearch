@@ -1526,9 +1526,30 @@ kontrastı değişmez (BEKLE metni kendi çipine karşı 5,50:1, eşiği geçiyo
 Silik görünmelerinin sebebi çipin kendisi: karta karşı **1,11:1**, yani rozet
 bir çip gibi değil soluk bir yazı gibi okunuyor.
 
-*Açık kalan, kullanıcıya bırakıldı:* `POZİSYON ARTIR` rozeti kendi çipine karşı
-**4,30:1** — 11px metin için 4,5:1 eşiğinin altında. Diğer üçü geçiyor
-(BEKLE 5,50 · SAT 4,89 · KISMİ KÂR AL 4,75).
+**D — `POZİSYON ARTIR` rozeti yeşilden amber'a.**
+
+Eşiğin altında kalması (4,30:1) bulgunun yalnızca görünen yüzüydü. Rozet TP
+merdiveninin yeşilini (`--tp3`) ödünç alıyordu ve bu, `KISMİ KÂR AL` ile
+**birebir aynı metin rengi**: birbirinin zıddı iki talimat — "daha koy" ve "bir
+kısmını al" — tek ağızdan konuşuyordu. Ayıran tek şey çip tonuydu, o da karta
+karşı 1,11:1, yani pratikte hiçbir şey ayırmıyordu.
+
+`--warn` bu haritanın harcamadığı tek accent'ti ve "burada yapılacak bir şey
+var" diye okunuyor. Ölçüm: **4,81:1 açık · 5,82:1 koyu** (eski yeşil açıkta
+4,30:1). `--tp3` duruyor — TP merdiveni onu asıl işi için kullanmaya devam
+ediyor, yalnız rozet oradan ayrıldı.
+
+*Elenen aday ve dersi:* sabit koyu amber `#8a5800` açık temada daha iyiydi
+(5,70:1) ama koyuda **2,17:1**'e çöktü. Sabit bir hex temayı takip edemiyor;
+rozetin iki yarısı da bu yüzden token. Ölçüm `shared.tsx`'teki yoruma yazıldı
+ki ileride "daha koyusu daha okunur olur" diye sabit renge dönülmesin.
+
+*Nasıl bakıldı:* panelde `POZİSYON ARTIR` örneği yoktu. Portföye örnek pozisyon
+eklemek işe yaramazdı — rozet pozisyondan değil `portfolio_insights.actions`'tan
+geliyor, yani canlı içeriğe de yazmak gerekirdi; üstelik yerel sunucu canlı
+veritabanına bağlı. Adaylar bunun yerine panelin kendi token'larıyla **DOM'a
+geçici olarak enjekte edilip** iki temada da karşılaştırıldı: veriye ve koda
+dokunmayan, yenileyince kaybolan bir önizleme.
 
 *Yan iş:* `--chart-grid` token'ı silindi. GÖREV 44 ızgarayı kaldırmıştı ama
 tanım kalmıştı; hiçbir yerden okunmayan bir renk token'ı, yeniden uygulanmayı
