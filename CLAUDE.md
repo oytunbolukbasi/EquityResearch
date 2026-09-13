@@ -5,14 +5,31 @@ Sen modern web uygulamaları geliştiren kıdemli bir Frontend Geliştirici ve U
 
 
 ## Amaç
-Günlük kontrol edilen, kişiselleştirilebilir bir yatırım takip dashboard'u. claude.ai (equity-research projesi) içinde MCP connector'ları ve web search ile üretilen içerikler (morning note, trade idea, trade plan, paper trading) bu panelde görselleştiriliyor. Tek kullanıcılı, düşük maliyetli, Railway'de deploy ediliyor.
+Günlük kontrol edilen bir yatırım çalışma alanı: portföy yönetimi, günlük araştırma
+içeriği ve kendi notların aynı panelde. Tek kullanıcılı, düşük maliyetli, Railway'de
+deploy ediliyor.
+
+İçerik (morning note, trade idea, trade plan, portfolio insight) **bu repo'da Claude
+Code ile** üretilir — bkz. İçerik Besleme Akışı. *(GÖREV 40'a kadar claude.ai'daki
+ayrı bir projede üretiliyordu; "cowork agent" diye bir şey artık yok.)* Portföy
+yönetimi de dışarıdan devralındı: ayrı bir mobil uygulama olan PortfoyTakip GÖREV 28
+ile içeri alındı ve 13 Eylül 2026'da emekliye ayrıldı.
+
+**"Kişiselleştirilebilir" değil.** İlk sürümde serbest sürükle-bırak bir canvas ve
+widget ekle/kaldır menüsü vardı; GÖREV 27'de ikisi de kaldırıldı. Bugün düzen
+sabittir, ayarlanabilen tek şey iki panelin genişliği ve sırası.
 
 ## Tech Stack
 - **Frontend:** React 19 + Vite + TypeScript
-- **Styling:** Tailwind CSS v4 + shadcn/ui (Radix tabanlı)
-- **Yerleşim:** 6 sekmeli çalışma alanı, her sekmede en fazla iki panel. Kütüphane
-  yok — `features/workspace/split.tsx` (~340 satır) divider'ı, %25/50/75 snap'ini ve
-  panel takasını kendisi yönetir. *(react-grid-layout GÖREV 27'de kaldırıldı.)*
+- **Styling:** Tailwind CSS v4 (CSS-first). **shadcn/ui iskeleti kaldı ama neredeyse
+  boşaldı:** `components/ui/` altındaki bileşenlerden yalnızca `button.tsx` kullanılıyor
+  (tek yer: AdminPage). `dropdown-menu.tsx` duruyor ama **hiçbir yerden import
+  edilmiyor**; select, date-range-picker, bottom-sheet ve profil menüsü elle yazıldı
+  (GÖREV 35, 36). Radix bağımlılığı `react-slot` üzerinden button'da, bir de kullanılmayan
+  dropdown'da. Yani "Radix tabanlı bir arayüz" beklemeyin.
+- **Yerleşim:** 6 sekme + açılıp kapanan Notlar yüzeyi; her sekmede en fazla iki panel.
+  Kütüphane yok — `features/workspace/split.tsx` divider'ı, %25/50/75 snap'ini ve panel
+  takasını kendisi yönetir. *(react-grid-layout GÖREV 27'de kaldırıldı.)*
 - **Not editörü:** BlockNote (`@blocknote/core` + `react` + `mantine`) — yalnız
   ücretsiz katman. `@blocknote/xl-*` paketleri GPL-3.0/ticari lisanslı, **kurulu
   değil**. Çekirdek MPL-2.0. Modül `React.lazy` ile ayrılır. (GÖREV 50)
@@ -53,6 +70,10 @@ köşeli kartlar (radius ~14px), bol boşluk — her iki temada da.
 }
 ```
 
+> Yukarıdaki kesitte `--card`'ın yalnız `.dark`'ta görünmesi eksiklik değil: açık
+> temada `--card` ham bir renk değil, dosyanın alt kısmındaki shadcn eşlemesinde
+> `var(--white)`'a bağlanıyor. Koyu tema onu doğrudan eziyor.
+
 - **Semantic accent katmanı** — inline-style'ların tek renk kaynağı. Widget badge/status
   chip, chart serisi ve seviye çizgileri bunları `var()` ile kullanır; `.dark` bunları
   yeniden eşler (parlatılmış accent + translucent tint dolgular):
@@ -61,18 +82,24 @@ köşeli kartlar (radius ~14px), bol boşluk — her iki temada da.
     `--neutral-tint` (light'ta pale hex, dark'ta translucent rgba)
   - TP merdiveni: `--tp1..3` + `--tp1..3-tint`
   - Cam modal + scrim: `--glass-bg` / `--glass-border` / `--scrim`
-  - Grafik: `--chart-grid` / `--chart-axis`
-  - Dağılım serisi: `--alloc-1..3` (mavi / turuncu / gül kurusu) — **kendi
-    skalası**, çünkü `--up`/`--warn` bu panelde anlam taşıyor; yeşil bir dilim
-    hemen üstündeki K/Z çubuklarıyla karışıp "kâr" okunuyordu. Renkler göz
-    kararı değil, `dataviz` doğrulayıcısıyla iki temada da ölçüldü ve ayrıca
-    `--down`'a uzaklıkları sınandı (gül↔kırmızı ΔE 17,7 açık / 14,1 koyu).
-    Koyu temada bu üçü **koyulaştırılır**, diğer accent'ler gibi parlatılmaz —
-    doğrulayıcının koyu bandı L 0,48–0,67. (GÖREV 34)
+  - Grafik: `--chart-axis` / `--chart-bar`
+  - Dağılım serisi: **`--alloc-1..4`** — mavi (Borsa İstanbul ve Fon) · turuncu
+    (ABD) · mor (Almanya) · turkuaz (Kripto). **Kendi skalası**, çünkü
+    `--up`/`--warn` bu panelde anlam taşıyor; yeşil bir dilim hemen üstündeki K/Z
+    çubuklarıyla karışıp "kâr" okunuyordu. Renkler göz kararı değil, `dataviz`
+    doğrulayıcısıyla iki temada da ölçüldü. Koyu temada bu dördü
+    **koyulaştırılır**, diğer accent'ler gibi parlatılmaz.
+    **Beşinci renk yok** ve bu bir eksiklik değil bir sınır: yeşil ile kırmızı
+    dışarıdayken (burada kâr/zarar demek) beşli hiçbir set ayrışma eşiğini
+    geçmiyor. Bu yüzden BİST ve fon **her yerde** tek grup. Yeni bir varlık sınıfı
+    eklenirse önce bu ölçüm tekrarlanmalı. (GÖREV 34, 37)
+    *(GÖREV 34 üç renkli ve gül kurusu içeren bir skala kurmuştu; GÖREV 37 Almanya
+    ve kripto gelince dördüne çıkardı ve gül kurusunu mor+turkuaz ile değiştirdi.)*
 
 **Tema state + toggle (`client/src/lib/theme.tsx`):**
-- İlk açılışta OS tercihini (`prefers-color-scheme`) izler; header'daki Sun/Moon toggle ile
-  override edilir ve seçim `localStorage['eqr:theme']`'de saklanır.
+- İlk açılışta OS tercihini (`prefers-color-scheme`) izler; **profil menüsündeki
+  "Koyu tema" anahtarıyla** override edilir ve seçim `localStorage['eqr:theme']`'de
+  saklanır. *(Header'daki Sun/Moon ikon butonu GÖREV 46'da menüye taşındı.)*
 - `.dark` class'ı `document.documentElement`'e **senkron** uygulanır — böylece portal'lı
   Radix dropdown'ları/modal'lar temayı izler ve child effect'ler (grafik) toggle sonrası
   doğru paleti okur. `index.html`'e FOUC önleyici inline script eklendi (render öncesi
@@ -99,10 +126,14 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
   satırları, form etiketleri, takvim hücreleri — en az 12px. 12px altı yalnızca *işaret*
   içindir, metin için değil: durum rozetleri (10px), grafik seviye etiketleri (10px),
   Risk/Getiri rozeti (11px) ve tablo `<th>` başlıkları (11px). (GÖREV 29)
-- Widget eyebrow başlıkları: 14px / weight 600 / uppercase / tracking 0.01em.
+- Panel başlıkları (`Panel.tsx`): 15px / weight 500 / tracking −0.25px — **uppercase
+  değil**. *(GÖREV 27 öncesi her widget'ın 14px/600/uppercase bir "eyebrow"u vardı;
+  widget çerçevesiyle birlikte gitti, sonuncusu GÖREV 48'de kaldırıldı.)*
 - Tablo başlıkları `<th>`: 11px / weight 500 / uppercase / tracking 0.04em.
 - Tablo hücreleri `<td>`: minimum 13px (CSS override, unlayered).
-- Piyasa Nabzı bölüm başlıkları (Ana Görüş / Makro / Sektör Odağı): 14px / weight 600.
+- Piyasa Nabzı bölüm başlıkları (Ana görüş / numaralı makro / **Avrupa NN** / Sektör
+  odağı): 14px / weight 600. Bölüm listesi ve kicker'ları **tek yerde**
+  `note-sections.ts`'te kararlaştırılır (GÖREV 39).
 - Makro bullet satırları: 14px / line-height 1.65.
 
 ## Veri Modeli (Postgres / Drizzle, jsonb ağırlıklı — şema esnek kalsın)
@@ -139,9 +170,10 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
     round-trip'i kesirli adetlerde hassasiyet kaybediyor (portföyde 0,809883524
     adetlik bir pozisyon var).
 - İçerik JSON şeması ve alan isimleri: bu klasördeki panel-icerik-talimatnamesi.md.
-- Sanal Portföy taşıma planı ve fazları: bu klasördeki **SANAL-PORTFOY-PLAN.md**.
+- Sanal Portföy taşımasının kaydı: bu klasördeki **SANAL-PORTFOY-PLAN.md**. Plan
+  **tamamlandı**, açık maddesi yok; yapılacaklar listesi değil tarihsel kayıt.
 
-## Sekmeler (6 aktif)
+## Sekmeler (6 sekme + Notlar yüzeyi)
 
 Serbest canvas yok. Her sekmede **en fazla iki panel** yan yana durur; aralarındaki
 divider sürüklenince genişlik imleci serbest takip eder ve bırakınca **tam olarak
@@ -217,13 +249,12 @@ arkasında; kapının önünde yalnızca iki şey var ve bilerek:
 - Çerez `httpOnly` + `sameSite=strict` + production'da `secure`, 30 gün.
 - Giriş 15 dakikada 8 denemeyle sınırlı. Yanlış kullanıcı adı da hash karşılaştırması
   çalıştırır, böylece cevap süresi bilgi sızdırmaz.
-- `x-admin-key` YALNIZCA agent'ın `bulk-import`'unda kalır — iki mekanizma
-  karıştırılmaz.
 
 ## Fiyat Boru Hattı
 
-PortfoyTakip uygulamasının yaptığı iş devralındı. **İki ayrı ritim**, çünkü iki kaynağın
-maliyeti çok farklı:
+Bu iş PortfoyTakip'ten devralındı; **o uygulama artık yok** (servis durduruldu, repo
+arşivlendi — 13 Eylül 2026), yani fiyatları yazan tek yer burası. **İki ayrı ritim**,
+çünkü iki kaynağın maliyeti çok farklı:
 
 | Varlık | Kaynak | Ritim |
 |---|---|---|

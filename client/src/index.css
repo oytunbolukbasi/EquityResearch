@@ -95,8 +95,9 @@
   --glass-border: rgba(255, 255, 255, 0.35);
   --scrim: rgba(0, 0, 0, 0.2);
 
-  /* lightweight-charts */
-  --chart-grid: var(--faint2);
+  /* lightweight-charts — grid token removed with the grid itself (GÖREV 44):
+     the horizontal lines worth reading here are the levels, and a --chart-grid
+     that nothing reads is a colour decision waiting to be re-applied by mistake. */
   --chart-axis: #9a9a94;
   /* Trade-plan bar colour — deliberately NOT a colour.
      Green/red said "closed up", which the bar's own shape already says, while
