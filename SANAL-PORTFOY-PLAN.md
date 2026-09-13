@@ -3,8 +3,11 @@
 > Amaç: `oytunbolukbasi/PortfoyTakip` uygulamasını **tamamen kapatmak** ve portföy
 > yönetimini EQR paneli içindeki "Sanal Portföy" sekmesine taşımak.
 >
-> Durum: **Faz 1 ve Faz 2 tamamlandı** (kod + testler). Faz 3 (eski app'in kapatılması)
-> için Railway değişkenleri ve bir haftalık paralel doğrulama bekleniyor. Son güncelleme: 4 Eylül 2026.
+> Durum: **Faz 1, 2, 3.5, 4 ve 5 kapandı.** Faz 3'ün teknik yarısı da bitti —
+> fiyatları EQR'nin güncellediği 7 Eylül 2026'da teyit edildi. Geriye yalnızca iki
+> **kullanıcı aksiyonu** kaldı: PortfoyTakip Railway servisinin durdurulması ve
+> repo'nun arşivlenmesi. Kod tarafında bu plandan bekleyen iş yok.
+> Son güncelleme: 13 Eylül 2026.
 
 ---
 
@@ -32,11 +35,14 @@ Bu kurala uyulacak: okuma istemcisine **dokunulmayacak**, yazma ayrı modüle gi
 `server/routes.ts:51` şu satırı içeriyor:
 
 ```ts
-const validPassword = process.env.APP_PASSWORD || "Slither1986";
+const validPassword = process.env.APP_PASSWORD || "<düz metin parola — buradan çıkarıldı>";
 ```
 
 Yani uygulamanın parolası GitHub üzerinden **herkes tarafından okunabilir durumda**.
-Dosyadan silmek yetmez — parola git geçmişinde de duruyor.
+Dosyadan silmek yetmez — parola git geçmişinde de duruyor. **Bu dosyadaki kopyası
+13 Eylül 2026'da çıkarıldı** (EQR repo'su da public), ama aynı sebeple o da yalnız
+yeni okumaları engeller; iki repo'nun git geçmişi parolayı hâlâ taşıyor. Tek gerçek
+çözüm parolayı değiştirmek.
 
 **Yapılması gerekenler (kod işi değil, hesap işi — kullanıcı tarafından):**
 
@@ -170,7 +176,11 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 - [x] Railway env: `SCRAPER_API_KEY`, `SHEETS_PRICE_URL` girildi ve doğrulandı
       (YKT fon fiyatı canlıda çekildi; yeni açılan TSKB pozisyonu sembol kaydı
       üzerinden fiyat aldı — uçtan uca çalışıyor)
-- [ ] **Doğrulama:** iki app bir hafta paralel çalışır, fiyatlar karşılaştırılır
+- [x] **Doğrulama:** paralel hafta beklenmedi — sorusu daha doğrudan cevaplandı.
+      Faz 3, fiyatı EQR'nin yazdığını Railway logu + `lastUpdated` damgasıyla saniye
+      düzeyinde gösterdi ve eski app'ten `SCRAPER_API_KEY` kaldırıldı, yani paralel
+      çalışma zaten sona erdi. İki app'in aynı sayıyı üretmesini beklemek, hangisinin
+      yazdığını ölçmenin dolaylı yoluydu.
 
 **Faz 2 testleri**
 - [x] Apps Script kaynağı doğrulandı: 38 sembol, portföydeki 16 hissenin **tamamı** var,
@@ -206,8 +216,8 @@ Cron: `node-cron`, hafta içi 09:00 ve 10:00 (TR) — eski app'le birebir aynı.
 > gider. `SHEETS_PRICE_URL` gibi değerlerin EQR'de kopyası var, ama bir yedeğini
 > almadan silmeyin.
 >
-> **Kapanmamış tek özellik:** BİST sembol otomatik tamamlama (Faz 5). Veri
-> kaybolmuyor — `bist_symbols` tablosu paylaşılan veritabanında.
+> **Kapanmamış özellik yok.** BİST sembol otomatik tamamlama 13 Eylül 2026'da
+> kapsam dışına alındı — bkz. Faz 5.
 
 ### Faz 3.5 — Tablo tamamlama (istek üzerine, tamamlandı)
 - [x] Açık pozisyonlar tablosu eski app'le birebir: Varlık · Adet · Alış · Güncel ·
@@ -282,9 +292,20 @@ belirtiliyor.
 değil, yukarıdaki yöntem farkı. Fiyat karşılaştırması yaparken **pozisyon bazında
 `currentPrice`** karşılaştırın, toplamları değil.
 
-### Faz 5 — İsteğe bağlı
-- [ ] BIST sembol otomatik tamamlama (`bist_symbols` tablosu zaten dolu)
-- [ ] Mobil form iyileştirmesi (gerekirse; şimdilik web-only kabul edildi)
+### Faz 5 — İsteğe bağlı ✅ KAPANDI (13 Eylül 2026)
+
+Bu faz "gerekirse" listesiydi; ikisi de gerekmedi.
+
+- [x] **Mobil form iyileştirmesi — yapıldı**, ama bu fazın işi olarak değil:
+      GÖREV 30 telefona ayrı bir render dalı verdi (≤640px'te tablo yerine kart
+      listesi + bottom sheet, form input'ları 16px). "Şimdilik web-only" kabulü
+      artık geçerli değil.
+- [x] **BİST sembol otomatik tamamlama — yapılmayacak.** Kullanıcı kararı
+      (13 Eylül 2026): şu an ihtiyaç yok. Sembol elle giriliyor ve yeni pozisyon
+      açılışında zaten Apps Script'e otomatik kaydediliyor (Faz 2), yani eksik olan
+      şey fiyatlandırma değil yalnızca yazarken kolaylık.
+      **Veri kaybolmuyor:** `bist_symbols` tablosu paylaşılan veritabanında duruyor,
+      istenirse doğrudan üzerine kurulur.
 
 ---
 
