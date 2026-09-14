@@ -1,14 +1,24 @@
 /**
- * TEFAS fund prices, scraped from fintables.com.
+ * TEFAS fund prices, read from TEFAS itself.
  *
- * Funds are the one asset class with no clean feed: TEFAS has no public API and
- * the Google Sheet's GOOGLEFINANCE rows don't cover Turkish funds. The
- * PortfoyTakip app solved this by scraping Fintables through ScraperAPI, and
- * that arrangement is carried over here unchanged.
+ * This file used to open with "TEFAS has no public API" — true when it was
+ * written, and the reason the price came the long way round: scrape
+ * fintables.com (which resells TEFAS data) through ScraperAPI. TEFAS has since
+ * rebuilt its site as a Next.js app whose own pages call a plain JSON endpoint,
+ * so the primary source is now reachable directly.
  *
- * Fund prices move once a day, so a single successful fetch is cached for the
- * rest of the Turkish calendar day — that keeps the ScraperAPI free-tier quota
- * for the two scheduled runs rather than burning it on refresh clicks.
+ * What that removes: an API key, a metered quota, and a middleman. On
+ * 14 Eylül 2026 Fintables blocked ScraperAPI at both fund slots — ScraperAPI
+ * retried 45 and 46 times, returned HTTP 500 each time, and the panel carried a
+ * three-day-old price. The same figure came back from TEFAS in 0,19 s with no
+ * credentials at all, and its 11 Eylül value matched our stored 0,892774
+ * exactly — which is also the proof that Fintables was reselling this data.
+ *
+ * Fintables is kept as a fallback, not deleted: one source is not a supply.
+ * It runs only when TEFAS fails, and it says so in the log when it does.
+ *
+ * Fund prices move once a day, so a successful fetch is cached for the rest of
+ * the Turkish calendar day.
  */
 
 interface CacheEntry {
@@ -35,6 +45,55 @@ export function cachedFundPrices(): { symbol: string; price: number; fetchedAt: 
     price: e.price,
     fetchedAt: e.fetchedAt.toISOString(),
   }))
+}
+
+const TEFAS_URL = 'https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir'
+/** The site's own "Haftalık" tab — a handful of rows, enough to read the last one. */
+const TEFAS_PERIOD_WEEK = 13
+
+interface TefasRow {
+  fonKodu: string
+  tarih: string
+  fiyat: number
+}
+
+/**
+ * The latest published unit price for a fund, straight from TEFAS.
+ *
+ * Returns the LAST row rather than filtering for today: a fund's price is
+ * published with a lag and never on a weekend, so "the most recent one TEFAS
+ * has" is the only answer that is always right. How fresh our copy is, is
+ * already recorded by `last_updated` on the position.
+ *
+ * No Authorization header: the site sends a bearer token, and the endpoint was
+ * measured to answer identically without it. Sending a token copied out of
+ * someone else's page would be borrowing a credential we were never issued.
+ */
+async function fetchFromTefas(code: string): Promise<number | null> {
+  try {
+    const res = await fetch(TEFAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fonKodu: code, dil: 'TR', periyod: TEFAS_PERIOD_WEEK }),
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const body = (await res.json()) as { errorMessage?: string | null; resultList?: TefasRow[] }
+    if (body.errorMessage) throw new Error(body.errorMessage)
+
+    const rows = (body.resultList ?? [])
+      .filter((r) => r.fonKodu === code && Number.isFinite(r.fiyat) && r.fiyat > 0)
+      .sort((a, b) => a.tarih.localeCompare(b.tarih))
+    const last = rows[rows.length - 1]
+    if (!last) throw new Error('resultList boş')
+
+    console.log(`[fund] ${code}: TEFAS ${last.tarih} → ${last.fiyat}`)
+    return last.fiyat
+  } catch (e) {
+    console.warn(`[fund] ${code}: TEFAS okunamadı —`, e)
+    return null
+  }
 }
 
 /**
@@ -99,6 +158,14 @@ export async function fetchFundPrice(symbol: string, force = false): Promise<Fun
     if (cached != null) return { price: cached, stale: false }
   }
 
+  const direct = await fetchFromTefas(upper)
+  if (direct != null) {
+    cache.set(upper, { price: direct, fetchedAt: new Date() })
+    return { price: direct, stale: false }
+  }
+
+  // Only now the paid, metered path.
+  console.warn(`[fund] ${upper}: TEFAS başarısız — Fintables'a düşülüyor`)
   try {
     const html = await fetchViaProxy(`https://fintables.com/fonlar/${upper}`)
     const price = extractPrice(html)
