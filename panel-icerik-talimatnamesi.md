@@ -177,6 +177,17 @@ uydurma.
 Tek seferde topla — çıktı hem ADIM 4 (morning_note) hem ADIM 5 (portföy analizi)
 için kullanılacak.
 
+> ### ⚠️ Kapalı günde yazıyorsan, KAPALI GÜNLERİ tara
+> Hafta sonu ya da tatilde içerik üretiyorsan tarama "bugün ne oldu" değil,
+> **son seanstan bu yana ne oldu** sorusunu cevaplamalı. Piyasa kapalıyken haber
+> akmaya devam ediyor ve ilk seansta topluca fiyatlanıyor.
+>
+> *(13 Eylül 2026 pazar günü 14 Eylül notu yazıldı. **Cumartesi** Musk, Altman ve
+> Amodei yapay zekâ geliştirmesinin yavaşlaması gerektiğinde anlaşmıştı; pazartesi
+> veri merkezine ekipman ve elektrik satan her şey satıldı — CEG %6,9, Siemens
+> Energy %8. Haber pazar günü kamuya açıktı ve tarama onu bulamadı. "Bilemezdim"
+> değil, aranmadı.)*
+
 ---
 
 ## ADIM 3 — YENİ FİKİR TARAMASI
@@ -323,6 +334,13 @@ ve şema bu adımın kendi sözleşmesidir; skill oraya işaret eder.
   Aktif olanlara appendPriceHistory + currentPrice,
   terminal olanlara sadece currentPrice.
 - OHLC bulunamazsa appendPriceHistory'yi çıkar, sadece currentPrice gönder, logla.
+- **Borsa hâlâ AÇIKSA o borsanın ticker'larına `appendPriceHistory` YAZMA.** Yarım
+  bar gerçek bir günü yanlış anlatır ve merge tarih bazlı olduğu için düzeltilene
+  kadar öyle kalır. Yalnız `currentPrice` gönder (gün içi fiyat güncel bilgidir,
+  sorun değil) ve ADIM 7'de logla. Aynı sebeple **gün içi bir seviye ihlali
+  terminal statü ÜRETMEZ** — statü kapanışla belirlenir.
+  Kontrol: `mcp__yfinance__get_market_status`. BİST ve XETRA ABD'den önce kapanır,
+  yani karma bir gün normaldir: onlara bar yazılır, ABD'ye yazılmaz.
 - Status değiştiyse o nesneye `"status"` ekle.
 - Seviye revizyonu SADECE `"updateLevels": true` + revize seviyelerle:
   `{"ticker": "ABT", "currentPrice": 95.63, "updateLevels": true, "entryLow": 92.00, "hardSl": 87.00}`
@@ -392,6 +410,23 @@ portfolio_insights   → DATABASE_URL, `order by date desc limit 1` (önceki ana
 Hangi temalar güçleniyor/zayıflıyor? Her pozisyon hangi temada? Konsantrasyon riski (tek pozisyon/tema >%25)? TL-USD ve büyüme-savunma dengesi?
 
 **Her açık pozisyon için:** K/Z tez ile tutarlı mı? Tema gücüne göre net aksiyon: `BEKLE` / `KISMİ KÂR AL` / `SAT` / `POZİSYON ARTIR`. Ticker trade_plans/ideas'ta da varsa seviyelerle tutarlı öneri ver.
+
+> ### ⚠️ Bir önceki notta verdiğin uyarıyı sessizce geri çekme
+> Aksiyonları yazmadan önce **o sembol için yazdığın son 3-5 notu oku**
+> (`portfolio_insights.actions` geçmişi). Bir pozisyon için daha önce risk
+> işaretlediysen ve fiyat o yönde devam ettiyse, yeni not öncekinden **daha
+> rahat olamaz** — ne değiştiği yazılmadan.
+>
+> *(CEG: 11 Eylül notu "yüksek faiz bu tür uzun vadeli büyüme hikâyelerini
+> baskılıyor, rüzgâr ters" diyordu. 14 Eylül notu, dört ardışık düşük kapanıştan
+> sonra, "en sağlam bacağı, dokunmaya gerek yok" dedi — uyarı gerekçesiz
+> kayboldu. Ertesi gün hisse %6,9 düştü ve kullanıcı stop oldu; kâr %13,5'ten
+> %0,4'e indi. Hata boşluklu açılışı öngörememek değil, kendi verdiği uyarıyı
+> silmekti.)*
+>
+> **24 pozisyonun gerekçesini tek geçişte "hepsi BEKLE" diye yazmak bu hatanın
+> üretim yolu.** Her pozisyonun kendi fiyat serisine bak; tematik bir cümle
+> fiyatın söylediğinin yerine geçmez.
 
 ### Çıktı — analiz MADDE MADDE yazılır, paragraf olarak DEĞİL
 
