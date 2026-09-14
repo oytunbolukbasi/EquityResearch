@@ -268,10 +268,11 @@ arşivlendi — 13 Eylül 2026), yani fiyatları yazan tek yer burası. **İki a
 |---|---|---|
 | BİST + ABD + Almanya hisseleri | Google Apps Script + Sheet (GOOGLEFINANCE, ~15 dk gecikmeli) | **15 dakikada bir** + açılışta |
 | Kripto | CoinGecko (anahtarsız, tek istekte tüm semboller) | Hisselerle aynı süpürmede |
-| TEFAS fonları | fintables.com kazıma (ScraperAPI, kotalı) | **Hafta içi 09:00 / 10:00 (TR)** — açılışta ÇEKİLMEZ |
+| TEFAS fonları | **TEFAS'ın kendi JSON ucu** (`/api/funds/fonFiyatBilgiGetir`, anahtarsız) — fallback: fintables.com kazıma (ScraperAPI) | **Hafta içi 09:00 / 10:00 (TR)** — açılışta ÇEKİLMEZ |
 | USD/TRY ve EUR/TRY | Frankfurter | İstek anında (`getRates()`) |
 
-- Env: `SHEETS_PRICE_URL`, `SCRAPER_API_KEY`.
+- Env: `SHEETS_PRICE_URL`; `SCRAPER_API_KEY` yalnız fon **fallback**'i için
+  (birincil yol TEFAS ve anahtar istemiyor — GÖREV 52).
 - Zamanlayıcı `node-cron` kullanmaz; `price-scheduler.ts` içinde bir dakika-tick'i.
   `dueSlot()` saf fonksiyondur, 09:00'ı beklemeden test edilebilir.
 - **Elle "Hisse fiyatlarını yenile" butonu yalnızca hisseleri yeniler.** Fon fiyatı
@@ -303,8 +304,13 @@ arşivlendi — 13 Eylül 2026), yani fiyatları yazan tek yer burası. **İki a
 - **Eş zamanlı okumalar tek isteği paylaşır.** Apps Script script başına aynı
   anda tek istek işler; üst üste binen okumalar hızlanmaz, kuyruğa girip
   birbirini timeout'a düşürür.
-- Arayüzde bayatlık göstergesi ("az önce / 3 saat önce / 2 gün önce"); iki günü aşarsa
-  uyarı rengine döner. Fiyat akışı durursa panel sessizce yanlış göstermesin diye.
+- Arayüzde bayatlık göstergesi ("az önce / 3 saat önce / 2 gün önce"). Fiyat akışı
+  durursa panel sessizce yanlış göstermesin diye.
+- **Bayatlık KAYNAK BAZINDA ölçülür** (`stalePositions`, GÖREV 52): sheet ve kripto
+  3 saat, fon 48 saat. Başlıktaki yaş en TAZE satırı gösterir — panelin ne kadar
+  güncel olduğunun dürüst cevabı o — ama eşiğini aşan pozisyonlar ayrıca **adıyla**
+  yazılır (`⚠ YKT 3 gün`). Tek eşik ya fonu her öğleden sonra bayat ilan ederdi ya
+  da sheet saatlerdir ölmüşken susardı.
 
 ## İçerik Besleme Akışı
 Günlük içerik (morning_note / ideas / trade_plans / portfolio_insight) **bu repo'da
@@ -1560,3 +1566,82 @@ dokunmayan, yenileyince kaybolan bir önizleme.
 *Yan iş:* `--chart-grid` token'ı silindi. GÖREV 44 ızgarayı kaldırmıştı ama
 tanım kalmıştı; hiçbir yerden okunmayan bir renk token'ı, yeniden uygulanmayı
 bekleyen bir karar gibi duruyor.
+
+GÖREV 52 — Fon fiyatı TEFAS'tan doğrudan; bayat pozisyon artık adıyla görünüyor
+
+Kullanıcı "YKT fiyatı neden güncellenmemiş?" diye sordu. İki ayrı şey çıktı ve
+ilki bizde değildi.
+
+**A — Kazıma zinciri koptu, boru hattı doğru davrandı.**
+
+Railway logu kesin: zamanlayıcı iki fon slotunda da saniyesinde çalıştı
+(06:00:50 ve 07:00:48 UTC = 09:00 ve 10:00 TR), kazıma ikisinde de
+`HTTP 500` aldı. ScraperAPI paneli tamamladı: aynı URL için **45 ve 46
+deneme**, "Request failed after automatic retries". Yani kota bitmemişti,
+hesap kapanmamıştı — **Fintables engelliyordu**, ve her denemede kotadan
+45+ istek yanıyordu.
+
+GÖREV 42'nin koruması tam tasarlandığı gibi çalıştı: çekemediği bir fiyatı
+yeniden damgalamadı, cumadan kalma değeri olduğu gibi bıraktı. Panel yalan
+söylemedi — söyleyemediğini de söyleyemedi, bkz. B.
+
+**Çözüm: aracıyı atmak.** `fund-price.ts` "TEFAS'ın açık API'si yok" diye
+açılıyordu; yazıldığında doğruydu ve tüm düzeneğin sebebi buydu. TEFAS o
+zamandan beri sitesini Next.js uygulamasına çevirdi ve kendi sayfaları düz bir
+JSON ucu çağırıyor: `POST /api/funds/fonFiyatBilgiGetir`,
+gövde `{fonKodu, dil, periyod}`.
+
+| | Fintables + ScraperAPI | TEFAS doğrudan |
+|---|---|---|
+| 14 Eylül sonucu | 45-46 deneme, HTTP 500, fiyat YOK | `0.884321` |
+| Süre | dakikalar | **182 ms** (gerçek kod yolu, yerelde) |
+| Kimlik bilgisi | API anahtarı | **yok** |
+| Kota | metreli | yok |
+
+**Fintables'ın bu veriyi yeniden sattığı kanıtlandı:** TEFAS'ın 11 Eylül değeri
+`0.892774`, bizim kayıtlı değerimizle birebir aynı.
+
+- Uç **tarayıcının ağ trafiği izlenerek** bulundu, tahminle değil. İlk iki
+  tahmin (`/api/DB/BindHistoryInfo`, sonra gövde varyantları) "Method not found"
+  ve "Sistem Hatası" döndü; doğru gövde ancak sitenin kendi `fetch`'i sarmalanıp
+  bir dönem düğmesine basılarak yakalandı.
+- **`Authorization` GÖNDERİLMİYOR.** Site bir bearer token yolluyor; uç onsuz da
+  aynı cevabı veriyor (ölçüldü). Başkasının sayfasından kopyalanan bir kimlik
+  bilgisini kullanmak, bize verilmemiş bir yetkiyi ödünç almak olurdu.
+- **Son satır alınır, "bugün" diye filtrelenmez.** Fon fiyatı gecikmeli
+  yayınlanır ve hafta sonu hiç yayınlanmaz; "TEFAS'ın elindeki en yenisi" her
+  zaman doğru olan tek cevap.
+- **Fintables silinmedi, fallback oldu** — tek kaynak bir tedarik değildir.
+  Yalnız TEFAS düştüğünde çalışır ve çalıştığını loga yazar. Kullanıcı
+  ScraperAPI hesabını bu yüzden açık tuttu (ücretsiz katman).
+
+**B — Asıl hata bizdeydi: panel doğruyu biliyordu ama göstermedi.**
+
+Tazelik göstergesi `Math.max(...times)` kullanıyordu — yani **en TAZE** satırın
+yaşını raporluyordu, izlenmesi hiç gerekmeyen satırın. Ölçüldü: etiket
+"3,2 saat önce" derken YKT **86 saat** eskiydi. 22 taze pozisyon bir bayatı
+arkasına saklıyordu.
+
+En can alıcısı, o fonksiyonun kendi yorumu şunu diyordu: *"yenileme işi durursa
+paneldeki her sayı otoriter görünmeye devam eder; yaşı göstermek bunu görünür
+kılar."* Tam da yapamadığı işi tarif ediyormuş. GÖREV 42 dürüst sinyali boru
+hattına koydu, arayüz onu `Math.max` ile attı.
+
+- `stalePositions()` her pozisyonu **kendi kaynağının ritmine** göre ölçer:
+  sheet ve kripto 3 saat, fon 48 saat. Tek eşik ya fonu her öğleden sonra bayat
+  ilan ederdi (fon zaten günde bir güncellenir) ya da sheet saatlerdir ölmüşken
+  susardı.
+- Başlık en tazeyi göstermeye devam eder; bayat olanlar **adıyla** eklenir
+  (`⚠ YKT 3 gün`). İkiden fazlaysa sayıya düşer, yoksa başlık listeye döner.
+
+*Ders:* bir sinyali üretmek yetmiyor, onu **taşıyan yolun her halkasını**
+kontrol etmek gerekiyor. Boru hattı doğru sinyali üretti, arayüz bir tek
+fonksiyon çağrısıyla onu yok etti ve kimse üç gün fark etmedi.
+
+*Yan iş:* bugünkü fiyat (`0.884321`) panele elle yazıldı — yalnız
+`current_price` ve `last_updated`, GÖREV 37 kuralı gereği; alış tarihi
+(17 Şubat) korunduğu doğrulandı.
+
+*Açık, ertelendi:* kota artık kısıt olmadığı için iki şey gevşetilebilir —
+fonun günde iki kez çekilme zorunluluğu ve "elle yenile butonu fonu yenilemez"
+kuralı (GÖREV 28'den beri kota koruması olarak duruyor).
