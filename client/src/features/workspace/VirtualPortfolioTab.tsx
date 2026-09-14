@@ -10,6 +10,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Select, type SelectOption } from '@/components/ui/select'
 import {
   POSITION_TYPES,
+  PRICE_SOURCE_FOR_TYPE,
   TYPE_LABEL as TYPE_LABEL_FULL,
   TYPE_SHORT,
   type PositionType,
@@ -163,6 +164,44 @@ function today(): string {
  * refresh job ever stops, every number on the panel keeps looking authoritative
  * while quietly going stale. Showing the age makes that visible instead.
  */
+/**
+ * How long a position may go without a write before something is wrong.
+ *
+ * Per SOURCE, not one number for the panel: shares and crypto ride a 15-minute
+ * sweep, a fund price is scraped on weekday mornings and legitimately sits
+ * still for a day. One threshold would either cry wolf about the fund every
+ * afternoon or stay silent while the sheet had been down for hours.
+ */
+const STALE_AFTER_HOURS: Record<'sheet' | 'fund' | 'crypto', number> = {
+  sheet: 3,
+  crypto: 3,
+  fund: 48,
+}
+
+/**
+ * Positions that have missed their own source's cadence.
+ *
+ * This exists because the headline below reports the FRESHEST row, and the
+ * freshest row is the one that never needed watching. On 14 Eylül 2026 the
+ * label read "3 saat önce güncellendi" while YKT had not been written since
+ * Friday — 86 hours — because ScraperAPI answered HTTP 500 at both fund slots
+ * and GÖREV 42 (correctly) refused to restamp a price it had not refetched.
+ * The pipeline kept the honest signal; the panel then hid it behind Math.max.
+ */
+function stalePositions(positions: PortfolioPosition[]): { symbol: string; days: number }[] {
+  const now = Date.now()
+  return positions
+    .map((p) => {
+      const t = p.lastUpdated ? Date.parse(p.lastUpdated) : NaN
+      if (!Number.isFinite(t)) return null
+      const hours = (now - t) / 3_600_000
+      const limit = STALE_AFTER_HOURS[PRICE_SOURCE_FOR_TYPE[p.type as PositionType] ?? 'sheet']
+      return hours > limit ? { symbol: p.symbol, days: Math.round(hours / 24) } : null
+    })
+    .filter((x): x is { symbol: string; days: number } => x !== null)
+    .sort((a, b) => b.days - a.days)
+}
+
 function freshnessLabel(positions: PortfolioPosition[]): { text: string; stale: boolean } | null {
   const times = positions
     .map((p) => (p.lastUpdated ? Date.parse(p.lastUpdated) : NaN))
@@ -751,6 +790,7 @@ export function VirtualPortfolioTab() {
   const positions = summary?.positions ?? []
   const selected = positions.find((p) => p.id === selectedId) ?? null
   const freshness = freshnessLabel(positions)
+  const stale = stalePositions(positions)
 
   const sortedPositions = sortRows(positions, openSort, (p, k) =>
     k === 'symbol' ? p.symbol : (p[k] as number | null),
@@ -1183,16 +1223,33 @@ export function VirtualPortfolioTab() {
           // Full width on a phone so freshness and the refresh button read as
           // one row rather than a ragged right-aligned block under the title.
           <div className="flex w-full items-center justify-between gap-2.5 sm:w-auto sm:justify-end">
-            {freshness && (
-              <span
-                className="num text-[12px]"
-                style={{ color: freshness.stale ? 'var(--warn)' : 'var(--mid)' }}
-                title="Hisseler 15 dakikada bir, fonlar hafta içi 09:00 ve 10:00'da yenilenir"
-              >
-                {freshness.stale ? '⚠ ' : ''}
-                {freshness.text}
-              </span>
-            )}
+            <span className="flex min-w-0 items-center gap-2">
+              {freshness && (
+                <span
+                  className="num shrink-0 text-[12px]"
+                  style={{ color: freshness.stale ? 'var(--warn)' : 'var(--mid)' }}
+                  title="Hisseler 15 dakikada bir, fonlar hafta içi 09:00 ve 10:00'da yenilenir"
+                >
+                  {freshness.stale ? '⚠ ' : ''}
+                  {freshness.text}
+                </span>
+              )}
+              {/* Named, because "bir şey bayat" sends you hunting through 23
+                  rows. The count is capped so a full outage does not turn the
+                  header into a list. */}
+              {stale.length > 0 && (
+                <span
+                  className="num truncate text-[12px]"
+                  style={{ color: 'var(--warn)' }}
+                  title={stale.map((s) => `${s.symbol}: ${s.days} gün`).join(' · ')}
+                >
+                  ⚠{' '}
+                  {stale.length <= 2
+                    ? stale.map((s) => `${s.symbol} ${s.days} gün`).join(' · ')
+                    : `${stale.length} pozisyon güncellenmiyor`}
+                </span>
+              )}
+            </span>
             <button
               onClick={refreshPrices}
               disabled={refreshing}
