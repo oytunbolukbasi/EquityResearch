@@ -154,7 +154,7 @@ export function Workspace() {
                   a single 0.9s rotate cost ~120 kB of bundle. */}
                   <span className="eqr-logo-spin inline-flex">
                     <BotMessageSquare
-                      className="size-[22px] text-[var(--up)]"
+                      className="text-info size-[22px]"
                       strokeWidth={1.75}
                     />
                   </span>

@@ -1645,3 +1645,29 @@ fonksiyon çağrısıyla onu yok etti ve kimse üç gün fark etmedi.
 *Açık, ertelendi:* kota artık kısıt olmadığı için iki şey gevşetilebilir —
 fonun günde iki kez çekilme zorunluluğu ve "elle yenile butonu fonu yenilemez"
 kuralı (GÖREV 28'den beri kota koruması olarak duruyor).
+
+GÖREV 53 — "Günlük analizi göster" butonuna kenar parıltısı, logo maviye döndü
+
+Analiz bloğu kapatıldığında başlıkta kalan tek yol bu buton; küçük, mavi bir
+metin olduğu için gözden kaçıyordu. Üç küçük değişiklik:
+
+- **İkon:** `IoDocumentTextOutline` → lucide `MessageSquareQuote`. "Belge"
+  değil "yorum" diyor — bloğun içeriği de bu.
+- **Kenar parıltısı (`.eqr-glow`, index.css):** butonun arkasında 1,5px taşan,
+  kayan bir gradyan; `::after` içini sayfa zeminiyle (`--bg`) geri örtüyor,
+  geriye yalnız kenar kalıyor. Açılışta bir kez yanıp ~3 sn'de söner, hover ve
+  klavye odağında yanık kalır.
+  - **Renkler tek accent'ten türetilir** (`--info` ve onun `color-mix`
+    açık/koyu tonları) — örnekteki gökkuşağı değil. Temayla birlikte döner.
+  - **Bulanıklık YOK, bilerek.** İlk sürümde `blur(5px)` vardı; gradyanı
+    butonun dışına yayıp gölge gibi okunuyordu, buton sayfanın üstünde
+    yüzüyordu. Panel düz — blur'u geri koyan bunu geri getirir.
+  - Butonun 1px'lik şeffaf kenarlığı kalktı, iç boşluk 1px artırıldı:
+    yükseklik ölçüldü, önce ve sonra 29,5px.
+  - `prefers-reduced-motion`: kayma ve açılış animasyonu kapalı, hover'da
+    kenar yine yanar.
+  - Blok × ile kapatılınca buton yeniden mount olduğu için açılış animasyonu
+    o an da bir kez oynar — kasıtlı: bloğun nereye gittiğini gösteriyor.
+- **Header logosu yeşilden `--info` mavisine** (`text-info`). Logo `--up`
+  kullanıyordu; panelde yeşil kâr demek. Giriş ekranındaki logo zaten maviydi,
+  ikisi artık aynı.

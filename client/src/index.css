@@ -497,11 +497,70 @@ body.eqr-dragging * {
   border-radius: 6px;
 }
 
+/* ── Kenar parıltısı ("Günlük analizi göster") ───────────────────────────
+   Butonun ARKASINDA, 1,5px taşan, kayan bir gradyan; ::after butonun içini
+   sayfa zeminiyle geri örter, geriye yalnız keskin bir kenar çizgisi kalır.
+   Bulanıklık YOK, bilerek: blur gradyanı butonun dışına yayıp gölge gibi
+   okunuyordu, buton sayfanın üstünde yüzüyor görünüyordu. Panel düz (flat). Renkler tek
+   accent'ten (--info) türetilir, temayla birlikte döner — panelde "başka bir
+   renk" yok. Açılışta bir kez yanıp söner, hover'da yanık kalır. */
+.eqr-glow {
+  position: relative;
+  isolation: isolate;
+}
+.eqr-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  z-index: -2;
+  border-radius: 10.5px;
+  background: linear-gradient(
+    45deg,
+    var(--info),
+    color-mix(in oklab, var(--info) 45%, white),
+    color-mix(in oklab, var(--info) 65%, black),
+    color-mix(in oklab, var(--info) 70%, white),
+    var(--info)
+  );
+  background-size: 400%;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  animation:
+    eqr-glow-slide 12s linear infinite,
+    eqr-glow-intro 2.6s ease-in-out 0.4s 1;
+}
+.eqr-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 9px;
+  background: var(--bg);
+}
+.eqr-glow:hover::before,
+.eqr-glow:focus-visible::before {
+  opacity: 1;
+}
+@keyframes eqr-glow-slide {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+@keyframes eqr-glow-intro {
+  0%, 100% { opacity: 0; }
+  30%, 65% { opacity: 1; }
+}
+
 /* ── reduced motion ─────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   .eqr-divider-grip {
     transition: none;
+  }
+
+  /* Hover'da kenar yine yanar, ama kaymaz ve açılışta kendiliğinden yanmaz. */
+  .eqr-glow::before {
+    animation: none;
   }
 
   .eqr-logo-spin,

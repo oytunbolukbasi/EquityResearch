@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react'
-import { IoClose, IoDocumentTextOutline } from 'react-icons/io5'
+import { MessageSquareQuote } from 'lucide-react'
+import { IoClose } from 'react-icons/io5'
 
 import type {
   PortfolioAction,
@@ -552,9 +553,9 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
             <button
               type="button"
               onClick={() => toggleAnalysis(true)}
-              className="text-info hover:border-info flex cursor-pointer items-center gap-1.5 rounded-[9px] border border-transparent bg-transparent px-2 py-1 text-[13px]"
+              className="eqr-glow text-info flex cursor-pointer items-center gap-1.5 rounded-[9px] border-0 bg-transparent px-[9px] py-[5px] text-[13px]"
             >
-              <IoDocumentTextOutline size={15} />
+              <MessageSquareQuote size={15} />
               Günlük analizi göster
             </button>
           )
