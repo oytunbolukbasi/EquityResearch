@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { BadgeCheck, CirclePlus, CircleStop, Clock7, Loader2, type LucideIcon } from 'lucide-react'
 
 export function Loading() {
   return (
@@ -41,17 +41,32 @@ export const ACTION_STYLE: Record<string, { bg: string; color: string }> = {
   'POZİSYON ARTIR': { bg: 'var(--warn-tint)', color: 'var(--warn)' },
 }
 
+/**
+ * Each action's glyph. It rides inside the pill, in the pill's own colour —
+ * the icon repeats what the colour says for a reader who can't tell the
+ * colours apart, it does not add a fifth colour. An unknown action gets no
+ * icon rather than a guessed one.
+ */
+const ACTION_ICON: Record<string, LucideIcon> = {
+  BEKLE: Clock7,
+  'KISMİ KÂR AL': BadgeCheck,
+  SAT: CircleStop,
+  'POZİSYON ARTIR': CirclePlus,
+}
+
 export function actionStyle(action: string) {
   return ACTION_STYLE[action] ?? { bg: 'var(--neutral-tint)', color: 'var(--mid)' }
 }
 
 export function ActionBadge({ action }: { action: string }) {
   const s = actionStyle(action)
+  const Icon = ACTION_ICON[action]
   return (
     <span
-      className="num inline-flex rounded-[5px] px-[7px] py-[3px] text-[11px] font-medium whitespace-nowrap"
+      className="num inline-flex items-center gap-1 rounded-[5px] px-[7px] py-[3px] text-[11px] font-medium whitespace-nowrap"
       style={{ background: s.bg, color: s.color }}
     >
+      {Icon && <Icon size={12} strokeWidth={2} aria-hidden="true" className="shrink-0" />}
       {action}
     </span>
   )

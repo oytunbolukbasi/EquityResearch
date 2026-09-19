@@ -1671,3 +1671,18 @@ metin olduğu için gözden kaçıyordu. Üç küçük değişiklik:
 - **Header logosu yeşilden `--info` mavisine** (`text-info`). Logo `--up`
   kullanıyordu; panelde yeşil kâr demek. Giriş ekranındaki logo zaten maviydi,
   ikisi artık aynı.
+
+GÖREV 54 — Aksiyon rozetlerine ikon
+
+Portföy widget'ındaki not rozetleri (`ActionBadge`, `shared.tsx`) artık bir
+ikon taşıyor: BEKLE `Clock7` · KISMİ KÂR AL `BadgeCheck` · SAT `CircleStop` ·
+POZİSYON ARTIR `CirclePlus`.
+
+- **İkon rozetin içinde ve rozetin kendi renginde** (`currentColor`). Beşinci
+  bir renk eklemiyor; rengin söylediğini renkleri ayıramayan okuyucu için
+  tekrarlıyor.
+- 12px, `gap-1`. Rozet yüksekliği ölçüldü: önce ve sonra 22,5px — satırlar
+  kaymadı.
+- **Bilinmeyen aksiyon ikonsuz çizilir**, tahmin edilmiş bir ikonla değil.
+  Panelde "KÂR AL" ya da "İZLE" diye bir aksiyon yok (geçerli dört aksiyon
+  talimatnamede ve `verify-insight.ts`'te); eklenirse haritaya da girmeli.
