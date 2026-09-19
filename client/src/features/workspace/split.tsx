@@ -17,8 +17,13 @@ export type SwapKey = Extract<SplitKey, 'overview' | 'ideas' | 'virtual' | 'anal
 const SPLITS_KEY = 'eqr2:splits:v2'
 const SWAPPED_KEY = 'eqr2:swapped'
 
-/** The only widths a split may come to rest at. Mid-drag values are transient. */
-const PRESETS = [25, 50, 75] as const
+/**
+ * The only widths a split may come to rest at. Mid-drag values are transient.
+ * Thirds are exact (100/3, not 33): a rounded third leaves the two panels a
+ * visible hair apart from "one third / two thirds", which is the whole point
+ * of the stop. Symmetric around 50 so both sides get the same choices. (GÖREV 55)
+ */
+const PRESETS = [25, 100 / 3, 50, 200 / 3, 75] as const
 /** Visual drag bounds — the pointer may roam here, but release still snaps to a preset. */
 const MIN_FRAC = 15
 const MAX_FRAC = 85
@@ -258,9 +263,9 @@ interface SplitPaneProps {
 /**
  * Two panels with a draggable divider between them.
  *
- * Width follows the pointer freely while dragging (with 25/50/75 guides shown),
+ * Width follows the pointer freely while dragging (with a guide at every preset),
  * then snaps to the nearest preset on release — so the persisted value is always
- * exactly 25, 50 or 75.
+ * one of PRESETS: a quarter, a third, a half, two thirds or three quarters.
  *
  * Swapping is driven from the panel headers (see `useSwapHandle`): the moment the
  * pointer crosses the divider the two panels trade places, with no transition.
@@ -400,7 +405,7 @@ export function SplitPane({ splitKey, a, b, swappable = true }: SplitPaneProps) 
 
         <div
           onPointerDown={startResize}
-          title="Sürükle: %25 / %50 / %75"
+          title="Sürükle: ¼ · ⅓ · ½ · ⅔ · ¾"
           role="separator"
           aria-orientation="vertical"
           aria-label="Panel genişliğini ayarla"

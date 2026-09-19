@@ -28,7 +28,7 @@ sabittir, ayarlanabilen tek şey iki panelin genişliği ve sırası.
   (GÖREV 35, 36). Radix bağımlılığı `react-slot` üzerinden button'da, bir de kullanılmayan
   dropdown'da. Yani "Radix tabanlı bir arayüz" beklemeyin.
 - **Yerleşim:** 6 sekme + açılıp kapanan Notlar yüzeyi; her sekmede en fazla iki panel.
-  Kütüphane yok — `features/workspace/split.tsx` divider'ı, %25/50/75 snap'ini ve panel
+  Kütüphane yok — `features/workspace/split.tsx` divider'ı, ¼ · ⅓ · ½ · ⅔ · ¾ snap'ini ve panel
   takasını kendisi yönetir. *(react-grid-layout GÖREV 27'de kaldırıldı.)*
 - **Not editörü:** BlockNote (`@blocknote/core` + `react` + `mantine`) — yalnız
   ücretsiz katman. `@blocknote/xl-*` paketleri GPL-3.0/ticari lisanslı, **kurulu
@@ -185,7 +185,7 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 
 Serbest canvas yok. Her sekmede **en fazla iki panel** yan yana durur; aralarındaki
 divider sürüklenince genişlik imleci serbest takip eder ve bırakınca **tam olarak
-%25/50/75**'ten birine oturur. Panel başlığı sürükleme tutamacıdır: imleç divider'ın
+¼ · ⅓ · ½ · ⅔ · ¾**'ten birine oturur (GÖREV 55). Panel başlığı sürükleme tutamacıdır: imleç divider'ın
 öbür tarafına geçtiği an iki panel **anında** yer değiştirir (geçiş süresi 0, DOM
 sırası sabit — yalnız `flex order` değişir, dolayısıyla panel remount olmaz, grafik
 ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır; ≤640px
@@ -1686,3 +1686,29 @@ POZİSYON ARTIR `CirclePlus`.
 - **Bilinmeyen aksiyon ikonsuz çizilir**, tahmin edilmiş bir ikonla değil.
   Panelde "KÂR AL" ya da "İZLE" diye bir aksiyon yok (geçerli dört aksiyon
   talimatnamede ve `verify-insight.ts`'te); eklenirse haritaya da girmeli.
+
+GÖREV 55 — Panel genişliğine üçte birler eklendi
+
+Divider'ın oturabildiği kademeler üçten beşe çıktı: **¼ · ⅓ · ½ · ⅔ · ¾**
+(`PRESETS`, `split.tsx`).
+
+- **Tam üçte bir, yuvarlanmış %33 değil** (`100 / 3`, `200 / 3`). Kademenin
+  var oluş sebebi "üçte bir / üçte iki" bölmesi; yuvarlanmış değer iki paneli
+  o orandan gözle görülür biçimde kaydırıyordu. Kayıtta 33,333… durur,
+  `isWorkspaceLayout` yalnız `number` baktığı için Kaydet/geri yükleme etkilenmez.
+- **%50 etrafında simetrik**, dolayısıyla kademe sayısı hep tek: ortayı
+  bırakmadan iki tarafa eşit seçenek vermenin yolu bu. İstenen "6 kademe"
+  bu yüzden 5 oldu, kullanıcıyla birlikte seçildi. %20/%80 de önerildi ve
+  elendi — 1280px ekranda ~250px, portföy tablosu orada okunmaz.
+- Eski kayıtlar (25/50/75) hâlâ geçerli kademe; migration yok.
+- **Test:** 13 bırakma noktası (%20–%90) sentetik pointer olaylarıyla — hepsi
+  en yakın kademeye oturdu, geçiş noktaları iki kademenin tam ortası
+  (29,2 · 41,7 · 58,3 · 70,8); ekrandaki genişlik kayıtla birebir. Takaslı
+  düzende %36 → ayırıcı ⅓'te. Kılavuzlar sürüklerken beşte de çıkıyor.
+  *Ölçüm dersi:* tarayıcı aracının `left_click_drag`'i koordinatları tutarsız
+  aktardı (aynı sürükleme bir okumada ¾, diğerinde ⅔); pointer olaylarını
+  divider'a doğrudan göndermek aynı kod yolunu belirsizliksiz sınadı.
+
+*Bilinen, dokunulmadı:* ⅓ ve ¼'te Genel bakış'taki portföy tablosunun Not
+sütunu kırpılıyor ("BEKL…"). Dar genişlikte Son fiyat sütununu gizlemek bir
+seçenek.
