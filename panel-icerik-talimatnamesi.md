@@ -187,6 +187,24 @@ için kullanılacak.
 > veri merkezine ekipman ve elektrik satan her şey satıldı — CEG %6,9, Siemens
 > Energy %8. Haber pazar günü kamuya açıktı ve tarama onu bulamadı. "Bilemezdim"
 > değil, aranmadı.)*
+>
+> **Siyaset ve jeopolitik ayrı bir kalem, piyasa haberinin içinde aranmaz.**
+> Hafta sonu en çok bunlar birikir ve piyasa haberi aramaları onları getirmez.
+> Kapalı günlerde aşağıdaki başlıkların HER BİRİ için en az bir arama yapılır;
+> "kayda değer bir şey yok" da bir sonuçtur ve özette yazılır:
+> 1. **Türkiye iç siyaseti ve düzenleyiciler:** hükümet/Cumhurbaşkanlığı
+>    kararları, SPK/BDDK/TCMB hafta sonu duyuruları, Resmî Gazete.
+>    *(Eylül 2026'da açık olan: TEFAS'ta işleme kapatılan fonların tasfiyesi.)*
+> 2. **Bölgesel jeopolitik:** Türkiye'nin komşu olduğu çatışma alanları, Orta
+>    Doğu, Rusya-Ukrayna — petrol ve lira riskini doğrudan taşırlar.
+> 3. **ABD siyaseti ve ticaret:** gümrük tarifeleri, yaptırımlar, Fed
+>    yetkililerinin hafta sonu konuşmaları, ABD-Çin.
+> 4. **Avrupa/Almanya:** hükümet, AB kararları, Alman sanayisini ilgilendiren
+>    düzenlemeler (portföyde beş Alman hissesi var).
+> 5. **Enerji arzı:** OPEC+ kararları, tedarik kesintileri.
+>
+> Bulunan bir gelişme portföyde bir pozisyonu etkiliyorsa ADIM 5'te o satırın
+> gerekçesinde adıyla anılır — genel makro maddesinde kalıp kaybolmaz.
 
 ---
 
