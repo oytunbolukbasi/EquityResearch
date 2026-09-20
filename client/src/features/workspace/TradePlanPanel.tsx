@@ -82,7 +82,14 @@ export function TradePlanPanel({
   const cur = plan.currentPrice
   const terminal = TERMINAL_LABEL[status]
 
-  const levels = [
+  const levels = planLevels(plan)
+
+  return <TradePlanPanelInner {...{ plan, plans, onSelect, status, levels, cur, terminal }} />
+}
+
+/** The level set the chart draws and the phone ladder lists — one definition. */
+function planLevels(plan: TradePlan) {
+  return [
     {
       label: 'Giriş Bandı',
       price:
@@ -104,7 +111,133 @@ export function TradePlanPanel({
     { label: 'TP3', price: fmtN(plan.tp3, 2), raw: plan.tp3, color: 'var(--tp3)', tint: 'var(--tp3-tint)', isEntry: false },
     { label: 'Hard SL', price: fmtN(plan.hardSl, 2), raw: plan.hardSl, color: 'var(--down)', tint: 'var(--down-tint)', isEntry: false },
   ]
+}
 
+
+/** "20 Eyl 12:19" — when the content round last wrote this plan's price. */
+function writtenAt(stamp: string | null | undefined): string {
+  if (!stamp) return 'yazılma zamanı yok'
+  const d = new Date(stamp)
+  if (Number.isNaN(d.getTime())) return 'yazılma zamanı yok'
+  return d.toLocaleString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/**
+ * Phone: the plan without a chart.
+ *
+ * At 375px the chart's plot came to 228px and the price scale ate the rest, so
+ * the bars were unreadable — and the one question the chart answered here is
+ * "where is the price between the stop and the target". A ladder answers that
+ * in words: levels in price order, the current price marked in its place among
+ * them, each with its distance. Then the two things that actually decide what
+ * to do — the thesis and what breaks it — instead of a picture of past bars.
+ */
+export function PlanLadder({ plan, status }: { plan: TradePlan; status: string }) {
+  const cur = plan.currentPrice
+  const rows = planLevels(plan)
+    .filter((l) => l.raw != null)
+    .sort((a, b) => (b.raw as number) - (a.raw as number))
+
+  // The current price sits in the ladder, not above it: its position between
+  // the levels is the reading.
+  const above = cur == null ? rows : rows.filter((l) => (l.raw as number) > cur)
+  const below = cur == null ? [] : rows.filter((l) => (l.raw as number) <= cur)
+
+  const row = (l: (typeof rows)[number]) => {
+    const pct =
+      cur != null && cur !== 0 && l.raw != null ? ((l.raw as number) / cur - 1) * 100 : null
+    return (
+      <div key={l.label} className="border-faint2 flex items-center gap-2.5 border-b py-2.5">
+        <span className="size-2 shrink-0 rounded-full" style={{ background: l.color }} />
+        <span className="flex-1 text-[13px]">{l.label}</span>
+        <span className="num text-[13px] font-medium">{l.price}</span>
+        <span className="num text-mid w-[54px] text-right text-[12px]">
+          {pct == null ? '' : `${pct > 0 ? '+' : ''}${fmtN(pct, 1)}%`}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="mb-4">
+        {above.map(row)}
+        {cur != null && (
+          <div
+            // The tint bleeds 10px past the content on both sides (-mx + px):
+            // padded normally, the row's own price sat 10px left of every other
+            // price in the ladder and the column stopped reading as a column.
+            className="-mx-2.5 my-1 flex items-center gap-2.5 rounded-[9px] px-2.5 py-2.5"
+            style={{ background: 'var(--info-tint)', color: 'var(--info)' }}
+          >
+            <span className="size-2 shrink-0 rounded-full" style={{ background: 'var(--info)' }} />
+            {/* Not "Şu an": this number is whatever the last content round
+                wrote — normally the last session's close — and among levels it
+                read as a live quote. The stamp beside it says how old it is. */}
+            <span className="flex-1 text-[13px] font-medium">Son fiyat</span>
+            <span className="num text-[11px] whitespace-nowrap opacity-70">
+              {writtenAt(plan.updatedAt)}
+            </span>
+            <span className="num text-[13px] font-semibold">{fmtN(cur, 2)}</span>
+            <span className="w-[54px]" />
+          </div>
+        )}
+        {below.map(row)}
+      </div>
+
+      {plan.thesis && (
+        <div className="border-faint mb-3 rounded-[9px] border p-[13px]">
+          <div className="text-mid mb-1.5 text-[12px]">Tez</div>
+          <p className="m-0 text-[13px] leading-[1.75]">{plan.thesis}</p>
+        </div>
+      )}
+
+      {plan.invalidation && (
+        // Warn tint, like the panel's other "there is something to do here"
+        // marks: this text says what ends the idea.
+        <div className="rounded-[9px] p-[13px]" style={{ background: 'var(--warn-tint)' }}>
+          <div className="mb-1.5 text-[12px]" style={{ color: 'var(--warn)' }}>
+            Tezi bozan
+          </div>
+          <p className="m-0 text-[13px] leading-[1.75]">{plan.invalidation}</p>
+        </div>
+      )}
+
+      {!plan.thesis && !plan.invalidation && (
+        <p className="text-mid text-[13px]">Bu plan için yazılı bir tez yok.</p>
+      )}
+
+      {status && TERMINAL_LABEL[status] && (
+        <p className="text-mid mt-3 text-[12px]">
+          Bu fikir {TERMINAL_LABEL[status]} ile kapandı; seviyeler kapanış anındaki haliyle duruyor.
+        </p>
+      )}
+    </>
+  )
+}
+
+function TradePlanPanelInner({
+  plan,
+  plans,
+  onSelect,
+  status,
+  levels,
+  cur,
+  terminal,
+}: {
+  plan: TradePlan
+  plans: TradePlan[]
+  onSelect: (ticker: string) => void
+  status: string
+  levels: ReturnType<typeof planLevels>
+  cur: number | null
+  terminal: string | undefined
+}) {
   const header = (
     <div className="flex items-center gap-2.5">
       <span>{plan.ticker}</span>

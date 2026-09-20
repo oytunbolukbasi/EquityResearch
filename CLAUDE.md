@@ -1782,3 +1782,116 @@ sunucu **tüm yanıtı** şema hatasıyla reddediyor
 *Yan fayda:* izleme listesindeki üç Alman aday (Munich Re, Deutsche Bank,
 Allianz) haftalardır fiyatsız duruyordu ve "koşulu test edilemiyorsa listede
 durmamalı" diye işaretlenmişti. Artık okunuyorlar; listede kalıyorlar.
+
+GÖREV 58 — Mobil uyumluluk: kalan dört ekran
+
+Sanal Portföy (GÖREV 30) ve Piyasa Nabzı (GÖREV 56) telefonda zaten
+çalışıyordu; bu tur Genel bakış, Notlar, Pozisyon Fikirleri ve Paper'ı aldı.
+Tasarım önce canvas'ta çizilip onaylandı, sonra yazıldı.
+
+**Tekrarlayan tek hata:** masaüstünün iki panelli düzeni telefonda üst üste
+yığılıyor ve **her panel kendi içinde ayrıca kayıyordu** — aynı anda iki, yer
+yer üç kaydırma ekseni. Çözüm her ekranda aynı: telefonda `maxBodyHeight`
+verilmez, tek kaydırma sayfanındır.
+
+**Tek eşik: `PHONE_QUERY = '(max-width: 640px)'`** (`split.tsx`'ten export).
+Sanal Portföy'ün yerel `CARD_QUERY`'si buna bağlandı. `STACK_QUERY` (800px)
+duruyor ve farkı bilinçli: 641–800 arası paneller yığılır ama içlerindeki
+masaüstü düzeni hâlâ sığar; 640 altında tablo listeye, yan panel alt sayfaya
+dönmek zorunda.
+
+**Genel bakış**
+- "Günlük analizi göster" 167×30px'lik bir metin bağlantısıydı ve başlık satırı
+  sarmaladığı için sola düşüyordu. Artık tam genişlikte 46px'lik bir satır
+  (ikon · ad · tarih · chevron), dokununca analiz **alt sayfada** açılıyor.
+  Masaüstündeki tam genişlik bloğu ve varsayılan-açık davranışı değişmedi —
+  telefonda blok açılsa sayfa 1.245 → 2.267px oluyordu.
+- Portföy tablosu telefonda **iki sütun**: fiyat sembolün altına, rozet K/Z'nin
+  altına. Dört sütun 375px ekranda 414px istiyordu (Not sütunu kırpık).
+- Satıra dokunmak araştırma notunu **alt sayfada** açıyor; masaüstünde sağ panel
+  aynen duruyor. Sağ panel telefonda bir ekran aşağıdaydı, yani dokunmanın
+  sonucu görünmüyordu.
+
+**Notlar**
+- Bölüm listesi telefonda katlanır tek satır ve satır **açık sayfanın adını**
+  taşıyor; sayfa seçilince kapanıyor. Liste 545px'ti, not ilk ekranda hiç
+  başlamıyordu.
+- Editörün sol şeridi 48 → 16px. O 48px sürükle ve `+` düğmelerinin yeri
+  (GÖREV 50) ama ikisi de **hover ile** çıkıyor; telefonda hover yok.
+- Başlıklar 32 → 19px. **Not içindeki tablolar küçültülmez, yatay kayar.**
+  BlockNote tablo genişliğini satır içi `width: 1000px` yazıp kendi kuralıyla
+  `!important` eziyor; sonuç 242px'e sıkışan dört sütun ve harf harf kırılan
+  başlıklardı ("Se-mb-ol"). Bu yüzden CSS'te `!important` var, kısayol değil.
+
+**Pozisyon Fikirleri**
+- Sekiz sütunlu tablo (581px) telefonda **kart listesine** dönüyor.
+- **Grafik telefonda hiç çizilmiyor.** 375px'te çizim alanı 228px'e düşüyordu ve
+  seviye etiketleri barların üstüne biniyordu. Yerine **seviye merdiveni**:
+  fiyat sırasına dizili seviyeler, aralarında vurgulu "Son fiyat" satırı, her
+  birinin yanında bugünkü fiyata uzaklığı. Altında **Tez** ve **Tezi bozan**
+  (uyarı tonunda — o metin fikri bitiren şeyi söylüyor).
+- Merdiven **alt sayfada** açılıyor, yerinde değil. Kullanıcı kararı: "aşağı
+  yukarı gezinmek mobil için iyi bir deneyim değil."
+- "Şu an" etiketi **"Son fiyat"** oldu ve yanında panele yazıldığı an duruyor.
+  O sayı canlı değil, içerik turunda yazılan son fiyat; seviyelerin arasında
+  canlı kotasyon gibi okunuyordu.
+- Vurgulu satırın iç boşluğu fiyat sütununu 10px içeri itiyordu; `-mx` + `px`
+  ile zemin dışarı taşıyor, sayılar hizada (beş fiyatın sağ kenarı 295px).
+
+**Paper Trading** (kullanıcı "fazla uğraşmayalım" demişti, sonra kart listesi
+de istendi)
+- **Asıl bozukluk sayfanın kendisiydi:** widget'ın sekme şeridi 443px yer
+  kaplıyor ve DOKÜMANI 68px yana kaydırıyordu. Şerit artık kendi içinde kayıyor.
+- Özet kutuları telefonda 2×2 (etiketler "TOP…", "KAZ…" diye kırpılıyordu) ve
+  etiketler büyük harften normal yazıya döndü.
+- Üç sekme de kart listesi + alt sayfa. **Pozisyon kapatma telefonda ancak şimdi
+  mümkün:** o işlem satır sonundaki "⋯" menüsündeydi ve o sütun ekran dışındaydı.
+  Onay panelin kendi modalıyla (`useConfirm`).
+
+**Ortak**
+- Dokunma hedefleri telefonda 44px. Sekme şeridi bununla 46 → 70px büyüyordu;
+  **negatif margin** ile yerleşim yüksekliği geri alındı (58px), hit-area 44px
+  kaldı.
+- **Yatay kaydırma çubukları gizlendi** (`.eqr-hscroll`): sekme şeritlerinin
+  altındaki gri çizgi bozuk bir ayraç gibi okunuyordu.
+- **Seçili sekme kendini görünür yere çeker** (`lib/scroll-tab-into-view.ts`).
+  `scrollIntoView` kullanılmadı: o tüm kaydırılabilir ataları dolaşır, yani
+  sekme seçmek alttaki listeyi de kaydırırdı.
+  *Hata ve dersi:* ilk sürüm `offsetLeft` kullanıyordu — o değer şeride değil,
+  en yakın KONUMLANMIŞ ataya (panel) göre. Son sekmede tesadüfen doğru, ilk
+  sekmede yanlış hedefe kaydırıyordu. Hesap `getBoundingClientRect` farklarına
+  çevrildi.
+- **Analiz sekmesine dokunulmadı** — ölçüldü, taşma yok. Paper'ın masaüstü
+  tablosu da aynen duruyor.
+
+GÖREV 59 — Spinner yerine iskelet yükleme
+
+Panel yüklenirken üç ayrı şey yanlış yapıyordu ve ikisi spinner'dan kötüydü:
+
+1. **₺0,00.** Genel bakış'ın KPI kartları boş diziden hesaplanıyordu; ilk
+   görünen şey gerçek gibi duran yanlış bir rakamdı.
+2. **Yanlış boş-durum yazıları.** "Henüz bülten eklenmedi" ve "Henüz analiz
+   eklenmedi" istek havadayken çıkıyordu. "Kayıt yok" bir cevaptır, elimizde
+   cevap yoktu. Aynı sınıftan: "0 plan", "0 araştırma notu", "Açık 0",
+   "Aktif Pozisyonlar (0)", Paper'da "+$0.00" ve "—".
+3. **Tam ekran spinner.** Fikirler ve Nabız'da sekme başlığı dahil her şey
+   kayboluyordu.
+
+`components/ui/skeleton.tsx` — `Skeleton` · `SkeletonLines` · `SkeletonKpi` ·
+`SkeletonRows` · `SkeletonCards`. Nabız CSS'te (`.eqr-sk`, 1,4 sn opaklık),
+`prefers-reduced-motion` açıkken sabit.
+
+- **Sabit olan her şey anında çizilir** (sekme şeridi, başlıklar, panel
+  başlıkları, Aktif/Geçmiş). Yalnız veriden gelen alanlar bloğa döner.
+- **Blok gerçeğin ölçüsünde.** KPI iskeleti göz kararıyla yapıldı, 94px çıktı;
+  gerçek kart 264×125. Aradaki 31px veri gelince şeridi zıplatıyordu — ölçülüp
+  birebir eşitlendi (fark 0).
+- **Tazelemede iskelet yok:** `useApi` `loading`'i yalnız mount'ta veriyor,
+  yani arka plan yenilemesi ekrandaki veriyi bozmuyor.
+- Bağlandığı yerler: Genel bakış, Nabız, Fikirler, Sanal Portföy (telefonda
+  kart iskeleti), Analiz, Notlar, Paper. Panelde geriye yalnız oturum açılırken
+  çıkan tam ekran spinner kaldı — orada hangi ekranın geleceği henüz belli değil.
+
+*Ölçüm notu:* iskeletleri görmek için `fetch` geçici olarak sarmalanıp `/api/`
+isteklerine 5-6 sn eklendi. Yerelde yükleme o kadar hızlı ki aksi halde
+yakalanamıyor.

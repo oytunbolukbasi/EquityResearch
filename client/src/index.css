@@ -347,11 +347,20 @@ tr[data-selected='true'] .eqr-pin-l {
   which felt like the row refusing to move. Free scrolling is right when the
   whole journey is one card long.
 */
-.eqr-kpi-rail {
-  /* The scrollbar would sit under the cards and jitter the row's height. */
+/*
+  Tab strips and the KPI rail scroll sideways, but never show a bar for it.
+  A horizontal scrollbar under a row of tabs reads as a stray grey line — on a
+  phone it sat between the tab names and the list and looked like a broken
+  divider — and it jitters the row's height when it appears. The overflow is
+  still there; only its scrollbar is hidden, and the cut-off item is what says
+  "keep going".
+*/
+.eqr-kpi-rail,
+.eqr-hscroll {
   scrollbar-width: none;
 }
-.eqr-kpi-rail::-webkit-scrollbar {
+.eqr-kpi-rail::-webkit-scrollbar,
+.eqr-hscroll::-webkit-scrollbar {
   display: none;
 }
 /*
@@ -551,6 +560,23 @@ body.eqr-dragging * {
   30%, 65% { opacity: 1; }
 }
 
+/* ── yükleme iskeleti ───────────────────────────────────────────────────── */
+.eqr-sk {
+  background: var(--faint2);
+  border-radius: 6px;
+  animation: eqr-sk-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes eqr-sk-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* ── reduced motion ─────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -564,7 +590,8 @@ body.eqr-dragging * {
   }
 
   .eqr-logo-spin,
-  .eqr-toast {
+  .eqr-toast,
+  .eqr-sk {
     animation: none;
   }
 

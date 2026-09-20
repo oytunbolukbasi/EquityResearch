@@ -7,6 +7,7 @@ import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { SkeletonCards, SkeletonRows } from '@/components/ui/skeleton'
 import { Select, type SelectOption } from '@/components/ui/select'
 import {
   POSITION_TYPES,
@@ -16,7 +17,7 @@ import {
   type PositionType,
 } from '@shared/asset-types'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
-import { SplitPane } from './split'
+import { SplitPane, PHONE_QUERY } from './split'
 import { Loading, Notice, UnderlineTabs } from './shared'
 import {
   fmtN,
@@ -38,7 +39,8 @@ import {
  * reason for opening the tab at all, were off-screen behind a horizontal
  * scroll, and the clipped Adet read as a wrong number (0,8099 shown as "0,8").
  */
-const CARD_QUERY = '(max-width: 640px)'
+/* Shared with the other tabs — one phone boundary for the whole panel. */
+const CARD_QUERY = PHONE_QUERY
 
 const DAY_FMT = new Intl.DateTimeFormat('tr-TR', {
   day: 'numeric',
@@ -894,7 +896,7 @@ export function VirtualPortfolioTab() {
       maxBodyHeight="70vh"
     >
       {!summary ? (
-        <Loading />
+        <SkeletonRows rows={7} cols={cards ? 2 : 5} className="border-faint2 border-t" />
       ) : tab === 'open' ? (
         positions.length === 0 ? (
           <PanelEmpty>Açık pozisyon yok. Sağdaki formdan ekleyin.</PanelEmpty>
@@ -1174,8 +1176,10 @@ export function VirtualPortfolioTab() {
           value={tab}
           onChange={setTab}
           items={[
-            { id: 'open' as const, label: `Açık ${positions.length}` },
-            { id: 'closed' as const, label: `Kapanan ${closed?.length ?? 0}` },
+            // The count waits for the data: "Açık 0" while the list is still
+            // loading is a fact the panel doesn't have yet.
+            { id: 'open' as const, label: summary ? `Açık ${positions.length}` : 'Açık' },
+            { id: 'closed' as const, label: closed ? `Kapanan ${closed.length}` : 'Kapanan' },
           ]}
         />
         <button
@@ -1190,7 +1194,7 @@ export function VirtualPortfolioTab() {
 
       <div className="bg-card border-faint overflow-hidden rounded-xl border">
         {!summary ? (
-          <Loading />
+          <SkeletonCards rows={6} />
         ) : tab === 'open' ? (
           positions.length === 0 ? (
             <PanelEmpty>Açık pozisyon yok. Yukarıdaki + ile ekleyin.</PanelEmpty>

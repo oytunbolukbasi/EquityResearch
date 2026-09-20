@@ -4,7 +4,8 @@ import type { MorningNote } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
 import { SplitPane, STACK_QUERY } from './split'
 import { useMediaQuery } from '@/lib/use-media-query'
-import { Loading, Notice } from './shared'
+import { Notice } from './shared'
+import { Skeleton, SkeletonLines } from '@/components/ui/skeleton'
 import { fmtNoteDate, noteSections, readMinutes } from './note-sections'
 
 /**
@@ -89,7 +90,26 @@ export function PulseTab({
     if (articleRef.current) articleRef.current.scrollTop = 0
   }, [safeIndex])
 
-  if (loading) return <Loading />
+  if (loading) {
+    // The stepper and the article frame are static, so they stay; only the
+    // bulletin's own text waits. A full-screen spinner used to take the tab's
+    // heading with it, and for a second you could not tell where you were.
+    return (
+      <div>
+        <div className="mb-[22px] flex items-center gap-3">
+          <Skeleton h={13} w={120} />
+          <Skeleton h={22} w={190} className="ml-auto" radius={8} />
+        </div>
+        <article className="bg-card border-faint flex flex-col gap-5 rounded-xl border px-[35px] py-8">
+          <Skeleton h={26} w="45%" />
+          <Skeleton h={9} w="30%" />
+          <SkeletonLines lines={4} />
+          <SkeletonLines lines={3} />
+          <SkeletonLines lines={4} />
+        </article>
+      </div>
+    )
+  }
   if (error) return <Notice>Bülten verisi alınamadı.</Notice>
   if (!notes?.length) return <Notice>Henüz bülten eklenmedi.</Notice>
 

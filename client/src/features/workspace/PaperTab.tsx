@@ -1,5 +1,5 @@
 import { PaperTradingWidget } from '@/features/widgets/PaperTradingWidget'
-import { Chip, TabHeading } from './Panel'
+import { TabHeading } from './Panel'
 
 /**
  * Single panel, no split. The widget is reused verbatim — it offsets its tables
@@ -8,11 +8,7 @@ import { Chip, TabHeading } from './Panel'
 export function PaperTab() {
   return (
     <div>
-      <TabHeading
-        title="Paper Trading"
-        subtitle="Alpaca kâğıt hesabı · Sadece NYSE/NASDAQ, BİST hariç."
-        right={<Chip>Otomatik: fikir → limit emir</Chip>}
-      />
+      <TabHeading title="Paper Trading" subtitle="Alpaca Paper Account" />
       <section className="eqr-panel bg-card border-faint rounded-xl border p-4">
         <PaperTradingWidget />
       </section>

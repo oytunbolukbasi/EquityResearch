@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { MessageSquareQuote } from 'lucide-react'
+import { ChevronRight, MessageSquareQuote } from 'lucide-react'
 import { IoClose } from 'react-icons/io5'
 
 import type {
@@ -11,10 +11,13 @@ import type {
   MorningNote,
 } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { useMediaQuery } from '@/lib/use-media-query'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { Skeleton, SkeletonKpi, SkeletonLines, SkeletonRows } from '@/components/ui/skeleton'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
-import { SplitPane } from './split'
+import { SplitPane, PHONE_QUERY } from './split'
 import { ScrollRail } from '@/components/ui/scroll-rail'
-import { ActionBadge, Loading, Notice, PillTabs } from './shared'
+import { ActionBadge, Notice, PillTabs } from './shared'
 import {
   fmtMoney,
   fmtN,
@@ -78,12 +81,21 @@ function PositionsTable({
   actions,
   selected,
   onSelect,
+  phone,
 }: {
   positions: PortfolioPosition[]
   actions: Map<string, PortfolioAction>
   selected: string | null
   onSelect: (symbol: string) => void
+  /**
+   * Phone layout: two columns instead of four. The price moves under the
+   * symbol and the badge under the percentage, because at 375px the four-column
+   * version needed 414px — the Not column was clipped mid-badge and the whole
+   * table sat behind a horizontal scroll inside a panel that also scrolled.
+   */
+  phone: boolean
 }) {
+  const cols = phone ? 2 : 4
   return (
     <table className="w-full border-collapse">
       <thead>
@@ -91,15 +103,23 @@ function PositionsTable({
           <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 pr-3 pl-[18px] text-left font-medium">
             Varlık
           </th>
-          <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b px-3 py-2 text-right font-medium whitespace-nowrap">
-            Son fiyat
-          </th>
-          <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b px-3 py-2 text-right font-medium whitespace-nowrap">
+          {!phone && (
+            <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b px-3 py-2 text-right font-medium whitespace-nowrap">
+              Son fiyat
+            </th>
+          )}
+          <th
+            className={`bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 text-right font-medium whitespace-nowrap ${
+              phone ? 'pr-[18px] pl-3' : 'px-3'
+            }`}
+          >
             K/Z %
           </th>
-          <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 pr-[18px] pl-3 text-left font-medium">
-            Not
-          </th>
+          {!phone && (
+            <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 pr-[18px] pl-3 text-left font-medium">
+              Not
+            </th>
+          )}
         </tr>
       </thead>
       <tbody>
@@ -114,7 +134,7 @@ function PositionsTable({
           return (
             <Fragment key={g.id}>
               <tr>
-                <td colSpan={4} className="px-[18px] pt-4 pb-1.5">
+                <td colSpan={cols} className="px-[18px] pt-4 pb-1.5">
                   <div className="flex items-center gap-2.5">
                     <span
                       className="h-[17px] w-1 shrink-0 rounded-full"
@@ -141,24 +161,43 @@ function PositionsTable({
             >
               <td className="pr-3 pl-[18px]">
                 <div className="text-[13px] font-semibold">{p.symbol}</div>
-                {p.name && <div className="text-mid text-[12px]">{p.name}</div>}
-              </td>
-              <td className="num px-3 text-right whitespace-nowrap">
-                {fmtPriceOf(p.currentPrice, p.type, unit)}
-              </td>
-              <td
-                className="num px-3 text-right whitespace-nowrap"
-                style={{ color: plColor(p.plPercent) }}
-              >
-                {fmtPct(p.plPercent)}
-              </td>
-              <td className="pr-[18px] pl-3">
-                {action ? (
-                  <ActionBadge action={action.action} />
+                {phone ? (
+                  <div className="text-mid num text-[12px]">
+                    {fmtPriceOf(p.currentPrice, p.type, unit)}
+                  </div>
                 ) : (
-                  <span className="text-mid text-[12px]">—</span>
+                  p.name && <div className="text-mid text-[12px]">{p.name}</div>
                 )}
-                    </td>
+              </td>
+              {!phone && (
+                <td className="num px-3 text-right whitespace-nowrap">
+                  {fmtPriceOf(p.currentPrice, p.type, unit)}
+                </td>
+              )}
+              <td
+                className={`num text-right whitespace-nowrap ${phone ? 'pr-[18px] pl-3' : 'px-3'}`}
+                style={phone ? undefined : { color: plColor(p.plPercent) }}
+              >
+                <div style={{ color: plColor(p.plPercent) }}>{fmtPct(p.plPercent)}</div>
+                {phone && (
+                  <div className="mt-1 flex justify-end">
+                    {action ? (
+                      <ActionBadge action={action.action} />
+                    ) : (
+                      <span className="text-mid text-[12px]">—</span>
+                    )}
+                  </div>
+                )}
+              </td>
+              {!phone && (
+                <td className="pr-[18px] pl-3">
+                  {action ? (
+                    <ActionBadge action={action.action} />
+                  ) : (
+                    <span className="text-mid text-[12px]">—</span>
+                  )}
+                </td>
+              )}
                   </tr>
                 )
               })}
@@ -213,6 +252,59 @@ function ClosedTable({ closed }: { closed: PortfolioClosedPosition[] }) {
 
 // ─── right panel: position detail ────────────────────────────────────────────
 
+/**
+ * The body of the position detail: price, four metrics, research note.
+ *
+ * Split out from the panel because the phone shows the same thing in a bottom
+ * sheet. On a phone the right panel sits a full screen below the row you
+ * tapped, so the note — the reason for tapping — arrived off-screen.
+ */
+function DetailBody({
+  position,
+  action,
+  noteDate,
+}: {
+  position: PortfolioPosition
+  action: PortfolioAction | undefined
+  noteDate: string
+}) {
+  const unit = UNIT_FOR_TYPE[position.type] ?? ''
+  const unitLabel =
+    position.type === 'us_stock' ? 'ABD hissesi · USD' : position.type === 'fund' ? 'Fon' : 'BİST · TL'
+
+  return (
+    <>
+      <Chip>{unitLabel}</Chip>
+      <div className="num mt-3.5 mb-3 text-[28px] font-medium tracking-[-1px]">
+        {fmtPriceOf(position.currentPrice, position.type, unit)}
+      </div>
+
+      <div className="border-faint mb-4 grid grid-cols-2 gap-4 border-t border-b py-4">
+        <Metric label="Ortalama maliyet" value={fmtPriceOf(position.buyPrice, position.type, unit)} />
+        <Metric
+          label="Pozisyon K/Z"
+          value={`${fmtPct(position.plPercent)}`}
+          color={plColor(position.plPercent)}
+        />
+        <Metric label="Miktar" value={fmtQtyOf(position.quantity, position.type)} />
+        <Metric label="Not tarihi" value={action ? noteDate : '—'} />
+      </div>
+
+      <h3 className="m-0 mb-2 text-[13px] font-medium">Araştırma notu</h3>
+      {action ? (
+        <div className="rounded-[9px] p-[13px]" style={{ background: 'var(--warn-tint)' }}>
+          <ActionBadge action={action.action} />
+          <p className="mt-2.5 mb-0 text-xs leading-[1.8]">{action.reason}</p>
+        </div>
+      ) : (
+        <p className="text-mid text-xs leading-[1.7]">
+          Bu varlık için güncel bir araştırma notu yok.
+        </p>
+      )}
+    </>
+  )
+}
+
 function DetailPanel({
   position,
   action,
@@ -224,10 +316,6 @@ function DetailPanel({
   noteDate: string
   onClose: () => void
 }) {
-  const unit = UNIT_FOR_TYPE[position.type] ?? ''
-  const unitLabel =
-    position.type === 'us_stock' ? 'ABD hissesi · USD' : position.type === 'fund' ? 'Fon' : 'BİST · TL'
-
   return (
     <section className="eqr-panel bg-card border-faint flex h-full flex-col rounded-xl border">
       <header className="flex shrink-0 items-start justify-between gap-2 px-[18px] pt-3.5">
@@ -245,33 +333,7 @@ function DetailPanel({
       </header>
 
       <div className="min-h-0 flex-1 overflow-auto px-[18px] pt-2 pb-[19px]">
-        <Chip>{unitLabel}</Chip>
-        <div className="num mt-3.5 mb-3 text-[28px] font-medium tracking-[-1px]">
-          {fmtPriceOf(position.currentPrice, position.type, unit)}
-        </div>
-
-        <div className="border-faint mb-4 grid grid-cols-2 gap-4 border-t border-b py-4">
-          <Metric label="Ortalama maliyet" value={fmtPriceOf(position.buyPrice, position.type, unit)} />
-          <Metric
-            label="Pozisyon K/Z"
-            value={`${fmtPct(position.plPercent)}`}
-            color={plColor(position.plPercent)}
-          />
-          <Metric label="Miktar" value={fmtQtyOf(position.quantity, position.type)} />
-          <Metric label="Not tarihi" value={action ? noteDate : '—'} />
-        </div>
-
-        <h3 className="m-0 mb-2 text-[13px] font-medium">Araştırma notu</h3>
-        {action ? (
-          <div className="rounded-[9px] p-[13px]" style={{ background: 'var(--warn-tint)' }}>
-            <ActionBadge action={action.action} />
-            <p className="mt-2.5 mb-0 text-xs leading-[1.8]">{action.reason}</p>
-          </div>
-        ) : (
-          <p className="text-mid text-xs leading-[1.7]">
-            Bu varlık için güncel bir araştırma notu yok.
-          </p>
-        )}
+        <DetailBody position={position} action={action} noteDate={noteDate} />
       </div>
     </section>
   )
@@ -314,9 +376,13 @@ function Kicker({ children }: { children: React.ReactNode }) {
 
 function PulseBrief({
   note,
+  loading,
   onOpenPulse,
 }: {
   note: MorningNote | null
+  /** Separate from `!note`: "no bulletin yet" is an answer, and while the
+      request is in flight we don't have one. */
+  loading: boolean
   onOpenPulse: (sectionId?: string) => void
 }) {
   const sections = noteSections(note)
@@ -334,7 +400,14 @@ function PulseBrief({
       }
       padded={false}
     >
-      {!note ? (
+      {loading ? (
+        <div className="flex flex-col gap-4 px-[18px] pb-[18px]">
+          <Skeleton h={9} w="30%" />
+          <SkeletonLines lines={3} />
+          <Skeleton h={9} w="38%" />
+          <SkeletonLines lines={4} />
+        </div>
+      ) : !note ? (
         <PanelEmpty>Henüz bülten eklenmedi.</PanelEmpty>
       ) : (
         <div className="px-[18px] pb-[18px]">
@@ -411,8 +484,47 @@ function readOpen(): boolean {
  * points: at this width each one is a line, where the narrow panel would wrap
  * every one of them onto two.
  */
-function DailyAnalysis({ insight, onClose }: { insight: PortfolioInsight | null; onClose: () => void }) {
+function AnalysisBody({
+  insight,
+  loading = false,
+}: {
+  insight: PortfolioInsight | null
+  loading?: boolean
+}) {
   const bullets = insight?.bullets ?? []
+  // Same rule as the bulletin panel: "no analysis yet" is an answer, and a
+  // request in flight is not one.
+  if (loading) return <SkeletonLines lines={4} />
+  if (!insight) return <p className="text-mid m-0 text-[13px]">Henüz analiz eklenmedi.</p>
+  return (
+    <>
+      {/* pre-line so an older single-block analysis keeps its own breaks. */}
+      <p className="m-0 whitespace-pre-line text-[13px] leading-[1.75]">{insight.body}</p>
+      {bullets.length > 0 && (
+        <ul className="mt-2.5 mb-0 flex list-none flex-col gap-2 p-0">
+          {bullets.map((b, i) => (
+            <li key={i} className="flex gap-2.5 text-[13px] leading-[1.6]">
+              <span aria-hidden="true" className="text-faint select-none">
+                •
+              </span>
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}
+
+function DailyAnalysis({
+  insight,
+  loading,
+  onClose,
+}: {
+  insight: PortfolioInsight | null
+  loading: boolean
+  onClose: () => void
+}) {
   return (
     <section className="bg-card border-faint mb-5 rounded-[14px] border px-[18px] py-4">
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -430,27 +542,32 @@ function DailyAnalysis({ insight, onClose }: { insight: PortfolioInsight | null;
         </div>
       </div>
 
-      {!insight ? (
-        <p className="text-mid m-0 text-[13px]">Henüz analiz eklenmedi.</p>
-      ) : (
-        <>
-          {/* pre-line so an older single-block analysis keeps its own breaks. */}
-          <p className="m-0 whitespace-pre-line text-[13px] leading-[1.75]">{insight.body}</p>
-          {bullets.length > 0 && (
-            <ul className="mt-2.5 mb-0 flex list-none flex-col gap-2 p-0">
-              {bullets.map((b, i) => (
-                <li key={i} className="flex gap-2.5 text-[13px] leading-[1.6]">
-                  <span aria-hidden="true" className="text-faint select-none">
-                    •
-                  </span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
+      <AnalysisBody insight={insight} loading={loading} />
     </section>
+  )
+}
+
+/**
+ * Phone: the control that opens the analysis.
+ *
+ * A full-width row rather than the desktop text button. On a phone the heading
+ * row wraps, which dropped that button onto its own line as a 167×30px blue
+ * link — below the 44px touch target and reading as a stray link rather than a
+ * control. As a row it is 48px, it names what it opens, and it carries the
+ * date the way every other opener in the panel does.
+ */
+function AnalysisRow({ date, onOpen }: { date: string; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="eqr-glow border-faint bg-card text-ink mb-5 flex w-full cursor-pointer items-center gap-2.5 rounded-[14px] border px-[14px] py-3 text-left text-[13px]"
+    >
+      <MessageSquareQuote size={16} className="text-info shrink-0" />
+      <span className="flex-1">Günlük portföy analizi</span>
+      <span className="text-mid num text-[12px]">{date}</span>
+      <ChevronRight size={16} className="text-mid shrink-0" />
+    </button>
   )
 }
 
@@ -460,6 +577,14 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
   const [sub, setSub] = useState<PortSub>('notes')
   const [detail, setDetail] = useState<string | null>(null)
   const [analysisOpen, setAnalysisOpen] = useState(readOpen)
+  const phone = useMediaQuery(PHONE_QUERY)
+  /**
+   * The phone's sheet has its own state and always starts closed. `analysisOpen`
+   * persists "keep it open" for the desktop block, which is the right default
+   * there — full width, one line per bullet. Reusing it on a phone would open a
+   * modal sheet over the panel on every visit.
+   */
+  const [analysisSheet, setAnalysisSheet] = useState(false)
 
   function toggleAnalysis(open: boolean) {
     setAnalysisOpen(open)
@@ -472,8 +597,8 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
 
   const { data: summary, loading, error } = useApi<PortfolioSummary>('/api/portfolio/summary')
   const { data: closed } = useApi<PortfolioClosedPosition[]>('/api/portfolio/closed')
-  const { data: insight } = useApi<PortfolioInsight | null>('/api/portfolio/insight')
-  const { data: notes } = useApi<MorningNote[]>('/api/morning-notes/history')
+  const { data: insight, loading: insightLoading } = useApi<PortfolioInsight | null>('/api/portfolio/insight')
+  const { data: notes, loading: notesLoading } = useApi<MorningNote[]>('/api/morning-notes/history')
 
   const positions = summary?.positions ?? []
   const note = notes?.[0] ?? null
@@ -498,13 +623,15 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
     <Panel
       side="a"
       title="Portföy"
-      right={<Chip>{actions.size} araştırma notu</Chip>}
+      right={insightLoading ? undefined : <Chip>{actions.size} araştırma notu</Chip>}
       belowHeader={<PillTabs items={PORT_SUBS} value={sub} onChange={setSub} />}
       padded={false}
-      maxBodyHeight="60vh"
+      // No inner scroller on a phone: the page is the only thing that scrolls,
+      // so a flick does the same thing wherever the finger lands.
+      maxBodyHeight={phone ? undefined : '60vh'}
     >
       {loading ? (
-        <Loading />
+        <SkeletonRows rows={6} cols={phone ? 2 : 4} className="border-faint2 border-t" />
       ) : error ? (
         <Notice>Portföy verisi alınamadı.</Notice>
       ) : sub === 'notes' ? (
@@ -517,6 +644,7 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
               actions={actions}
               selected={detail}
               onSelect={(s) => setDetail((cur) => (cur === s ? null : s))}
+              phone={phone}
             />
           </div>
         )
@@ -530,7 +658,9 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
     </Panel>
   )
 
-  const rightPanel = showDetail ? (
+  // On a phone the detail is a sheet over the row, so the right panel stays on
+  // the bulletin and the tapped row remains visible behind the scrim.
+  const rightPanel = showDetail && !phone ? (
     <DetailPanel
       position={detailPosition}
       action={actions.get(detailPosition.symbol)}
@@ -538,7 +668,7 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
       onClose={() => setDetail(null)}
     />
   ) : (
-    <PulseBrief note={note} onOpenPulse={onOpenPulse} />
+    <PulseBrief note={note} loading={notesLoading} onOpenPulse={onOpenPulse} />
   )
 
   return (
@@ -549,7 +679,7 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
         // Only offered while the block is hidden: with it open there would be
         // two controls for one thing, and the block carries its own ×.
         right={
-          analysisOpen ? undefined : (
+          phone || analysisOpen ? undefined : (
             <button
               type="button"
               onClick={() => toggleAnalysis(true)}
@@ -569,28 +699,89 @@ export function OverviewTab({ onOpenPulse }: { onOpenPulse: (sectionId?: string)
         clipped card is the only honest way to say "there is more to the right".
       */}
       <ScrollRail className="eqr-kpi-rail mb-5 gap-3 pb-1">
-        <KpiCard
-          label="Toplam portföy değeri"
-          bucket={{
-            value: totals.totalValue,
-            cost: totals.totalCost,
-            pl: totals.unrealized,
-            plPercent: totals.unrealizedPercent,
-          }}
-        />
-        {totals.byGroup.map((g) => (
-          <KpiCard
-            key={g.id}
-            label={g.label}
-            rate={rateNote(g.id, summary)}
-            bucket={g.bucket}
-          />
-        ))}
+        {/* Blocks, not zeros: computed from an empty list the total came out
+            as ₺0,00 and read as a real figure. */}
+        {loading ? (
+          <>
+            <SkeletonKpi />
+            <SkeletonKpi />
+            <SkeletonKpi />
+          </>
+        ) : (
+          <>
+            <KpiCard
+              label="Toplam portföy değeri"
+              bucket={{
+                value: totals.totalValue,
+                cost: totals.totalCost,
+                pl: totals.unrealized,
+                plPercent: totals.unrealizedPercent,
+              }}
+            />
+            {totals.byGroup.map((g) => (
+              <KpiCard
+                key={g.id}
+                label={g.label}
+                rate={rateNote(g.id, summary)}
+                bucket={g.bucket}
+              />
+            ))}
+          </>
+        )}
       </ScrollRail>
 
-      {analysisOpen && <DailyAnalysis insight={insight ?? null} onClose={() => toggleAnalysis(false)} />}
+      {phone ? (
+        insightLoading ? (
+          <div className="border-faint bg-card mb-5 flex items-center gap-2.5 rounded-[14px] border px-[14px] py-3">
+            <Skeleton h={14} w={14} radius={7} />
+            <Skeleton h={11} w="45%" />
+            <Skeleton h={11} w={64} className="ml-auto" />
+          </div>
+        ) : (
+          <AnalysisRow date={fmtNoteDate(insight?.date)} onOpen={() => setAnalysisSheet(true)} />
+        )
+      ) : (
+        analysisOpen && (
+          <DailyAnalysis
+            insight={insight ?? null}
+            loading={insightLoading}
+            onClose={() => toggleAnalysis(false)}
+          />
+        )
+      )}
 
       <SplitPane splitKey="overview" a={portfolioPanel} b={rightPanel} />
+
+      {phone && (
+        <BottomSheet
+          open={analysisSheet}
+          title="Günlük portföy analizi"
+          onClose={() => setAnalysisSheet(false)}
+        >
+          <AnalysisBody insight={insight ?? null} loading={insightLoading} />
+        </BottomSheet>
+      )}
+
+      {phone && showDetail && (
+        <BottomSheet
+          open
+          title={
+            <span className="flex items-baseline gap-2">
+              {detailPosition.symbol}
+              {detailPosition.name && (
+                <span className="text-mid text-[12px] font-normal">{detailPosition.name}</span>
+              )}
+            </span>
+          }
+          onClose={() => setDetail(null)}
+        >
+          <DetailBody
+            position={detailPosition}
+            action={actions.get(detailPosition.symbol)}
+            noteDate={fmtNoteDate(insight?.date)}
+          />
+        </BottomSheet>
+      )}
     </div>
   )
 }

@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Loader2, MoreHorizontal } from 'lucide-react'
+import { ChevronRight, Loader2, MoreHorizontal } from 'lucide-react'
 
 import { useApi } from '@/lib/use-api'
+import { scrollTabIntoView } from '@/lib/scroll-tab-into-view'
+import { Skeleton, SkeletonCards, SkeletonRows } from '@/components/ui/skeleton'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { useConfirm } from '@/lib/confirm'
+import { useMediaQuery } from '@/lib/use-media-query'
+import { PHONE_QUERY } from '@/features/workspace/split'
 
 // ─── Alpaca types ──────────────────────────────────────────────────────────────
 
@@ -69,14 +75,6 @@ function fmtDate(raw: string | number | null | undefined): string {
 
 // ─── shared UI ────────────────────────────────────────────────────────────────
 
-function Loading() {
-  return (
-    <div className="flex h-32 items-center justify-center">
-      <Loader2 className="size-5 animate-spin text-mid" />
-    </div>
-  )
-}
-
 function Empty({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-32 items-center justify-center">
@@ -91,13 +89,18 @@ interface KpiItem { label: string; value: React.ReactNode; colorClass?: string }
 
 function KpiBar({ items }: { items: KpiItem[] }) {
   return (
-    <div className="mb-3 flex overflow-hidden rounded-lg border border-faint2 divide-x divide-faint2">
+    /* Two per row on a phone: four across a 375px screen left ~80px each and
+       the labels truncated to "TOP…", "KAZ…". The hairlines come from the grid
+       gap over a tinted background, since divide-x only draws between columns. */
+    <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-faint2 bg-faint2 sm:flex sm:gap-0 sm:divide-x sm:divide-faint2 sm:bg-transparent">
       {items.map(({ label, value, colorClass = 'text-ink' }, i) => (
-        <div key={i} className="flex-1 px-4 py-2.5 min-w-0">
-          <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.06em] text-mid leading-none truncate">
+        <div key={i} className="bg-card min-w-0 flex-1 px-4 py-2.5">
+          <p className="mb-1 truncate text-[12px] leading-none text-mid">
             {label}
           </p>
-          <p className={`num text-base font-semibold leading-none ${colorClass}`}>{value}</p>
+          <p className={`num flex h-[19px] items-center text-base font-semibold ${colorClass}`}>
+            {value}
+          </p>
         </div>
       ))}
     </div>
@@ -121,13 +124,29 @@ function PaperTabs({
 }: {
   tab: PaperTab
   onChange: (t: PaperTab) => void
-  counts: Record<PaperTab, number>
+  /** null until that list has answered — "(0)" is a count we don't have yet. */
+  counts: Record<PaperTab, number | null>
 }) {
+  const stripRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<Partial<Record<PaperTab, HTMLButtonElement | null>>>({})
+
+  // Keep the selected tab fully visible: the strip overflows on a phone and the
+  // last tab was landing half-cut against the right edge.
+  useEffect(() => {
+    scrollTabIntoView(stripRef.current, itemRefs.current[tab] ?? null)
+  }, [tab])
+
   return (
-    <div className="mb-3 flex gap-3 border-b border-faint">
+    /* Scrolls instead of pushing the page: four labels came to 443px against a
+       375px screen, and the overflow was the document's, so every screen in the
+       tab scrolled sideways. */
+    <div ref={stripRef} className="eqr-hscroll mb-3 flex gap-3 overflow-x-auto border-b border-faint">
       {TAB_DEFS.map(({ key, label }) => (
         <button
           key={key}
+          ref={(el) => {
+            itemRefs.current[key] = el
+          }}
           onClick={() => onChange(key)}
           className={[
             '-mb-px border-b-2 px-1 pb-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap',
@@ -136,7 +155,8 @@ function PaperTabs({
               : 'border-transparent text-mid hover:text-ink',
           ].join(' ')}
         >
-          {label} ({counts[key]})
+          {label}
+          {counts[key] != null && ` (${counts[key]})`}
         </button>
       ))}
     </div>
@@ -257,6 +277,66 @@ function RowActions({ actions }: { actions: RowActionDef[] }) {
         </div>,
         document.body,
       )}
+    </div>
+  )
+}
+
+
+// ─── phone: cards + sheet ─────────────────────────────────────────────────────
+//
+// Eight columns measured 722px against a 375px screen, so the phone showed
+// Sembol, Miktar and half of Giriş — while K/Z, the reason for opening the tab,
+// and the row's "⋯" menu (the only way to close a position) sat off-screen.
+// Same shape as the Sanal Portföy cards: the number you came for on the right,
+// the detail one tap away.
+
+function CardRow({
+  title,
+  sub,
+  right,
+  rightSub,
+  rightClass = '',
+  onOpen,
+}: {
+  title: React.ReactNode
+  sub: React.ReactNode
+  right: React.ReactNode
+  rightSub?: React.ReactNode
+  rightClass?: string
+  onOpen: () => void
+}) {
+  return (
+    <button
+      onClick={onOpen}
+      className="flex w-full cursor-pointer items-start justify-between gap-3 border-0 border-b border-faint2 bg-transparent px-4 py-3 text-left last:border-b-0 hover:bg-bg"
+    >
+      <span className="min-w-0">
+        <span className="block text-[14px] font-semibold text-ink">{title}</span>
+        <span className="num mt-0.5 block text-[12px] text-mid">{sub}</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <span className="text-right">
+          <span className={`num block text-[14px] font-medium whitespace-nowrap ${rightClass}`}>
+            {right}
+          </span>
+          {rightSub && (
+            <span className={`num mt-0.5 block text-[12px] whitespace-nowrap ${rightClass}`}>
+              {rightSub}
+            </span>
+          )}
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-faint" aria-hidden="true" />
+      </span>
+    </button>
+  )
+}
+
+/** One field of the sheet — label left, value right. */
+function SheetRow({ label, value, className = '' }: { label: string; value: React.ReactNode; className?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-faint2 py-2.5 last:border-b-0">
+      <span className="text-[12px] text-mid">{label}</span>
+      <span className={`num text-[13px] ${className}`}>{value}</span>
     </div>
   )
 }
@@ -495,6 +575,14 @@ function OrdersTable({
 export function PaperTradingWidget() {
   const [tab, setTab]                   = useState<PaperTab>('positions')
   const [ordersVersion, setOrdersVersion] = useState(0)
+  const phone = useMediaQuery(PHONE_QUERY)
+  const confirm = useConfirm()
+  const [sheet, setSheet] = useState<
+    | { kind: 'position'; row: AlpacaPosition }
+    | { kind: 'closed'; row: ClosedPaperPosition }
+    | { kind: 'order'; row: AlpacaOrder }
+    | null
+  >(null)
 
   const { data: positions,      loading: posLoading,    error: posError } =
     useApi<AlpacaPosition[]>('/api/paper-trading/positions')
@@ -539,10 +627,10 @@ export function PaperTradingWidget() {
   const totalPlClass = totalPl >= 0 ? 'text-up' : 'text-down'
   const totalPlSign  = totalPl >= 0 ? '+' : '−'
 
-  const counts: Record<PaperTab, number> = {
-    positions: positions?.length ?? 0,
-    closed:    closedPositions?.length ?? 0,
-    orders:    openOrders?.length ?? 0,
+  const counts: Record<PaperTab, number | null> = {
+    positions: positions?.length ?? null,
+    closed:    closedPositions?.length ?? null,
+    orders:    openOrders?.length ?? null,
   }
 
   if (posError) {
@@ -558,23 +646,31 @@ export function PaperTradingWidget() {
       <KpiBar
         items={[
           {
-            label: 'Toplam K/Z',
-            value: `${totalPlSign}$${fmtUsd(Math.abs(totalPl))}`,
+            label: 'Toplam k/z',
+            // Blocks while the account loads: computed from empty arrays the
+            // total rendered as "+$0.00", a real-looking figure for an account
+            // that had not answered yet.
+            value:
+              posLoading || closedLoading ? (
+                <Skeleton h={16} w={86} />
+              ) : (
+                `${totalPlSign}$${fmtUsd(Math.abs(totalPl))}`
+              ),
             colorClass: totalPlClass,
           },
           {
             label: 'Kazanan',
-            value: closedPositions ? String(winCount) : '—',
+            value: closedLoading ? <Skeleton h={16} w={26} /> : String(winCount),
             colorClass: 'text-up',
           },
           {
             label: 'Kaybeden',
-            value: closedPositions ? String(lossCount) : '—',
+            value: closedLoading ? <Skeleton h={16} w={26} /> : String(lossCount),
             colorClass: 'text-down',
           },
           {
-            label: 'Açık Pozisyon',
-            value: positions ? String(positions.length) : '—',
+            label: 'Açık pozisyon',
+            value: posLoading ? <Skeleton h={16} w={26} /> : String(positions?.length ?? 0),
           },
         ]}
       />
@@ -582,27 +678,178 @@ export function PaperTradingWidget() {
       <PaperTabs tab={tab} onChange={setTab} counts={counts} />
 
       {tab === 'positions' && (
-        posLoading ? <Loading /> :
+        posLoading ? (phone ? <SkeletonCards rows={5} /> : <SkeletonRows rows={5} cols={4} />) :
         !positions?.length ? <Empty>Açık pozisyon yok</Empty> :
-        <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
-          <ActivePositionsTable positions={positions} onClose={closePosition} />
-        </div>
+        phone ? (
+          <div className="-mx-4">
+            {positions.map(p => {
+              const pl = parseFloat(p.unrealized_pl)
+              return (
+                <CardRow
+                  key={p.symbol}
+                  title={<>{p.symbol} <span className="text-[12px] font-normal text-mid">{p.exchange}</span></>}
+                  sub={`${p.qty} adet · $${fmtUsd(parseFloat(p.avg_entry_price))} → ${p.current_price ? `$${fmtUsd(parseFloat(p.current_price))}` : '—'}`}
+                  right={`${pl >= 0 ? '+' : '−'}$${fmtUsd(Math.abs(pl))}`}
+                  rightSub={fmtPct(parseFloat(p.unrealized_plpc) * 100)}
+                  rightClass={pl >= 0 ? 'text-up' : 'text-down'}
+                  onOpen={() => setSheet({ kind: 'position', row: p })}
+                />
+              )
+            })}
+          </div>
+        ) : (
+          <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
+            <ActivePositionsTable positions={positions} onClose={closePosition} />
+          </div>
+        )
       )}
 
       {tab === 'closed' && (
-        closedLoading ? <Loading /> :
+        closedLoading ? (phone ? <SkeletonCards rows={5} /> : <SkeletonRows rows={5} cols={4} />) :
         !closedPositions?.length ? <Empty>Henüz kapanmış işlem yok</Empty> :
-        <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
-          <ClosedPositionsTable positions={closedPositions} />
-        </div>
+        phone ? (
+          <div className="-mx-4">
+            {closedPositions.map((c, i) => (
+              <CardRow
+                key={`${c.symbol}-${i}`}
+                title={c.symbol}
+                sub={`${c.qty} adet · $${fmtUsd(c.entryPrice)} → $${fmtUsd(c.exitPrice)}`}
+                right={`${c.pl >= 0 ? '+' : '−'}$${fmtUsd(Math.abs(c.pl))}`}
+                rightSub={fmtPct(c.plPct)}
+                rightClass={c.pl >= 0 ? 'text-up' : 'text-down'}
+                onOpen={() => setSheet({ kind: 'closed', row: c })}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
+            <ClosedPositionsTable positions={closedPositions} />
+          </div>
+        )
       )}
 
       {tab === 'orders' && (
-        ordersLoading ? <Loading /> :
+        ordersLoading ? (phone ? <SkeletonCards rows={4} /> : <SkeletonRows rows={5} cols={4} />) :
         !openOrders?.length ? <Empty>Bekleyen emir yok</Empty> :
-        <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
-          <OrdersTable orders={openOrders} onCancel={cancelOrder} />
-        </div>
+        phone ? (
+          <div className="-mx-4">
+            {openOrders.map(o => (
+              <CardRow
+                key={o.id}
+                title={<>{o.symbol} <span className="text-[12px] font-normal text-mid">{o.side === 'buy' ? 'alış' : 'satış'}</span></>}
+                sub={`${ORDER_TYPE_LABEL[o.type] ?? o.type} · ${o.qty} adet`}
+                right={o.limit_price ? `$${fmtUsd(parseFloat(o.limit_price))}` : '—'}
+                rightSub={o.status}
+                onOpen={() => setSheet({ kind: 'order', row: o })}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="-m-4 mt-0 min-h-0 flex-1 overflow-auto">
+            <OrdersTable orders={openOrders} onCancel={cancelOrder} />
+          </div>
+        )
+      )}
+
+      {phone && sheet && (
+        <BottomSheet
+          open
+          title={
+            <span className="flex items-baseline gap-2">
+              {sheet.row.symbol}
+              {sheet.kind === 'position' && (
+                <span className="num text-[12px] font-normal text-mid">{sheet.row.exchange}</span>
+              )}
+            </span>
+          }
+          onClose={() => setSheet(null)}
+          footer={
+            sheet.kind === 'position' ? (
+              <button
+                onClick={async () => {
+                  const row = sheet.row
+                  // The panel's own modal, not window.confirm — see GÖREV 28.
+                  const ok = await confirm({
+                    title: 'Pozisyon kapatılsın mı?',
+                    body: `${row.symbol} pozisyonu market fiyatından kapatılacak.`,
+                    confirmLabel: 'Kapat',
+                    danger: true,
+                  })
+                  if (!ok) return
+                  setSheet(null)
+                  await closePosition(row)
+                }}
+                className="w-full cursor-pointer rounded-xl border px-3 py-2.5 text-[13px] font-medium"
+                style={{ borderColor: 'var(--down)', color: 'var(--down)', background: 'var(--down-tint)' }}
+              >
+                Pozisyonu kapat
+              </button>
+            ) : sheet.kind === 'order' ? (
+              <button
+                onClick={async () => {
+                  const row = sheet.row
+                  const ok = await confirm({
+                    title: 'Emir iptal edilsin mi?',
+                    body: `${row.symbol} için bekleyen emir iptal edilecek.`,
+                    confirmLabel: 'İptal et',
+                    danger: true,
+                  })
+                  if (!ok) return
+                  setSheet(null)
+                  await cancelOrder(row)
+                }}
+                className="w-full cursor-pointer rounded-xl border px-3 py-2.5 text-[13px] font-medium"
+                style={{ borderColor: 'var(--down)', color: 'var(--down)', background: 'var(--down-tint)' }}
+              >
+                Emri iptal et
+              </button>
+            ) : undefined
+          }
+        >
+          {sheet.kind === 'position' && (
+            <>
+              <SheetRow label="Miktar" value={sheet.row.qty} />
+              <SheetRow label="Giriş fiyatı" value={`$${fmtUsd(parseFloat(sheet.row.avg_entry_price))}`} />
+              <SheetRow
+                label="Güncel fiyat"
+                value={sheet.row.current_price ? `$${fmtUsd(parseFloat(sheet.row.current_price))}` : '—'}
+              />
+              <SheetRow
+                label="K/Z"
+                value={`${parseFloat(sheet.row.unrealized_pl) >= 0 ? '+' : '−'}$${fmtUsd(Math.abs(parseFloat(sheet.row.unrealized_pl)))} · ${fmtPct(parseFloat(sheet.row.unrealized_plpc) * 100)}`}
+                className={parseFloat(sheet.row.unrealized_pl) >= 0 ? 'text-up' : 'text-down'}
+              />
+              <SheetRow label="Piyasa değeri" value={`$${fmtUsd(parseFloat(sheet.row.market_value))}`} />
+              <SheetRow label="Açılış" value={fmtDate(sheet.row.created_at)} />
+            </>
+          )}
+          {sheet.kind === 'closed' && (
+            <>
+              <SheetRow label="Miktar" value={sheet.row.qty} />
+              <SheetRow label="Giriş" value={`$${fmtUsd(sheet.row.entryPrice)}`} />
+              <SheetRow label="Çıkış" value={`$${fmtUsd(sheet.row.exitPrice)}`} />
+              <SheetRow
+                label="K/Z"
+                value={`${sheet.row.pl >= 0 ? '+' : '−'}$${fmtUsd(Math.abs(sheet.row.pl))} · ${fmtPct(sheet.row.plPct)}`}
+                className={sheet.row.pl >= 0 ? 'text-up' : 'text-down'}
+              />
+              <SheetRow label="Kapanış tarihi" value={fmtDate(sheet.row.closedAt)} />
+            </>
+          )}
+          {sheet.kind === 'order' && (
+            <>
+              <SheetRow label="Yön" value={sheet.row.side === 'buy' ? 'Alış' : 'Satış'} />
+              <SheetRow label="Tip" value={ORDER_TYPE_LABEL[sheet.row.type] ?? sheet.row.type} />
+              <SheetRow label="Miktar" value={sheet.row.qty} />
+              <SheetRow
+                label="Limit fiyat"
+                value={sheet.row.limit_price ? `$${fmtUsd(parseFloat(sheet.row.limit_price))}` : '—'}
+              />
+              <SheetRow label="Durum" value={sheet.row.status} />
+              <SheetRow label="Tarih" value={fmtDate(sheet.row.submitted_at ?? sheet.row.created_at)} />
+            </>
+          )}
+        </BottomSheet>
       )}
     </div>
   )

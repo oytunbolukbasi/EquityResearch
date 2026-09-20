@@ -2,10 +2,13 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronRight, Pencil, Pin, Plus, Trash2 } from 'lucide-react'
 
 import { useConfirm } from '@/lib/confirm'
+import { useToast } from '@/lib/toast'
+import { useMediaQuery } from '@/lib/use-media-query'
 
 import { Panel, PanelEmpty, TabHeading } from '../workspace/Panel'
-import { SplitPane } from '../workspace/split'
-import { Loading, Notice } from '../workspace/shared'
+import { SplitPane, PHONE_QUERY } from '../workspace/split'
+import { Notice } from '../workspace/shared'
+import { Skeleton, SkeletonLines } from '@/components/ui/skeleton'
 import { SavedFlash } from './SavedFlash'
 
 // The editor is the panel's heaviest module by a wide margin. Loading it here
@@ -40,6 +43,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function NotesTab() {
   const confirm = useConfirm()
+  const toast = useToast()
 
   const [sections, setSections] = useState<Section[]>([])
   const [pages, setPages] = useState<PageMeta[]>([])
@@ -48,6 +52,16 @@ export function NotesTab() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [savedAt, setSavedAt] = useState(0)
+  const phone = useMediaQuery(PHONE_QUERY)
+  /**
+   * Phone: the section list is collapsed by default and names the open page.
+   *
+   * Stacked, the list sat at full height above the editor — 545px of an 812px
+   * screen — so the first thing the Notes tab showed was a list of what it
+   * could show, and the note itself started below the fold. Same fix as the
+   * bulletin's contents (GÖREV 56); here the row doubles as the page's name.
+   */
+  const [navOpen, setNavOpen] = useState(false)
 
   const [openSections, setOpenSections] = useState<Set<number>>(() => {
     try {
@@ -114,23 +128,43 @@ export function NotesTab() {
 
   // ── mutations ──────────────────────────────────────────────────────────────
 
+  /*
+    Creating used to be silent: the row appeared somewhere in the list and you
+    had to spot it. On a phone the list is collapsed, so a new section landed
+    entirely out of sight. Both now confirm in words, and the phone opens the
+    list so the thing you just made is on screen.
+  */
   async function addSection() {
-    const row = await api<Section>('/api/notes/sections', {
-      method: 'POST',
-      body: JSON.stringify({ title: 'Yeni bölüm' }),
-    })
-    setSections((s) => [...s, row])
-    setOpenSections((o) => new Set(o).add(row.id))
+    try {
+      const row = await api<Section>('/api/notes/sections', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Yeni bölüm' }),
+      })
+      setSections((s) => [...s, row])
+      setOpenSections((o) => new Set(o).add(row.id))
+      setNavOpen(true)
+      toast.success('Bölüm eklendi')
+    } catch {
+      toast.error('Bölüm eklenemedi')
+    }
   }
 
   async function addPage(sectionId: number) {
-    const row = await api<PageMeta>('/api/notes/pages', {
-      method: 'POST',
-      body: JSON.stringify({ sectionId }),
-    })
-    setPages((p) => [...p, row])
-    setOpenSections((o) => new Set(o).add(sectionId))
-    setActiveId(row.id)
+    try {
+      const row = await api<PageMeta>('/api/notes/pages', {
+        method: 'POST',
+        body: JSON.stringify({ sectionId }),
+      })
+      setPages((p) => [...p, row])
+      setOpenSections((o) => new Set(o).add(sectionId))
+      // The new page opens in the editor, so the phone's list closes behind it
+      // — the toast and the row's own title are what say it was created.
+      setActiveId(row.id)
+      setNavOpen(false)
+      toast.success('Sayfa eklendi')
+    } catch {
+      toast.error('Sayfa eklenemedi')
+    }
   }
 
   async function renameSection(id: number, title: string) {
@@ -193,24 +227,20 @@ export function NotesTab() {
 
   // ── panels ─────────────────────────────────────────────────────────────────
 
-  const sidebar = (
-    <Panel
-      side="a"
-      title="Notlar"
-      right={
-        <button
-          onClick={addSection}
-          title="Bölüm ekle"
-          className="text-mid hover:text-ink cursor-pointer border-0 bg-transparent p-1 leading-none"
-        >
-          <Plus className="size-[15px]" />
-        </button>
-      }
-      padded={false}
-      maxBodyHeight="70vh"
-    >
+  /** Picking a page on a phone also closes the list it was picked from. */
+  const openPage = (id: number) => {
+    setActiveId(id)
+    setNavOpen(false)
+  }
+
+  const navList = (
+    <>
       {loading ? (
-        <Loading />
+        <div className="flex flex-col gap-3 px-[18px] py-4">
+          <Skeleton h={11} w="55%" />
+          <Skeleton h={11} w="70%" />
+          <Skeleton h={11} w="45%" />
+        </div>
       ) : sections.length === 0 ? (
         <PanelEmpty>Henüz bölüm yok. Sağ üstteki + ile ekleyin.</PanelEmpty>
       ) : (
@@ -225,7 +255,7 @@ export function NotesTab() {
                   key={`pin-${p.id}`}
                   page={p}
                   active={p.id === activeId}
-                  onOpen={() => setActiveId(p.id)}
+                  onOpen={() => openPage(p.id)}
                   onRename={(t) => renamePage(p.id, t)}
                   onPin={() => togglePin(p)}
                   onDelete={() => removePage(p)}
@@ -259,7 +289,7 @@ export function NotesTab() {
                         key={p.id}
                         page={p}
                         active={p.id === activeId}
-                        onOpen={() => setActiveId(p.id)}
+                        onOpen={() => openPage(p.id)}
                         onRename={(t) => renamePage(p.id, t)}
                         onPin={() => togglePin(p)}
                         onDelete={() => removePage(p)}
@@ -271,7 +301,57 @@ export function NotesTab() {
           })}
         </div>
       )}
+    </>
+  )
+
+  const sidebar = (
+    <Panel
+      side="a"
+      title="Notlar"
+      right={
+        <button
+          onClick={addSection}
+          title="Bölüm ekle"
+          className="text-mid hover:text-ink cursor-pointer border-0 bg-transparent p-1 leading-none"
+        >
+          <Plus className="size-[15px]" />
+        </button>
+      }
+      padded={false}
+      maxBodyHeight={phone ? undefined : '70vh'}
+    >
+      {navList}
     </Panel>
+  )
+
+  /** Phone: one row that names the open page and holds the list behind it. */
+  const phoneNav = (
+    <div className="bg-card border-faint mb-4 rounded-xl border">
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => setNavOpen((v) => !v)}
+          aria-expanded={navOpen}
+          className="text-ink flex min-h-[46px] flex-1 cursor-pointer items-center gap-2 border-0 bg-transparent px-[14px] py-3 text-left text-[13px] font-medium"
+        >
+          <span className="flex-1 truncate">{active ? active.title : 'Notlar'}</span>
+          {navOpen ? (
+            <ChevronDown className="text-mid size-4 shrink-0" />
+          ) : (
+            <ChevronRight className="text-mid size-4 shrink-0" />
+          )}
+        </button>
+        <button
+          onClick={addSection}
+          title="Bölüm ekle"
+          aria-label="Bölüm ekle"
+          className="text-mid min-h-[46px] cursor-pointer border-0 bg-transparent px-[14px] leading-none"
+        >
+          <Plus className="size-[17px]" />
+        </button>
+      </div>
+      {navOpen && <div className="border-faint border-t pb-1.5">{navList}</div>}
+    </div>
   )
 
   const editorPanel = (
@@ -290,14 +370,25 @@ export function NotesTab() {
         )
       }
       right={<SavedFlash at={savedAt} />}
-      maxBodyHeight="70vh"
+      maxBodyHeight={phone ? undefined : '70vh'}
     >
       {!active ? (
         <PanelEmpty>Soldan bir sayfa seçin ya da yeni bir sayfa ekleyin.</PanelEmpty>
       ) : !body || body.id !== active.id ? (
-        <Loading />
+        <div className="flex flex-col gap-4 px-[18px] py-4">
+          <Skeleton h={22} w="45%" />
+          <SkeletonLines lines={4} />
+          <SkeletonLines lines={3} />
+        </div>
       ) : (
-        <Suspense fallback={<Loading />}>
+        <Suspense
+          fallback={
+            <div className="flex flex-col gap-4 px-[18px] py-4">
+              <Skeleton h={22} w="45%" />
+              <SkeletonLines lines={4} />
+            </div>
+          }
+        >
           <NoteEditor
             pageId={active.id}
             initialContent={body.content}
@@ -315,7 +406,14 @@ export function NotesTab() {
         subtitle="Panel güncellemeleri, fikirler ve kendi notların."
       />
       {error && <Notice>{error}</Notice>}
-      <SplitPane splitKey="notes" a={sidebar} b={editorPanel} />
+      {phone ? (
+        <>
+          {phoneNav}
+          {editorPanel}
+        </>
+      ) : (
+        <SplitPane splitKey="notes" a={sidebar} b={editorPanel} />
+      )}
     </div>
   )
 }

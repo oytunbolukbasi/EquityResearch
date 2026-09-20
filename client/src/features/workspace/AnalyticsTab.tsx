@@ -3,9 +3,10 @@ import { CalendarDays, Target } from 'lucide-react'
 
 import type { PortfolioClosedPosition, PortfolioSummary } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { Skeleton, SkeletonLines } from '@/components/ui/skeleton'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane } from './split'
-import { Loading, Notice } from './shared'
+import { Notice } from './shared'
 import {
   DateRangePicker,
   formatRange,
@@ -255,7 +256,23 @@ export function AnalyticsTab() {
   const { data: summary, loading, error } = useApi<PortfolioSummary>('/api/portfolio/summary')
   const { data: closed } = useApi<PortfolioClosedPosition[]>('/api/portfolio/closed')
 
-  if (loading) return <Loading />
+  if (loading) {
+    // The heading and the period band are static; the cards are what waits.
+    return (
+      <div>
+        <TabHeading title="Analiz" subtitle="Portföyün bütünü: değer, kâr-zarar ve dağılım." />
+        <div className="flex flex-col gap-4">
+          {[0, 1, 2].map((i) => (
+            <section key={i} className="bg-card border-faint flex flex-col gap-3 rounded-xl border px-[18px] py-4">
+              <Skeleton h={12} w="34%" />
+              <Skeleton h={24} w="55%" />
+              <SkeletonLines lines={2} />
+            </section>
+          ))}
+        </div>
+      </div>
+    )
+  }
   if (error) return <Notice>Portföy verisi alınamadı.</Notice>
 
   const a = computeAnalytics(summary?.positions ?? [], closed ?? [], summary?.rates ?? { TRY: 1, USD: 1, EUR: 1 }, range)

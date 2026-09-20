@@ -69,7 +69,9 @@ export function BottomSheet({
           <button
             onClick={onClose}
             aria-label="Kapat"
-            className="text-mid hover:text-ink -m-2 shrink-0 cursor-pointer border-0 bg-transparent p-2 text-[20px] leading-none"
+            // 44px of touch target, not the glyph's own 20px: this is the one
+            // control that dismisses a sheet covering the screen.
+            className="text-mid hover:text-ink -m-2 flex size-11 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-2 text-[20px] leading-none"
           >
             ×
           </button>

@@ -50,3 +50,47 @@
 .eqr-note-editor .bn-editor {
   padding-inline: 48px 0;
 }
+
+/*
+  Telefon (≤640px). Üç ayar, üçü de ölçülerek:
+
+  1. Sol şerit 48 → 16px. O 48px sürükle ve + düğmelerinin yaşadığı yerdi
+     (yukarıdaki nota bak) ama ikisi de HOVER ile çıkıyor; telefonda hover yok,
+     dolayısıyla orada kimse oturmuyor. 375px ekranda 48px, metin sütununun
+     %13'ü demekti.
+  2. Başlıklar küçülür. BlockNote'un h1'i masaüstü ölçeğinde; "Şu an izlenenler"
+     iki satıra sarıyordu.
+  3. Tablolar yatay kayar ve punto KÜÇÜLMEZ. Dar ekranda sütunları sıkıştırmak
+     başlıkları harf harf kırıyordu ("Se-mb-ol"); kaydırmak okunur bırakıyor.
+*/
+@media (max-width: 640px) {
+  .eqr-note-editor .bn-editor {
+    padding-inline: 16px 0;
+  }
+
+  /* The size lives on the heading element itself, not on the block wrapper —
+     setting it on `.bn-block-content` changes nothing. */
+  .eqr-note-editor .bn-block-content[data-content-type='heading'] h1 {
+    font-size: 22px;
+  }
+
+  .eqr-note-editor .bn-block-content[data-content-type='heading'] h2 {
+    font-size: 19px;
+  }
+
+  .eqr-note-editor .bn-block-content[data-content-type='heading'] h3 {
+    font-size: 16px;
+  }
+
+  /* `!important` is needed and it is the library's fault, not a shortcut:
+     BlockNote writes the table width inline (`width: 1000px`) AND overrides it
+     with its own important rule, so the table computed to 242px and squeezed
+     four columns into it — the headers broke a letter per line ("Se-mb-ol").
+     max-content lets the cells keep their own width; the wrapper above already
+     scrolls horizontally. */
+  .eqr-note-editor .tableWrapper-inner,
+  .eqr-note-editor .bn-block-content[data-content-type='table'] table {
+    width: max-content !important;
+    min-width: 100%;
+  }
+}

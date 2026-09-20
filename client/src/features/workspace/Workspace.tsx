@@ -5,6 +5,7 @@ import { OverviewTab } from "./OverviewTab";
 import { PulseTab } from "./PulseTab";
 import { IdeasTab } from "./IdeasTab";
 import { PaperTab } from "./PaperTab";
+import { scrollTabIntoView } from "@/lib/scroll-tab-into-view";
 import { VirtualPortfolioTab } from "./VirtualPortfolioTab";
 import { AnalyticsTab } from "./AnalyticsTab";
 import { useLayoutPersistence } from "./useLayoutPersistence";
@@ -105,6 +106,13 @@ export function Workspace() {
 
   const clearJump = useCallback(() => setPendingJump(null), []);
 
+  // Keep the selected tab fully visible in the strip (it overflows on a phone).
+  const navRef = useRef<HTMLElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  useEffect(() => {
+    scrollTabIntoView(navRef.current, tabRefs.current[tab] ?? null);
+  }, [tab]);
+
   // Collapse the header's identity row once the page is scrolled.
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -180,13 +188,19 @@ export function Workspace() {
             </div>
           </div>
 
-          <nav className="eqr-header-nav flex items-center gap-3.5 overflow-x-auto pr-6 sm:gap-6">
+          <nav
+            ref={navRef}
+            className="eqr-header-nav eqr-hscroll flex items-center gap-3.5 overflow-x-auto pr-6 sm:gap-6"
+          >
             {TABS.map((t) => (
               <button
                 key={t.id}
+                ref={(el) => {
+                  tabRefs.current[t.id] = el;
+                }}
                 onClick={() => setTab(t.id)}
                 aria-current={tab === t.id ? "page" : undefined}
-                className="shrink-0 cursor-pointer border-0 border-b-2 bg-transparent px-0 pt-0 pb-[13px] text-[13px] transition-colors"
+                className="-my-1.5 min-h-11 shrink-0 cursor-pointer border-0 border-b-2 bg-transparent px-0 pt-0 pb-[13px] text-[13px] transition-colors sm:my-0 sm:min-h-0"
                 style={{
                   borderBottomColor:
                     tab === t.id ? "var(--info)" : "transparent",
@@ -211,9 +225,12 @@ export function Workspace() {
                 }}
               >
                 <button
+                  ref={(el) => {
+                    tabRefs.current["notes"] = el;
+                  }}
                   onClick={() => setTab("notes")}
                   aria-current={tab === "notes" ? "page" : undefined}
-                  className="cursor-pointer border-0 bg-transparent px-0 py-0 text-[13px] transition-colors"
+                  className="-my-1.5 min-h-11 cursor-pointer border-0 bg-transparent px-0 py-0 text-[13px] transition-colors sm:my-0 sm:min-h-0"
                   style={{
                     color: tab === "notes" ? "var(--info)" : "var(--mid)",
                     fontWeight: tab === "notes" ? 500 : 400,
@@ -225,7 +242,7 @@ export function Workspace() {
                   onClick={toggleNotes}
                   title="Notlar sekmesini kapat"
                   aria-label="Notlar sekmesini kapat"
-                  className="text-mid hover:text-ink -mr-1 cursor-pointer border-0 bg-transparent p-0.5 leading-none"
+                  className="text-mid hover:text-ink -mr-1 -my-1.5 flex size-11 cursor-pointer items-center justify-center border-0 bg-transparent leading-none sm:my-0 sm:size-auto sm:p-0.5"
                 >
                   <X className="size-[13px]" />
                 </button>

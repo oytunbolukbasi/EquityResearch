@@ -31,6 +31,14 @@ const MAX_FRAC = 85
 /** Below this the split collapses to one column and every drag interaction is off. */
 export const STACK_QUERY = '(max-width: 800px)'
 
+/**
+ * Phone. Narrower than STACK_QUERY on purpose: between 641 and 800px the panels
+ * stack but every desktop layout inside them still fits, while below 640 a table
+ * has to become a list and a side panel has to become a sheet. Kept equal to
+ * Tailwind's `sm:` so the codebase carries one phone boundary, not two.
+ */
+export const PHONE_QUERY = '(max-width: 640px)'
+
 // `virtual` opens wide: its table carries eight columns, while the form beside
 // it is a single narrow column.
 const DEFAULT_SPLITS: Record<SplitKey, number> = {

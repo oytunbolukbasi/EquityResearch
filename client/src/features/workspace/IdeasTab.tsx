@@ -4,11 +4,14 @@ import { IoInformationCircleOutline } from 'react-icons/io5'
 
 import type { Idea, TradePlan } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { RiskRewardBar } from '@/components/ui/risk-reward-bar'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
-import { SplitPane } from './split'
-import { Loading, Notice, UnderlineTabs } from './shared'
-import { TradePlanPanel } from './TradePlanPanel'
+import { SplitPane, PHONE_QUERY } from './split'
+import { Notice, UnderlineTabs } from './shared'
+import { Skeleton, SkeletonRows } from '@/components/ui/skeleton'
+import { TradePlanPanel, PlanLadder } from './TradePlanPanel'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { fmtN } from './portfolio-calc'
 
 /** Statuses that retire an idea to the Geçmiş tab. */
@@ -145,6 +148,21 @@ const TH =
 export function IdeasTab() {
   const [tab, setTab] = useState<IdeaTab>('active')
   const [ticker, setTicker] = useState<string | null>(null)
+  const phone = useMediaQuery(PHONE_QUERY)
+  const [sheetOpen, setSheetOpen] = useState(false)
+
+  /**
+   * Phone: picking an idea opens its plan in a sheet.
+   *
+   * Not inline below the list: the plan sits under every row, so reading one
+   * meant scrolling down and back up for the next — the user's words, "aşağı
+   * yukarı gezinmek mobil için iyi bir deneyim değil". The sheet keeps the list
+   * in place behind it, same as the portfolio row's note.
+   */
+  function chooseIdea(t: string) {
+    setTicker(t)
+    if (phone) setSheetOpen(true)
+  }
 
   const { data: ideas, loading, error } = useApi<Idea[]>('/api/ideas')
   const { data: plans } = useApi<TradePlan[]>('/api/trade-plans')
@@ -178,7 +196,6 @@ export function IdeasTab() {
   }
   const plan = pickPlan()
 
-  if (loading) return <Loading />
   if (error) return <Notice>Fikir verisi alınamadı.</Notice>
 
   const isHistory = tab === 'history'
@@ -189,14 +206,55 @@ export function IdeasTab() {
       title="Fikirler"
       belowHeader={<UnderlineTabs items={IDEA_TABS} value={tab} onChange={setTab} />}
       padded={false}
-      maxBodyHeight="72vh"
+      maxBodyHeight={phone ? undefined : '72vh'}
     >
-      {!visibleIdeas.length ? (
+      {loading ? (
+        <SkeletonRows rows={6} cols={phone ? 2 : 4} className="border-faint2 border-t" />
+      ) : !visibleIdeas.length ? (
         <PanelEmpty>
           {tab === 'active'
             ? 'Aktif fikir yok.'
             : 'Geçmiş kayıt yok. Stop veya hedefe ulaşan fikirler burada listelenir.'}
         </PanelEmpty>
+      ) : phone ? (
+        /*
+          Phone: cards, not a table. The eight columns measured 581px against a
+          325px screen, so Risk/Getiri, the dates and Durum sat behind a
+          horizontal scroll — and the first two are the reason to read the row.
+        */
+        <div className="border-faint2 flex flex-col border-t">
+          {visibleIdeas.map((idea) => (
+            <button
+              key={idea.id}
+              type="button"
+              onClick={() => chooseIdea(idea.ticker)}
+              data-selected={plan?.ticker === idea.ticker}
+              className="eqr-row border-faint2 flex w-full cursor-pointer flex-col gap-2 border-b px-[18px] py-3 text-left"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold">{idea.ticker}</span>
+                {idea.exchange && <span className="num text-mid text-[12px]">{idea.exchange}</span>}
+                <span className="ml-auto flex items-center gap-1.5">
+                  <DirectionBadge direction={idea.direction} />
+                  {isHistory && <StatusBadge status={idea.status} />}
+                </span>
+              </span>
+              <span className="num flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+                <span className="text-mid">
+                  Giriş{' '}
+                  <span className="text-ink">
+                    {idea.entryLow != null && idea.entryHigh != null
+                      ? `${fmtN(idea.entryLow, 0)}–${fmtN(idea.entryHigh, 0)}`
+                      : fmtN(idea.entryLow, 0)}
+                  </span>
+                </span>
+                <span style={{ color: 'var(--down)' }}>SL {fmtN(idea.stopLoss, 0)}</span>
+                <span style={{ color: 'var(--up)' }}>TP1 {fmtN(idea.target1, 0)}</span>
+                <span className="text-mid ml-auto">{fmtDate(idea.firstDate)}</span>
+              </span>
+            </button>
+          ))}
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -294,21 +352,61 @@ export function IdeasTab() {
     <div>
       <TabHeading
         title="Pozisyon Fikirleri"
-        subtitle="Fikri seç, planı sağda incele."
-        right={<Chip>{allPlans.length} plan</Chip>}
+        subtitle={phone ? 'Fikri seç, planı altta incele.' : 'Fikri seç, planı sağda incele.'}
+        // Not "0 plan" while the list is on its way — a count is a fact, and
+        // we don't have it yet.
+        right={loading ? undefined : <Chip>{allPlans.length} plan</Chip>}
       />
-      <SplitPane
-        splitKey="ideas"
-        a={ideasPanel}
-        b={
-          <TradePlanPanel
-            plan={plan}
-            plans={allPlans}
-            onSelect={setTicker}
-            status={plan ? effStatus(plan) : 'active'}
-          />
-        }
-      />
+      {/* The chart is desktop-only: at 375px its plot fell to 228px and the
+          bars stopped being readable. On a phone the sheet carries the same
+          plan as a level ladder plus the thesis. */}
+      {phone ? (
+        <>
+          {ideasPanel}
+          {plan && (
+            <BottomSheet
+              open={sheetOpen}
+              title={
+                <span className="flex items-baseline gap-2">
+                  {plan.ticker}
+                  {plan.exchange && (
+                    <span className="text-mid num text-[12px] font-normal">{plan.exchange}</span>
+                  )}
+                </span>
+              }
+              onClose={() => setSheetOpen(false)}
+            >
+              <PlanLadder plan={plan} status={effStatus(plan)} />
+            </BottomSheet>
+          )}
+        </>
+      ) : (
+        <SplitPane
+          splitKey="ideas"
+          a={ideasPanel}
+          b={
+            loading ? (
+              <section className="eqr-panel bg-card border-faint flex flex-col gap-4 rounded-xl border px-[18px] py-4">
+                <Skeleton h={14} w="28%" />
+                <Skeleton h={22} w="40%" />
+                <Skeleton h={190} radius={10} />
+                <span className="flex gap-2">
+                  <Skeleton h={18} w={92} radius={9} />
+                  <Skeleton h={18} w={78} radius={9} />
+                  <Skeleton h={18} w={84} radius={9} />
+                </span>
+              </section>
+            ) : (
+            <TradePlanPanel
+              plan={plan}
+              plans={allPlans}
+              onSelect={chooseIdea}
+              status={plan ? effStatus(plan) : 'active'}
+            />
+            )
+          }
+        />
+      )}
     </div>
   )
 }
