@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { MorningNote } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
-import { SplitPane } from './split'
+import { SplitPane, STACK_QUERY } from './split'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { Loading, Notice } from './shared'
 import { fmtNoteDate, noteSections, readMinutes } from './note-sections'
 
@@ -22,6 +23,9 @@ export function PulseTab({
   onBack: () => void
 }) {
   const [index, setIndex] = useState(0)
+  // Phone layout: the article scrolls with the page, and the contents collapses.
+  const stacked = useMediaQuery(STACK_QUERY)
+  const [tocOpen, setTocOpen] = useState(false)
   const articleRef = useRef<HTMLElement>(null)
   const { data: notes, loading, error } = useApi<MorningNote[]>('/api/morning-notes/history')
 
@@ -33,6 +37,41 @@ export function PulseTab({
     const art = articleRef.current
     const sec = art?.querySelector<HTMLElement>(`[data-sec="${id}"]`)
     if (!art || !sec) return
+    // Stacked: the article has no scroller of its own, so the page is what
+    // moves — and the header is sticky, so the target has to clear it.
+    if (stacked) {
+      /*
+        Align, then keep aligning until the page stops moving under us.
+
+        One pass is not enough and two is a race: the header is sticky but
+        still in flow, and it folds from 102px to 46px once the page leaves
+        the top — shifting everything below it by 56px. That fold is driven by
+        an IntersectionObserver, so it lands whenever it lands; a fixed number
+        of frames sometimes measured before it and left the heading 56px low.
+        Stopping as soon as two frames agree has the same hole — the fold
+        arrives after that agreement. So the correction simply runs for 400ms,
+        which outlasts the fold, and aborts the moment the reader scrolls.
+      */
+      let cancelled = false
+      const deadline = performance.now() + 400
+      const stop = () => {
+        cancelled = true
+      }
+      for (const ev of ['wheel', 'touchstart', 'pointerdown'] as const) {
+        window.addEventListener(ev, stop, { once: true, passive: true })
+      }
+      const step = () => {
+        if (cancelled) return
+        const header = document.querySelector('header')?.getBoundingClientRect().height ?? 0
+        const delta = sec.getBoundingClientRect().top - header - 12
+        if (Math.abs(delta) > 1) window.scrollBy(0, delta)
+        if (performance.now() < deadline) requestAnimationFrame(step)
+        else for (const ev of ['wheel', 'touchstart', 'pointerdown'] as const)
+          window.removeEventListener(ev, stop)
+      }
+      step()
+      return
+    }
     art.scrollTop =
       sec.getBoundingClientRect().top - art.getBoundingClientRect().top + art.scrollTop - 12
   }
@@ -60,12 +99,20 @@ export function PulseTab({
   // No visible "İçindekiler" heading: a list of the note's section titles, sat
   // beside the note itself, needs no label. The nav's aria-label still names it
   // for screen readers.
-  const toc = (
+  const tocList = (
     <nav className="min-w-0 py-3" aria-label="Bülten içindekiler">
       {sections.map((s) => (
         <button
           key={s.id}
-          onClick={() => scrollToSection(s.id)}
+          onClick={() => {
+            // Collapse on the way out: a list left open pushes the section you
+            // just asked for back off the screen. The jump waits a frame for
+            // that collapse to land — measured before the wait, the target
+            // came to rest 55px too low, because the list was still occupying
+            // the space the measurement was taken in.
+            setTocOpen(false)
+            requestAnimationFrame(() => scrollToSection(s.id))
+          }}
           className="group block w-full cursor-pointer border-0 bg-transparent py-2.5 text-left"
         >
           {s.kicker && (
@@ -84,11 +131,37 @@ export function PulseTab({
     </nav>
   )
 
+  /*
+    On a phone the contents is 545px of an 812px screen: the article starts
+    below the fold, so the first thing the bulletin shows is a list of what it
+    would have said. Collapsed to one row it costs ~44px and still jumps.
+  */
+  const toc = stacked ? (
+    <div className="bg-card border-faint rounded-xl border px-4">
+      <button
+        onClick={() => setTocOpen((v) => !v)}
+        aria-expanded={tocOpen}
+        className="text-ink flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-0 py-3 text-left text-[13px] font-medium"
+      >
+        {sections.length} başlık
+        <span className="text-mid text-[11px]">{tocOpen ? '▲' : '▼'}</span>
+      </button>
+      {tocOpen && <div className="border-faint border-t">{tocList}</div>}
+    </div>
+  ) : (
+    tocList
+  )
+
   const article = (
     <article
       ref={articleRef}
-      className="bg-card border-faint min-w-0 overflow-auto rounded-xl border px-[35px] py-8"
-      style={{ maxHeight: '78vh' }}
+      className={`bg-card border-faint min-w-0 rounded-xl border px-[35px] py-8 ${
+        stacked ? '' : 'overflow-auto'
+      }`}
+      // Never on a phone: an inner scroller inside a page that also scrolls
+      // means the same flick does different things depending on where the
+      // finger lands. Stacked, the page is the only scroller.
+      style={stacked ? undefined : { maxHeight: '78vh' }}
     >
       <header className="mb-7">
         {/* No "EQR / GÜNLÜK ARAŞTIRMA" eyebrow: the tab is called Piyasa Nabzı,

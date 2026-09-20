@@ -1712,3 +1712,39 @@ Divider'ın oturabildiği kademeler üçten beşe çıktı: **¼ · ⅓ · ½ ·
 *Bilinen, dokunulmadı:* ⅓ ve ¼'te Genel bakış'taki portföy tablosunun Not
 sütunu kırpılıyor ("BEKL…"). Dar genişlikte Son fiyat sütununu gizlemek bir
 seçenek.
+
+GÖREV 56 — Piyasa Nabzı telefonda: içindekiler katlandı, iç kaydırma kalktı
+
+Telefonda bülteni okumak fazladan çaba istiyordu ve sebebi iki ayrı şeydi.
+Ölçüldü (375×812): içindekiler **545px**, makale sayfanın **768.** pikselinde
+başlıyor — yani ilk ekranda bültenin kendisi hiç yok, yalnız neler
+anlatacağının listesi var. Üstüne makale `maxHeight: 78vh` + `overflow:auto`
+ile **kendi içinde** kayıyordu: 633px'lik pencerede 3.736px içerik. Sayfa da
+kaydığı için aynı hareket, parmağın nereye denk geldiğine göre farklı şey
+yapıyordu.
+
+- **İç kaydırma yalnız masaüstünde.** Yığılmış düzende (`STACK_QUERY`) makale
+  doğal boyunda akar, tek kaydırma sayfanındır. Masaüstü değişmedi (ölçüldü:
+  78vh, `overflow:auto`, atlayınca bölüm makalenin 12px altında).
+- **İçindekiler telefonda katlanır tek satır** ("9 başlık", 46px). Açılır,
+  bir başlığa dokununca kapanır ve atlar. Makale artık 269px'te başlıyor.
+- **Atlama kapanmayı bekler** (`requestAnimationFrame`): açık liste,
+  istenen bölümü ekrandan aşağı itiyordu.
+
+**Yapışkan header, atlamayı iki kez bozdu — kalıcı ders:**
+`header` `sticky` ama **akışın içinde**; sayfa tepeden ayrılınca 102px'ten
+46px'e katlanıyor ve altındaki HER ŞEY 56px yukarı kayıyor. Dolayısıyla
+atlamayı o anki header yüksekliğine göre hesaplamak yetmiyor:
+1. Tek geçiş → başlık 56px aşağıda kalıyordu.
+2. "İki kare sonra düzelt" → katlanmayı tetikleyen `IntersectionObserver`
+   asenkron olduğu için bazen düzeltme katlanmadan ÖNCE koşuyordu; hata
+   rastgele görünüyordu (aynı başlık kimi zaman 58px, kimi zaman 114px).
+Çözüm: hizalama **400ms boyunca her karede** tekrarlanır ve okuyucu
+`wheel`/`touchstart`/`pointerdown` ile müdahale ederse anında iptal olur.
+Ölçüm: altı başlık da 57–58px (header 46 + 12). Genel bakış'tan gelen
+bağlantı da aynı yere geliyor.
+
+*Ölçüm dersi:* `requestAnimationFrame` **gizli sekmede çalışmaz**. Tarayıcı
+paneli arkada dururken hem ölçüm betiği takıldı hem de sonuçlar tutarsız
+göründü; panel öne alınınca üçü de düzeldi. rAF'e dayanan bir davranış, arka
+plandaki bir sekmede test edilemez.
