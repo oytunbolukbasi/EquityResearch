@@ -1748,3 +1748,37 @@ bağlantı da aynı yere geliyor.
 paneli arkada dururken hem ölçüm betiği takıldı hem de sonuçlar tutarsız
 göründü; panel öne alınınca üçü de düzeldi. rAF'e dayanan bir davranış, arka
 plandaki bir sekmede test edilemez.
+
+GÖREV 57 — Frankfurt fiyatı: anahtarsız bir kaynak (`scripts/de-price.mjs`)
+
+Haftalardır her içerik turunda aynı satır yazılıyordu: *"XETRA barı üç kaynakta
+da alınamadı, MBG yalnız currentPrice"*. 20 Eylül 2026'da Mercedes fikri zarar
+kesme seviyesinin altında kapanınca bu bir rahatsızlıktan çıkıp karar verilemez
+hale geldi: statü değişimi, doğrulanamayan tek bir sayıya bakıyordu.
+
+**Sorun sanıldığı yerde değildi.** yfinance MCP'si Alman sembollerini
+getiremiyor değil; getiriyor, ama GÜNLÜK barların son iki günü `null` geliyor ve
+sunucu **tüm yanıtı** şema hatasıyla reddediyor
+(`data/result/252/Open must be number`). Yani "veri yok" değil, "son bar boş".
+
+- **Çözüm:** aynı Yahoo chart ucundan günlük bar İSTEMEDEN
+  `meta.regularMarketPrice` okunuyor. Anahtar yok, kota yok, 8 sembol tek
+  çağrıda. `scripts/de-price.mjs`.
+- **Doğrulandı:** Volkswagen'in 18 Eylül kapanışı bu yolla 76,52 € — Twelve
+  Data'nın (ücretli katman, aynı gün) verdiği rakamla birebir aynı.
+- **Elenen kaynaklar:** Twelve Data ücretsiz planı XETRA'da yalnız VOW3'ü
+  açıyor (MBG, MUV2, DBK, ALV "Grow plan" istiyor). Stooq'un CSV ucu artık
+  JavaScript proof-of-work istiyor — bot korumasıdır, aşılmadı.
+- **Bar çekilmiyor, bilinçli.** Kullanıcı kararı: "TradingView tarafı için
+  barlar çok önemli değil, güncel fiyatları alabiliyorsan yeter." Saatlik
+  barlardan seans barı kurmak denendi ve çalıştı (MBG 18 Eylül: o 45,83 ·
+  h 45,83 · l 43,60 · c 43,99) ama kapsama alınmadı.
+- **Panelin fiyat hattı bu değil.** Portföy satırlarını hâlâ Google E-Tablosu
+  besliyor; betik yalnız içerik turunda okumak içindir. İki kaynağın aynı gün
+  farklı sayı verdiği görüldü (MBG: sheet 44,22 · bu kaynak 43,995 · bir Alman
+  finans sitesi 44,61) — üçü de zarar kesme seviyesi 44,80'in altında olduğu
+  için 21 Eylül kararı hiçbirinde değişmiyordu.
+
+*Yan fayda:* izleme listesindeki üç Alman aday (Munich Re, Deutsche Bank,
+Allianz) haftalardır fiyatsız duruyordu ve "koşulu test edilemiyorsa listede
+durmamalı" diye işaretlenmişti. Artık okunuyorlar; listede kalıyorlar.

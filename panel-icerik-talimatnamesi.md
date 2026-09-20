@@ -21,17 +21,34 @@ Bu bir finansal veri güncelleme görevidir: gerçek veri çek → istenen JSON'
 
 **ABD hisseleri (birincil):** `yfinance` MCP — sembol olduğu gibi (örn. `MA`, `ABT`).
 
-**Almanya hisseleri (birincil):** `yfinance` MCP — sembol formatı `TICKER.DE`
-(örn. `SAP.DE`, `VOW3.DE`, `SZG.DE`). Fiyatlar **EUR**.
-`.DE` yalnızca sorgu içindir; panele giden ticker çıplaktır (`SAP`), borsa alanı `XETRA`.
+**Almanya hisseleri (birincil):** `node scripts/de-price.mjs MBG VOW3 SAP …` —
+anahtarsız, XETRA fiyatı, tek çağrıda hepsi. Fiyatlar **EUR**. Panele giden ticker
+çıplaktır (`SAP`), borsa alanı `XETRA`.
+
+> **Neden yfinance MCP'si değil (2026-09-20'de ölçüldü):** Alman sembollerinde
+> GÜNLÜK barların son iki günü `null` geliyor ve MCP tüm yanıtı şema hatasıyla
+> reddediyor (`data/result/252/Open must be number`) — yani Frankfurt tarafı
+> haftalardır "veri yok" görünüyordu, oysa veri oradaydı. Betik aynı uçtan
+> **günlük bar istemiyor**, `meta.regularMarketPrice`'ı okuyor.
+> Doğrulama: Volkswagen 18 Eylül kapanışı bu yolla 76,52 €, ücretli kaynağın
+> (Twelve Data) verdiği rakamla birebir aynı.
+>
+> **Denenip elenenler:** Twelve Data ücretsiz planı XETRA'da yalnız VOW3'ü
+> açıyor (MBG/MUV2/DBK/ALV "Grow plan" istiyor). Stooq'un CSV ucu tarayıcı
+> doğrulaması (JavaScript proof-of-work) istiyor — bot korumasıdır, aşılmaz.
+>
+> **Bar gerekmiyor.** Trade planı grafiği Almanya için bar taşımıyor ve bu
+> bilinçli: kullanıcı kararı (2026-09-20) — "TradingView tarafı için barlar çok
+> önemli değil, güncel fiyat yeter". `appendPriceHistory` gönderme.
 
 **Fallback sırası (her kaynakta en fazla 2 deneme):**
 1. yfinance MCP
 2. yfinance yoksa/çökmüşse **borsaya göre böl** (2026-07 tarihinde sahada doğrulandı):
    - **ABD fiyat/OHLC** → Twelve Data `get_time_series` (sembol olduğu gibi, `outputsize` ile
      60+ bar çekilebilir). ÇALIŞIR.
-   - **Almanya fiyat/OHLC** → Twelve Data `get_time_series`, sembol `TICKER:XETR`
-     (örn. `SAP:XETR`). Bulunamazsa `foreignMarkets` (ac443cbd MCP) denenir.
+   - **Almanya fiyatı** → birincil kaynak zaten `scripts/de-price.mjs`. Düşerse
+     Twelve Data `get_quote` (`symbol=VOW3, exchange=XETR`) yalnız VOW3 için
+     çalışır; diğer semboller ücretli planda. Sonra web_search.
    - **BIST fiyat/OHLC** → BIST-native sağlayıcı `historicalData` (ac443cbd MCP; sembol `.IS`'siz,
      `rawBars=true` ile günlük OHLC döner). ÇALIŞIR. *(Twelve Data'nın ücretsiz planında BIST kapalı.)*
    - **Analist hedefi/rating** → TEK web_search (Twelve Data `price_target` ve FMP `quote`
