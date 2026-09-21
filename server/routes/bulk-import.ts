@@ -9,6 +9,8 @@ import { morningNoteInput } from './morning-notes'
 import { ideaInput } from './ideas'
 import { tradePlanInput } from './trade-plans'
 import { alpacaFetch, AlpacaError } from '../lib/alpaca'
+import { fetchSharePrices, registerSymbol } from '../services/price-source'
+import { typeForExchange } from '../../shared/asset-types'
 
 const portfolioActionSchema = z.object({
   ticker: z.string(),
@@ -99,6 +101,9 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
 
   type AlpacaAction = { action: 'buy'; ticker: string; limitPrice: number } | { action: 'stop'; ticker: string }
   const alpacaActions: AlpacaAction[] = []
+  // New ideas whose ticker the price sheet should start tracking — so Fikirler
+  // can show a delayed live price instead of the content round's close.
+  const sheetCandidates = new Map<string, string>()
 
   if (body.ideas !== undefined) {
     results.ideas = await upsertTable(ideaInput, body.ideas, async (d) => {
@@ -132,6 +137,13 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         await db.insert(ideas).values(values)
       }
 
+      // A new idea that is still open gets a row in the price sheet. Closed
+      // ones don't: every row is recomputed on each read (44 rows ≈ 9s), and a
+      // retired idea's live price answers no question anyone is asking.
+      const openStatus = !d.status || d.status === 'active' || d.status === 'review'
+      const sheetType = typeForExchange(d.exchange ?? existing[0]?.exchange)
+      if (!existing.length && openStatus && sheetType) sheetCandidates.set(d.ticker.toUpperCase(), sheetType)
+
       // Alpaca auto-order: only for US exchanges (NYSE/NASDAQ)
       const exchange = (d.exchange ?? existing[0]?.exchange ?? '').toUpperCase()
       const isUS = exchange === 'NYSE' || exchange === 'NASDAQ'
@@ -145,6 +157,26 @@ bulkImportRouter.post('/', requireAdmin, async (req, res) => {
         }
       }
     })
+
+    // Register new idea tickers with the price sheet — in the background, the
+    // same way a new position does (GÖREV 31): Apps Script can take ~35s per
+    // request and the import must not wait on it. Tickers the sheet already
+    // tracks are skipped so an existing row is never duplicated.
+    if (sheetCandidates.size) {
+      const candidates = [...sheetCandidates]
+      void (async () => {
+        try {
+          const { prices } = await fetchSharePrices(false, { attempts: 1 })
+          for (const [ticker, type] of candidates) {
+            if (prices[ticker] != null) continue
+            await registerSymbol(ticker, type)
+            console.log(`[price] fikir sembolü e-tabloya eklendi: ${ticker} (${type})`)
+          }
+        } catch (e) {
+          console.warn('[price] fikir sembolleri e-tabloya eklenemedi —', e)
+        }
+      })()
+    }
 
     // Process queued Alpaca actions after all DB writes succeed
     for (const act of alpacaActions) {

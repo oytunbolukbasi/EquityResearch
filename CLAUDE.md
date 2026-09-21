@@ -28,7 +28,7 @@ sabittir, ayarlanabilen tek şey iki panelin genişliği ve sırası.
   (GÖREV 35, 36). Radix bağımlılığı `react-slot` üzerinden button'da, bir de kullanılmayan
   dropdown'da. Yani "Radix tabanlı bir arayüz" beklemeyin.
 - **Yerleşim:** 6 sekme + açılıp kapanan Notlar yüzeyi; her sekmede en fazla iki panel.
-  Kütüphane yok — `features/workspace/split.tsx` divider'ı, ¼ · ⅓ · ½ · ⅔ · ¾ snap'ini ve panel
+  Kütüphane yok — `features/workspace/split.tsx` divider'ı, ¼ · ⅓ · ⅖ · ½ · ⅗ · ⅔ · ¾ snap'ini ve panel
   takasını kendisi yönetir. *(react-grid-layout GÖREV 27'de kaldırıldı.)*
 - **Not editörü:** BlockNote (`@blocknote/core` + `react` + `mantine`) — yalnız
   ücretsiz katman. `@blocknote/xl-*` paketleri GPL-3.0/ticari lisanslı, **kurulu
@@ -185,7 +185,7 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
 
 Serbest canvas yok. Her sekmede **en fazla iki panel** yan yana durur; aralarındaki
 divider sürüklenince genişlik imleci serbest takip eder ve bırakınca **tam olarak
-¼ · ⅓ · ½ · ⅔ · ¾**'ten birine oturur (GÖREV 55). Panel başlığı sürükleme tutamacıdır: imleç divider'ın
+¼ · ⅓ · ⅖ · ½ · ⅗ · ⅔ · ¾**'ten birine oturur (GÖREV 55, 60). Panel başlığı sürükleme tutamacıdır: imleç divider'ın
 öbür tarafına geçtiği an iki panel **anında** yer değiştirir (geçiş süresi 0, DOM
 sırası sabit — yalnız `flex order` değişir, dolayısıyla panel remount olmaz, grafik
 ve scroll korunur). ≤800px tek kolona yığılır ve tüm sürükleme kapanır; ≤640px
@@ -203,8 +203,8 @@ Sanal Portföy ayrıca tabloyu bırakıp kart listesine geçer (GÖREV 30).
    (GÖREV 43)
 2. **Piyasa Nabzı** — İçindekiler ↔ tam metin makale. Üstte ‹ tarih › adımlayıcı;
    yalnızca kaydı olan bültenler arasında gezer (datepicker yok).
-3. **Pozisyon Fikirleri** — fikir tablosu (Aktif/Geçmiş, Risk/Getiri mini-bar, tarih
-   kolonları) ↔ seçili trade planı. TradingView Lightweight Charts **aynen korundu**.
+3. **Pozisyon Fikirleri** — fikir tablosu (Aktif/Geçmiş, Risk/Getiri çubuğu, **Son fiyat** —
+   e-tablodan ~15 dk gecikmeli, tarih kolonları) ↔ seçili trade planı. TradingView Lightweight Charts **aynen korundu**.
    Varsayılan açılış = en güncel tarihli aktif idea (statü `/api/ideas`'ten türetilir;
    senkron olmayan `trade_plans.status`'a güvenilmez).
 4. **Paper Trading** — tek panel, split yok. Alpaca kâğıt hesabı; 4 özet kart +
@@ -1895,3 +1895,67 @@ Panel yüklenirken üç ayrı şey yanlış yapıyordu ve ikisi spinner'dan köt
 *Ölçüm notu:* iskeletleri görmek için `fetch` geçici olarak sarmalanıp `/api/`
 isteklerine 5-6 sn eklendi. Yerelde yükleme o kadar hızlı ki aksi halde
 yakalanamıyor.
+
+GÖREV 60 — Fikirlerde canlı fiyat, yeni Risk/Getiri çubuğu, ⅖ · ⅗ kademeleri
+
+**A — Fikirler artık e-tablonun fiyatını gösteriyor.** Tablo ve trade planı
+içerik turunda yazılan son fiyatı gösteriyordu; gün içinde bayat bir sayı canlı
+kotasyon gibi okunuyordu. Kaynak portföyün kullandığı Google E-Tablosu (~15 dk
+gecikmeli), yeni bir tedarikçi değil.
+- `GET /api/trade-plans/live-prices` → `{prices, readAt, stale}`. **`/:ticker`'dan
+  önce tanımlı** — sonra olsaydı "live-prices" bir ticker sanılırdı. Tek deneme,
+  60 sn; kaynak düşerse 503, önbellekten dönerse `stale: true`. `PriceMap`'e
+  okuma anı (`at`) eklendi; `readAt` o, istek anı değil.
+- **Fikir sembolleri e-tabloda yoktu** — yalnız portföy pozisyonları vardı.
+  `scripts/register-idea-symbols.ts` (`--dry` destekli) açık fikirleri tarayıp
+  eksikleri ekliyor ve yeniden okuyarak doğruluyor (BIMAS, NVDA, SCHW eklendi).
+  bulk-import da yeni açık fikrin sembolünü **arka planda** kaydediyor —
+  GÖREV 31 kuralı: yazma yolunu beklemez. Talimatnamede ADIM 6'ya işlendi.
+- `typeForExchange()` (`shared/asset-types.ts`): fikrin borsasından türe, yani
+  doğru `FRA:` ön ekine.
+- Tabloda **Son fiyat** sütunu; başlıktaki kırmızı saat ikonu okuma saatini
+  söyler. Trade planındaki büyük fiyatın yanında da aynı ikon: gecikme + okuma
+  saati + **grafiğin son barının tarihi** (barlar içerik turunda çekiliyor,
+  canlı değil). Telefondaki merdivende "Son fiyat" satırı da canlı sayıyı taşıyor.
+- **Grafiğin son-fiyat etiketi ve çizgisi kaldırıldı** (`lastValueVisible`/
+  `priceLineVisible: false`): son barın kapanışını gösteriyordu, yani yanındaki
+  canlı fiyatla çelişen ikinci bir "son fiyat".
+- `HintTooltip` (`components/ui/hint-tooltip.tsx`): tıkla/dokun ile açılır
+  (telefonda hover yok), portal + `fixed`, `align` start/end — fiyat ipucu
+  sola açılınca tablonun üstüne biniyordu.
+
+**B — Risk/Getiri çubuğu baştan çizildi.** Kırmızı→yeşil gradyanın üstünde
+giriş bandı yarı saydam koyu bir leke gibi duruyordu; kullanıcı "koyu kırmızı
+noktalar ne?" diye sordu — cevabı olmayan bir işaretti. Şimdi stoptan TP1'e iki
+düz parça, girişte kesiliyor: kırmızı risk, yeşil getiri; oran okunacak bir
+etiket değil, iki uzunluğun oranı. Üstte `2,3×`, girişte ink çentik, **canlı
+fiyat mavi halka** (SCHW'nin halkası kırmızıda, S TP1'e yakın).
+- Renkler `color-mix(--down/--up 75%, --card)`: tam doygunlukta sert duruyordu
+  ve üstündeki iki işaretle aynı yüksekten konuşuyordu. Ölçüldü: %75 iki temada
+  da 3:1 grafik eşiğinin üstünde (açık 3,55 / 3,28 · koyu 3,48 / 4,04); %65 altına
+  düşüyor.
+- Genişlik 80px — seviye etiketi yok, çünkü SL/Giriş/TP1 hemen solundaki sütunlar.
+
+**C — Tablo yatay kaydırmaya düşmüyor.** Son fiyat sütunu tabloyu 60px taşırdı.
+Yön sütunu ticker'ın yanına rozet olarak katlandı, bu yılın tarihlerinden yıl
+atıldı, hücre boşluğu 10 → 8px. Ölçüldü (1280px): ½'de 608px, ⅗'te 731px, taşma 0.
+
+**D — ⅖ ve ⅗ kademeleri.** `PRESETS` yedi kademe: ¼ · ⅓ · ⅖ · ½ · ⅗ · ⅔ · ¾.
+**Çift olarak eklendi** — GÖREV 55'in simetri kuralı. Sebep: grafiği genişletip
+tabloyu kaydırmaya düşürmeden durulabilecek bir ara nokta. Ölçüldü: %37→40,
+%62→60, %70→⅔.
+
+**E — Genel bakış portföy tablosu.**
+- Grup başlığındaki "N pozisyon" masaüstünde adın hemen yanında (telefonda sağa
+  yaslı kaldı — kullanıcı "mobildekine dokunmayalım" dedi).
+- **Sağdaki boşluk:** veri sütunları panelle birlikte büyüyor, boşluğu sayıların
+  arasına dağıtıyordu. Varlık sütunu `w-full`, veri sütunları `w-px` +
+  `whitespace-nowrap`: artık fazla genişliği ad sütunu yutuyor, sayılar sağda
+  bitişik (94/82/133px sabit; Varlık ½'de 288, ⅔'te 494px).
+- **Not sütunu sağa yaslı**, başlığı dahil — tablonun geri kalanı zaten sağa
+  yaslı. Ölçüldü: 22 rozetin ve başlığın sağ kenarı tablonun 18px içinde.
+
+**F — Piyasa Nabzı telefonda:** "← Genel bakışa dön" kalktı (alt sekme şeridi
+zaten orada), tarih adımlayıcısı ortalandı, oklar 44px dokunma hedefi, "N / M"
+tarihin altında.
+

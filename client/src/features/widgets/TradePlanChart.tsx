@@ -166,6 +166,13 @@ export function TradePlanChart({ plan }: { plan: TradePlan }) {
       downColor:   bar,
       openVisible: true,
       thinBars:    false,
+      // No last-price label or line. The last bar is the content round's close,
+      // while the number above the chart is the sheet's delayed live price —
+      // two different prices, and the axis label made the older one look like
+      // the current quote. Hovering a bar still shows its date and values; this
+      // chart is here to place entry and targets, not to quote.
+      lastValueVisible: false,
+      priceLineVisible: false,
     })
 
     // lightweight-charts requires ascending time order and silently fails to

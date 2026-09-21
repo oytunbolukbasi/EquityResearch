@@ -98,25 +98,37 @@ function PositionsTable({
   const cols = phone ? 2 : 4
   return (
     <table className="w-full border-collapse">
+      {/*
+        Desktop: the name column takes every spare pixel (`w-full`) and the
+        three data columns shrink to their content (`w-px`). Left to the browser,
+        a wide panel spread its extra width across all four, and the Not column
+        ended ~100px short of the card edge with an empty strip beside the
+        badges. Now the numbers and badges sit against the right edge and the
+        slack goes between the name and its numbers, where a table expects it.
+      */}
       <thead>
         <tr>
-          <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 pr-3 pl-[18px] text-left font-medium">
+          <th
+            className={`bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 pr-3 pl-[18px] text-left font-medium ${
+              phone ? '' : 'w-full'
+            }`}
+          >
             Varlık
           </th>
           {!phone && (
-            <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b px-3 py-2 text-right font-medium whitespace-nowrap">
+            <th className="bg-card border-faint text-mid sticky top-0 z-[2] w-px border-b px-3 py-2 text-right font-medium whitespace-nowrap">
               Son fiyat
             </th>
           )}
           <th
             className={`bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 text-right font-medium whitespace-nowrap ${
-              phone ? 'pr-[18px] pl-3' : 'px-3'
+              phone ? 'pr-[18px] pl-3' : 'w-px px-3'
             }`}
           >
             K/Z %
           </th>
           {!phone && (
-            <th className="bg-card border-faint text-mid sticky top-0 z-[2] border-b py-2 pr-[18px] pl-3 text-left font-medium">
+            <th className="bg-card border-faint text-mid sticky top-0 z-[2] w-px border-b py-2 pr-[18px] pl-3 text-right font-medium whitespace-nowrap">
               Not
             </th>
           )}
@@ -142,8 +154,13 @@ function PositionsTable({
                     />
                     <span className="text-[14px] font-semibold tracking-[-0.2px]">{g.label}</span>
                     {/* The group's value is on the card directly above; the one
-                        thing the heading can add is how many rows follow. */}
-                    <span className="text-mid num ml-auto text-[12px]">
+                        thing the heading can add is how many rows follow.
+                        Desktop: right beside the label. Pinned to the far edge
+                        it drifted away from the heading it belongs to as the
+                        panel widened — at ⅔ it sat ~700px from its own label.
+                        Phone keeps the right edge: there the gap is small and
+                        the right column is where the numbers live. */}
+                    <span className={`text-mid num text-[12px] ${phone ? 'ml-auto' : ''}`}>
                       {rows.length} pozisyon
                     </span>
                   </div>
@@ -190,7 +207,11 @@ function PositionsTable({
                 )}
               </td>
               {!phone && (
-                <td className="pr-[18px] pl-3">
+                // Right-aligned like every other data column in this table, so
+                // the badges end on the same edge as the header and the numbers
+                // — left-aligned, short badges (SAT, BEKLE) stopped up to 52px
+                // shy of it and the column read ragged.
+                <td className="pr-[18px] pl-3 text-right">
                   {action ? (
                     <ActionBadge action={action.action} />
                   ) : (

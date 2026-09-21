@@ -511,6 +511,17 @@ elle yapıştırmıyor.
    yazıldığını ADIM 7 loguna geçir.
 5. Yüklendikten sonra panelden **doğrula** — en az bir uç: `/api/morning-notes`
    bugünün tarihini mi dönüyor, yeni fikir `/api/ideas`'te görünüyor mu.
+6. **Yeni fikir açıldıysa:** `npx tsx scripts/register-idea-symbols.ts` — açık
+   fikirlerin sembolleri fiyat e-tablosunda mı, değilse ekler ve fiyatın geldiğini
+   doğrular. Fikirler ekranındaki "Son fiyat" sütunu ve plan fiyatı bu e-tablodan
+   (~15 dk gecikmeli) okunur; e-tabloda olmayan sembol "—" görünür ve plan
+   fiyatı içerik turunun yazdığı kapanışa düşer.
+   > `bulk-import` yeni bir açık fikir aldığında bu kaydı **arka planda kendisi de
+   > yapar** (GÖREV 60). Betik yine de çalıştırılır: arka plandaki kayıt sessizce
+   > düşebilir (e-tablo aralıklı `HTTP 404` veriyor, GÖREV 42) ve betik sonucu
+   > doğrulayan tek adım. Yalnız **açık** fikirler kaydedilir — e-tablodaki her
+   > satır her okumada yeniden hesaplanıyor, kapanmış bir fikrin canlı fiyatı
+   > bir soruyu cevaplamıyor.
 
 > **Bu adım deploy GEREKTİRMEZ.** İçerik doğrudan çalışan uygulamaya gider; deploy
 > yalnızca panel KODU değiştiğinde gerekir. İkisi bir kez aynı turda yapıldı diye

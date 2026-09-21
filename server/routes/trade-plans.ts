@@ -6,6 +6,7 @@ import { db } from '../db/client'
 import { tradePlans } from '../db/schema'
 import { requireAdmin } from '../middleware/require-admin'
 import { parseRecords } from '../lib/validation'
+import { fetchSharePrices, PriceSourceUnavailable } from '../services/price-source'
 
 export const tradePlansRouter = Router()
 
@@ -13,6 +14,37 @@ export const tradePlansRouter = Router()
 tradePlansRouter.get('/', async (_req, res) => {
   const rows = await db.select().from(tradePlans).orderBy(desc(tradePlans.updatedAt)).limit(100)
   res.json(rows)
+})
+
+/**
+ * GET /api/trade-plans/live-prices → { prices, readAt, stale }
+ *
+ * The ~15-minute-delayed price from the same sheet the portfolio reads, for
+ * every plan ticker the sheet tracks. `trade_plans.currentPrice` is what the
+ * last CONTENT round wrote — normally the previous session's close — and the
+ * Fikirler screen was showing it as "Son fiyat" all day long.
+ *
+ * Only a single sheet read, shared with the portfolio's (60s cache, one request
+ * in flight). A ticker the sheet doesn't track is simply absent; the client
+ * falls back to the plan's own price and says so.
+ *
+ * Declared BEFORE `/:ticker`, which would otherwise swallow this path.
+ */
+tradePlansRouter.get('/live-prices', async (_req, res) => {
+  try {
+    const rows = await db.select({ ticker: tradePlans.ticker }).from(tradePlans)
+    const { prices, stale, at } = await fetchSharePrices(false, { attempts: 1, timeoutMs: 60_000 })
+    const out: Record<string, number> = {}
+    for (const { ticker } of rows) {
+      const p = prices[ticker.toUpperCase()]
+      if (p != null) out[ticker] = p
+    }
+    res.json({ prices: out, readAt: at ? new Date(at).toISOString() : null, stale })
+  } catch (e) {
+    // A dead source is not an empty answer — the client keeps the plan price.
+    if (e instanceof PriceSourceUnavailable) return res.status(503).json({ error: e.message })
+    throw e
+  }
 })
 
 // GET /api/trade-plans/:ticker → latest plan for a ticker

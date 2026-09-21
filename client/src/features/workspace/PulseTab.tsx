@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { MorningNote } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
-import { SplitPane, STACK_QUERY } from './split'
+import { SplitPane, STACK_QUERY, PHONE_QUERY } from './split'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { Notice } from './shared'
 import { Skeleton, SkeletonLines } from '@/components/ui/skeleton'
@@ -26,6 +26,7 @@ export function PulseTab({
   const [index, setIndex] = useState(0)
   // Phone layout: the article scrolls with the page, and the contents collapses.
   const stacked = useMediaQuery(STACK_QUERY)
+  const phone = useMediaQuery(PHONE_QUERY)
   const [tocOpen, setTocOpen] = useState(false)
   const articleRef = useRef<HTMLElement>(null)
   const { data: notes, loading, error } = useApi<MorningNote[]>('/api/morning-notes/history')
@@ -96,10 +97,21 @@ export function PulseTab({
     // heading with it, and for a second you could not tell where you were.
     return (
       <div>
-        <div className="mb-[22px] flex items-center gap-3">
-          <Skeleton h={13} w={120} />
-          <Skeleton h={22} w={190} className="ml-auto" radius={8} />
-        </div>
+        {phone ? (
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <Skeleton h={44} w={44} radius={12} />
+            <span className="flex min-w-[150px] flex-col items-center gap-1.5">
+              <Skeleton h={13} w={110} />
+              <Skeleton h={10} w={40} />
+            </span>
+            <Skeleton h={44} w={44} radius={12} />
+          </div>
+        ) : (
+          <div className="mb-[22px] flex items-center gap-3">
+            <Skeleton h={13} w={120} />
+            <Skeleton h={22} w={190} className="ml-auto" radius={8} />
+          </div>
+        )}
         <article className="bg-card border-faint flex flex-col gap-5 rounded-xl border px-[35px] py-8">
           <Skeleton h={26} w="45%" />
           <Skeleton h={9} w="30%" />
@@ -210,37 +222,70 @@ export function PulseTab({
 
   return (
     <div>
-      <div className="mb-[22px] flex flex-wrap items-center justify-between gap-3">
-        <button
-          onClick={onBack}
-          className="text-info cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium hover:underline"
-        >
-          ← Genel bakışa dön
-        </button>
-
-        <div className="flex items-center gap-1.5">
+      {phone ? (
+        /*
+          Phone: no "Genel bakışa dön" — the tab strip is right above it and is
+          the way back — and the stepper is centred with 44px arrows. The date
+          and the counter stack between them, so the three-part control stays
+          symmetric instead of being pushed off-centre by "1/40".
+        */
+        <div className="mb-4 flex items-center justify-center gap-3">
           <StepButton
+            big
             disabled={isOldest}
             onClick={() => setIndex(safeIndex + 1)}
             label="Önceki bülten"
           >
             ‹
           </StepButton>
-          <span className="num min-w-[150px] text-center text-xs font-medium">
-            {fmtNoteDate(note?.date)}
+          <span className="flex min-w-[150px] flex-col items-center">
+            <span className="num text-[14px] font-medium">{fmtNoteDate(note?.date)}</span>
+            <span className="text-mid num text-[12px]">
+              {safeIndex + 1} / {notes.length}
+            </span>
           </span>
           <StepButton
+            big
             disabled={isNewest}
             onClick={() => setIndex(safeIndex - 1)}
             label="Sonraki bülten"
           >
             ›
           </StepButton>
-          <span className="text-mid num ml-1.5 text-[12px]">
-            {safeIndex + 1}/{notes.length}
-          </span>
         </div>
-      </div>
+      ) : (
+        <div className="mb-[22px] flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={onBack}
+            className="text-info cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium hover:underline"
+          >
+            ← Genel bakışa dön
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <StepButton
+              disabled={isOldest}
+              onClick={() => setIndex(safeIndex + 1)}
+              label="Önceki bülten"
+            >
+              ‹
+            </StepButton>
+            <span className="num min-w-[150px] text-center text-xs font-medium">
+              {fmtNoteDate(note?.date)}
+            </span>
+            <StepButton
+              disabled={isNewest}
+              onClick={() => setIndex(safeIndex - 1)}
+              label="Sonraki bülten"
+            >
+              ›
+            </StepButton>
+            <span className="text-mid num ml-1.5 text-[12px]">
+              {safeIndex + 1}/{notes.length}
+            </span>
+          </div>
+        </div>
+      )}
 
       <SplitPane splitKey="reader" a={toc} b={article} swappable={false} />
     </div>
@@ -251,11 +296,14 @@ function StepButton({
   disabled,
   onClick,
   label,
+  big = false,
   children,
 }: {
   disabled: boolean
   onClick: () => void
   label: string
+  /** Phone: a 44px target. The desktop button is ~26×24, fine for a mouse. */
+  big?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -263,7 +311,11 @@ function StepButton({
       disabled={disabled}
       onClick={onClick}
       aria-label={label}
-      className="border-faint bg-card text-ink hover:bg-faint2 cursor-pointer rounded-[7px] border px-2.5 py-[3px] text-[13px] transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+      className={`border-faint bg-card text-ink hover:bg-faint2 cursor-pointer border transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
+        big
+          ? 'flex size-11 items-center justify-center rounded-xl text-[20px] leading-none'
+          : 'rounded-[7px] px-2.5 py-[3px] text-[13px]'
+      }`}
     >
       {children}
     </button>

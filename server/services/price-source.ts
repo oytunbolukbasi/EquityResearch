@@ -69,6 +69,12 @@ export interface FetchOptions {
 export interface PriceMap {
   prices: Record<string, number>
   stale: boolean
+  /**
+   * When the sheet was actually read (epoch ms). A cache hit returns the time
+   * of the read it came from, not "now" — the panel shows this as "HH:MM'de
+   * okundu", and the whole point of that label is to be honest about age.
+   */
+  at?: number
 }
 
 /** Thrown when the sheet could not be read at all and no cache can stand in. */
@@ -113,7 +119,7 @@ export async function fetchSharePrices(
 ): Promise<PriceMap> {
   // A cache hit inside the TTL is not stale: a read succeeded seconds ago.
   if (!force && cache && Date.now() - cache.at < CACHE_TTL_MS)
-    return { prices: cache.prices, stale: false }
+    return { prices: cache.prices, stale: false, at: cache.at }
 
   const url = sheetsUrl()
   if (!url) throw new PriceSourceUnavailable('SHEETS_PRICE_URL tanımlı değil')
@@ -131,7 +137,7 @@ async function read(url: string, attempts: number, timeoutMs: number): Promise<P
     try {
       const prices = await readSheet(url, timeoutMs)
       cache = { at: Date.now(), prices }
-      return { prices, stale: false }
+      return { prices, stale: false, at: cache.at }
     } catch (e) {
       last = e
       console.warn(`[price] sheet okunamadı (deneme ${attempt}/${attempts}) —`, e)
@@ -142,7 +148,7 @@ async function read(url: string, attempts: number, timeoutMs: number): Promise<P
   // A stale cache still beats failing outright — those prices were real.
   if (cache) {
     console.warn('[price] kaynak yanıt vermedi, önbellekteki fiyatlar kullanılıyor')
-    return { prices: cache.prices, stale: true }
+    return { prices: cache.prices, stale: true, at: cache.at }
   }
   console.error('[price] hisse fiyatları alınamadı —', last)
   throw new PriceSourceUnavailable(last)

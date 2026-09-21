@@ -4,6 +4,9 @@ import type { TradePlan } from '@/lib/api-types'
 import { TradePlanChart } from '@/features/widgets/TradePlanChart'
 import { Chip, Panel, PanelEmpty } from './Panel'
 import { fmtN } from './portfolio-calc'
+import { Clock3 } from 'lucide-react'
+import { HintTooltip } from '@/components/ui/hint-tooltip'
+import { fmtBarDay, fmtClock } from '@/lib/live-prices'
 
 // TradingView's exchange codes don't always match ours 1:1 (our "XETRA" vs
 // their "XETR") — map the ones that differ, pass the rest through.
@@ -63,6 +66,9 @@ export function TradePlanPanel({
   plans,
   onSelect,
   status,
+  live = null,
+  readAt = null,
+  stale = false,
 }: {
   plan: TradePlan | null
   /** Every plan, so the select can reach a ticker the table isn't showing. */
@@ -70,6 +76,10 @@ export function TradePlanPanel({
   onSelect: (ticker: string) => void
   /** Effective status derived from `/api/ideas`, not the plan's own drifting column. */
   status: string
+  /** The sheet's delayed price for this ticker, if it tracks it. */
+  live?: number | null
+  readAt?: string | null
+  stale?: boolean
 }) {
   if (!plan) {
     return (
@@ -79,12 +89,19 @@ export function TradePlanPanel({
     )
   }
 
-  const cur = plan.currentPrice
+  // The live price when the sheet has one; the content round's price otherwise.
+  // Level distances are measured from the same number the reader sees.
+  const cur = live ?? plan.currentPrice
   const terminal = TERMINAL_LABEL[status]
 
   const levels = planLevels(plan)
 
-  return <TradePlanPanelInner {...{ plan, plans, onSelect, status, levels, cur, terminal }} />
+  return (
+    <TradePlanPanelInner
+      {...{ plan, plans, onSelect, status, levels, cur, terminal }}
+      hint={<PriceHint plan={plan} live={live} readAt={readAt} stale={stale} />}
+    />
+  )
 }
 
 /** The level set the chart draws and the phone ladder lists — one definition. */
@@ -114,6 +131,66 @@ function planLevels(plan: TradePlan) {
 }
 
 
+
+/** The chart's last bar — the content round's close, not the live price. */
+function lastBarDay(plan: TradePlan): string | null {
+  const bars = plan.priceHistory ?? []
+  if (!bars.length) return null
+  return [...bars].map((b) => b.t).sort().at(-1) ?? null
+}
+
+/**
+ * What the price next to a clock icon is, in words. Two prices live on this
+ * screen and they are not the same number: the sheet's ~15-minute-delayed live
+ * price, and the chart's last bar (written by the content round). When the
+ * sheet has no price for this ticker, the panel falls back to the latter and
+ * says so rather than passing it off as live.
+ */
+function PriceHint({
+  plan,
+  live,
+  readAt,
+  stale,
+}: {
+  plan: TradePlan
+  live: number | null
+  readAt: string | null
+  stale: boolean
+}) {
+  const bar = lastBarDay(plan)
+  return (
+    <HintTooltip
+      align="start"
+      label="Bu fiyat nereden geliyor?"
+      icon={<Clock3 className="size-[15px]" style={{ color: 'var(--down)' }} aria-hidden="true" />}
+    >
+      {live != null ? (
+        <>
+          <p className="text-ink m-0 font-semibold">Son fiyat · ~15 dk gecikmeli</p>
+          <p className="text-mid mt-1 mb-0">
+            {stale
+              ? `Kaynak şu an yanıt vermiyor; bu, ${fmtClock(readAt)}'de okunan son fiyat.`
+              : `${fmtClock(readAt)}'de okundu.`}
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-ink m-0 font-semibold">Canlı fiyat yok</p>
+          <p className="text-mid mt-1 mb-0">
+            Bu sembol fiyat kaynağında izlenmiyor; gösterilen, içerik turunda yazılan fiyat.
+          </p>
+        </>
+      )}
+      {bar && (
+        <p className="text-mid mt-2 mb-0">
+          Grafikteki son bar <span className="text-ink">{fmtBarDay(bar)}</span> tarihli — içerik
+          turunda çekildi, canlı değil.
+        </p>
+      )}
+    </HintTooltip>
+  )
+}
+
 /** "20 Eyl 12:19" — when the content round last wrote this plan's price. */
 function writtenAt(stamp: string | null | undefined): string {
   if (!stamp) return 'yazılma zamanı yok'
@@ -137,8 +214,22 @@ function writtenAt(stamp: string | null | undefined): string {
  * them, each with its distance. Then the two things that actually decide what
  * to do — the thesis and what breaks it — instead of a picture of past bars.
  */
-export function PlanLadder({ plan, status }: { plan: TradePlan; status: string }) {
-  const cur = plan.currentPrice
+export function PlanLadder({
+  plan,
+  status,
+  live = null,
+  readAt = null,
+  stale = false,
+}: {
+  plan: TradePlan
+  status: string
+  live?: number | null
+  readAt?: string | null
+  stale?: boolean
+}) {
+  // Live (sheet, ~15 min delayed) when there is one; the content round's price
+  // otherwise. The row says which, so a fallback is never read as live.
+  const cur = live ?? plan.currentPrice
   const rows = planLevels(plan)
     .filter((l) => l.raw != null)
     .sort((a, b) => (b.raw as number) - (a.raw as number))
@@ -180,9 +271,18 @@ export function PlanLadder({ plan, status }: { plan: TradePlan; status: string }
                 wrote — normally the last session's close — and among levels it
                 read as a live quote. The stamp beside it says how old it is. */}
             <span className="flex-1 text-[13px] font-medium">Son fiyat</span>
-            <span className="num text-[11px] whitespace-nowrap opacity-70">
-              {writtenAt(plan.updatedAt)}
-            </span>
+            {live != null ? (
+              // Clock + read time for the sheet's delayed price; the icon opens
+              // the same explanation the desktop panel carries.
+              <span className="num flex items-center gap-1 text-[11px] whitespace-nowrap">
+                <PriceHint plan={plan} live={live} readAt={readAt} stale={stale} />
+                <span className="opacity-70">{fmtClock(readAt)}</span>
+              </span>
+            ) : (
+              <span className="num text-[11px] whitespace-nowrap opacity-70">
+                {writtenAt(plan.updatedAt)}
+              </span>
+            )}
             <span className="num text-[13px] font-semibold">{fmtN(cur, 2)}</span>
             <span className="w-[54px]" />
           </div>
@@ -229,6 +329,7 @@ function TradePlanPanelInner({
   levels,
   cur,
   terminal,
+  hint,
 }: {
   plan: TradePlan
   plans: TradePlan[]
@@ -237,6 +338,7 @@ function TradePlanPanelInner({
   levels: ReturnType<typeof planLevels>
   cur: number | null
   terminal: string | undefined
+  hint: React.ReactNode
 }) {
   const header = (
     <div className="flex items-center gap-2.5">
@@ -290,7 +392,10 @@ function TradePlanPanelInner({
     >
       <div className="px-[18px] pb-[18px]">
         {cur != null && (
-          <div className="num mb-3 text-[23px] font-medium tracking-[-0.7px]">{fmtN(cur, 2)}</div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="num text-[23px] font-medium tracking-[-0.7px]">{fmtN(cur, 2)}</span>
+            {hint}
+          </div>
         )}
 
         <TradePlanChart plan={plan} />

@@ -4,6 +4,9 @@ import { IoInformationCircleOutline } from 'react-icons/io5'
 
 import type { Idea, TradePlan } from '@/lib/api-types'
 import { useApi } from '@/lib/use-api'
+import { useLivePrices, fmtClock } from '@/lib/live-prices'
+import { HintTooltip } from '@/components/ui/hint-tooltip'
+import { Clock3 } from 'lucide-react'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { RiskRewardBar } from '@/components/ui/risk-reward-bar'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
@@ -24,13 +27,18 @@ const IDEA_TABS = [
   { id: 'history' as const, label: 'Geçmiş' },
 ]
 
+/**
+ * "9 Eyl" for this year, "9 Eyl 2025" otherwise. The year on every row of a
+ * table that is almost entirely this year's ideas cost ~35px per date column —
+ * the width that pushed the table into a sideways scroll at a half-width panel.
+ */
 function fmtDate(s: string | null | undefined): string {
   if (!s) return '—'
   const [y, m, d] = s.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('tr-TR', {
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
+    ...(y === new Date().getFullYear() ? {} : { year: 'numeric' }),
   })
 }
 
@@ -124,16 +132,19 @@ function RiskRewardTooltip() {
             style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999, width: 280 }}
             className="border-faint bg-card rounded-lg border p-3 shadow-lg"
           >
-            <p className="text-ink mb-1 text-xs font-semibold">Risk/Getiri Oranı</p>
+            <p className="text-ink mb-1 text-xs font-semibold">Risk / getiri</p>
             <p className="text-mid text-[12px] leading-relaxed">
-              Potansiyel kazancın potansiyel kayba oranı:
-            </p>
-            <p className="num text-ink mt-1 text-[12px] font-medium">
-              (TP1 − Giriş) ÷ (Giriş − Stop)
+              Çubuk soldan sağa stoptan TP1'e uzanır ve girişte (siyah çizgi) ikiye bölünür:
+              <span style={{ color: 'var(--down)' }}> kırmızı</span> girişten stopa olan mesafe
+              (risk), <span style={{ color: 'var(--up)' }}>yeşil</span> girişten TP1'e olan
+              mesafe (getiri). Üstteki sayı yeşilin kırmızının kaç katı olduğu.
             </p>
             <p className="text-mid mt-1.5 text-[12px] leading-relaxed">
-              Giriş için bant ortalaması (Low + High) / 2 kullanılır. Örnek: Giriş 100, Stop 90, TP1
-              130 → R/R = 3,0×
+              <span style={{ color: 'var(--info)' }}>Mavi halka</span> son fiyat (~15 dk
+              gecikmeli): kırmızıdaysa fiyat girişin altında, sağ uca yaklaştıkça TP1'e yakın.
+            </p>
+            <p className="text-mid mt-1.5 text-[12px] leading-relaxed">
+              Giriş için bant ortası kullanılır. Örnek: giriş 100, stop 90, TP1 130 → 3,0×
             </p>
           </div>,
           document.body,
@@ -166,6 +177,8 @@ export function IdeasTab() {
 
   const { data: ideas, loading, error } = useApi<Idea[]>('/api/ideas')
   const { data: plans } = useApi<TradePlan[]>('/api/trade-plans')
+  const { data: live } = useLivePrices()
+  const liveOf = (t: string | undefined) => (t ? live?.prices[t] ?? null : null)
 
   // Ideas are the source of truth for a ticker's status — a trade_plan's own
   // `status` column drifts, because currentPrice updates keep bumping updatedAt
@@ -261,18 +274,39 @@ export function IdeasTab() {
             <thead>
               <tr>
                 <th className={`${TH} pr-3 pl-[18px]`}>Hisse</th>
-                <th className={`${TH} px-2.5`}>Yön</th>
-                <th className={`${TH} px-2.5 text-right`}>Giriş</th>
-                <th className={`${TH} px-2.5 text-right`}>SL</th>
-                <th className={`${TH} px-2.5 text-right`}>TP1</th>
-                <th className={`${TH} px-2.5 text-right`}>
+                <th className={`${TH} px-2 text-right`}>
+                  <span className="inline-flex items-center justify-end gap-1">
+                    Son fiyat
+                    <HintTooltip
+                      label="Son fiyat ne zaman okundu?"
+                      icon={<Clock3 className="size-[13px]" style={{ color: 'var(--down)' }} aria-hidden="true" />}
+                      width={260}
+                    >
+                      <p className="text-ink m-0 font-semibold">~15 dk gecikmeli fiyat</p>
+                      <p className="text-mid mt-1 mb-0 normal-case">
+                        {live?.readAt
+                          ? live.stale
+                            ? `Kaynak şu an yanıt vermiyor; ${fmtClock(live.readAt)}'de okunan son fiyatlar.`
+                            : `${fmtClock(live.readAt)}'de okundu.`
+                          : 'Fiyat kaynağına şu an ulaşılamıyor.'}
+                      </p>
+                      <p className="text-mid mt-1.5 mb-0 normal-case">
+                        Portföyle aynı kaynaktan gelir. Kaynakta izlenmeyen sembollerde boş kalır.
+                      </p>
+                    </HintTooltip>
+                  </span>
+                </th>
+                <th className={`${TH} px-2 text-right`}>Giriş</th>
+                <th className={`${TH} px-2 text-right`}>SL</th>
+                <th className={`${TH} px-2 text-right`}>TP1</th>
+                <th className={`${TH} px-2 text-right`}>
                   <span className="inline-flex items-center justify-end gap-0.5">
                     Risk/Getiri
                     <RiskRewardTooltip />
                   </span>
                 </th>
-                <th className={`${TH} px-2.5 text-right`}>Öneri tarihi</th>
-                {isHistory && <th className={`${TH} px-2.5 text-right`}>Bitiş tarihi</th>}
+                <th className={`${TH} px-2 text-right`}>Öneri tarihi</th>
+                {isHistory && <th className={`${TH} px-2 text-right`}>Bitiş tarihi</th>}
                 <th className={`${TH} pr-[18px] pl-2.5`}>Durum</th>
               </tr>
             </thead>
@@ -287,30 +321,42 @@ export function IdeasTab() {
                   }}
                 >
                   <td className="pr-3 pl-[18px]">
-                    <div className="text-[13px] font-semibold">{idea.ticker}</div>
+                    {/* Direction rides beside the ticker, not in its own column:
+                        a 60px column holding one word ("LONG") on every row was
+                        what pushed the table into a sideways scroll once the
+                        Son fiyat column arrived. Beside the ticker, not beside
+                        the exchange — "NASDAQ LONG" made the cell wider still. */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-semibold">{idea.ticker}</span>
+                      <DirectionBadge direction={idea.direction} />
+                    </div>
                     {idea.exchange && <div className="num text-mid text-[12px]">{idea.exchange}</div>}
                   </td>
-                  <td className="px-2.5">
-                    <DirectionBadge direction={idea.direction} />
+                  <td className="num px-2 text-right whitespace-nowrap">
+                    {liveOf(idea.ticker) != null ? (
+                      fmtN(liveOf(idea.ticker), 2)
+                    ) : (
+                      <span className="text-mid">—</span>
+                    )}
                   </td>
-                  <td className="num px-2.5 text-right whitespace-nowrap">
+                  <td className="num px-2 text-right whitespace-nowrap">
                     {idea.entryLow != null && idea.entryHigh != null
                       ? `${fmtN(idea.entryLow, 0)}–${fmtN(idea.entryHigh, 0)}`
                       : fmtN(idea.entryLow, 0)}
                   </td>
                   <td
-                    className="num px-2.5 text-right whitespace-nowrap"
+                    className="num px-2 text-right whitespace-nowrap"
                     style={{ color: 'var(--down)' }}
                   >
                     {fmtN(idea.stopLoss, 0)}
                   </td>
                   <td
-                    className="num px-2.5 text-right whitespace-nowrap"
+                    className="num px-2 text-right whitespace-nowrap"
                     style={{ color: 'var(--up)' }}
                   >
                     {fmtN(idea.target1, 0)}
                   </td>
-                  <td className="px-2.5">
+                  <td className="px-2">
                     <div className="flex justify-end">
                       {idea.stopLoss != null &&
                       idea.entryLow != null &&
@@ -322,17 +368,20 @@ export function IdeasTab() {
                           entryHigh={idea.entryHigh}
                           target1={idea.target1}
                           direction={idea.direction}
+                          // Only for open ideas: a closed idea's live price
+                          // plotted against its old levels answers nothing.
+                          currentPrice={isHistory ? null : liveOf(idea.ticker)}
                         />
                       ) : (
                         <span className="num text-mid text-xs">—</span>
                       )}
                     </div>
                   </td>
-                  <td className="num text-mid px-2.5 text-right whitespace-nowrap">
+                  <td className="num text-mid px-2 text-right whitespace-nowrap">
                     {fmtDate(idea.firstDate)}
                   </td>
                   {isHistory && (
-                    <td className="num text-mid px-2.5 text-right whitespace-nowrap">
+                    <td className="num text-mid px-2 text-right whitespace-nowrap">
                       {fmtDate(idea.endDate)}
                     </td>
                   )}
@@ -376,7 +425,13 @@ export function IdeasTab() {
               }
               onClose={() => setSheetOpen(false)}
             >
-              <PlanLadder plan={plan} status={effStatus(plan)} />
+              <PlanLadder
+                plan={plan}
+                status={effStatus(plan)}
+                live={liveOf(plan.ticker)}
+                readAt={live?.readAt ?? null}
+                stale={live?.stale ?? false}
+              />
             </BottomSheet>
           )}
         </>
@@ -402,6 +457,9 @@ export function IdeasTab() {
               plans={allPlans}
               onSelect={chooseIdea}
               status={plan ? effStatus(plan) : 'active'}
+              live={liveOf(plan?.ticker)}
+              readAt={live?.readAt ?? null}
+              stale={live?.stale ?? false}
             />
             )
           }

@@ -116,3 +116,24 @@ export function sheetSymbol(symbol: string, type: string): string {
   const exchange = EXCHANGE_FOR_TYPE[type as PositionType]
   return exchange ? `${exchange}:${bare}` : bare
 }
+
+/**
+ * The position type an IDEA's exchange corresponds to — ideas carry an exchange
+ * ("BIST", "NYSE", "XETRA"), positions carry a type, and the price sheet speaks
+ * types (it decides the "FRA:" prefix from them). Null for anything the sheet
+ * can't price, so a caller skips it instead of registering a wrong listing.
+ */
+export function typeForExchange(exchange: string | null | undefined): PositionType | null {
+  switch ((exchange ?? '').toUpperCase()) {
+    case 'BIST':
+      return 'stock'
+    case 'NYSE':
+    case 'NASDAQ':
+      return 'us_stock'
+    case 'XETRA':
+    case 'XETR':
+      return 'de_stock'
+    default:
+      return null
+  }
+}

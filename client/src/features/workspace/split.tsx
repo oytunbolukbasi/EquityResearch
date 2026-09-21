@@ -22,8 +22,14 @@ const SWAPPED_KEY = 'eqr2:swapped'
  * Thirds are exact (100/3, not 33): a rounded third leaves the two panels a
  * visible hair apart from "one third / two thirds", which is the whole point
  * of the stop. Symmetric around 50 so both sides get the same choices. (GÖREV 55)
+ *
+ * 40/60 added as a pair (GÖREV 60): the ideas table needs ~610px, which ⅓
+ * denies it and ½ only just gives on a laptop; ⅗ lets the chart have 40%
+ * without pushing the table into a sideways scroll. Added as a PAIR because a
+ * lone 60 would exist on one side only — swap the panels and the same split is
+ * no longer reachable.
  */
-const PRESETS = [25, 100 / 3, 50, 200 / 3, 75] as const
+const PRESETS = [25, 100 / 3, 40, 50, 60, 200 / 3, 75] as const
 /** Visual drag bounds — the pointer may roam here, but release still snaps to a preset. */
 const MIN_FRAC = 15
 const MAX_FRAC = 85
@@ -273,7 +279,8 @@ interface SplitPaneProps {
  *
  * Width follows the pointer freely while dragging (with a guide at every preset),
  * then snaps to the nearest preset on release — so the persisted value is always
- * one of PRESETS: a quarter, a third, a half, two thirds or three quarters.
+ * one of PRESETS: a quarter, a third, two fifths, a half, three fifths, two
+ * thirds or three quarters.
  *
  * Swapping is driven from the panel headers (see `useSwapHandle`): the moment the
  * pointer crosses the divider the two panels trade places, with no transition.
@@ -413,7 +420,7 @@ export function SplitPane({ splitKey, a, b, swappable = true }: SplitPaneProps) 
 
         <div
           onPointerDown={startResize}
-          title="Sürükle: ¼ · ⅓ · ½ · ⅔ · ¾"
+          title="Sürükle: ¼ · ⅓ · ⅖ · ½ · ⅗ · ⅔ · ¾"
           role="separator"
           aria-orientation="vertical"
           aria-label="Panel genişliğini ayarla"
