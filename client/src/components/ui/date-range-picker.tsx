@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { endAlignedLeft } from '@/lib/anchor'
 
 export interface DateRange {
   /** ISO yyyy-mm-dd, inclusive. null on both sides means all time. */
@@ -96,7 +97,7 @@ export function DateRangePicker({
   onChange: (range: DateRange) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const [pos, setPos] = useState({ top: 0, left: 0 })
   const [month, setMonth] = useState(() => (value.from ? parse(value.from) : new Date()))
   /** Set after the first click; the second click closes the range. */
   const [anchor, setAnchor] = useState<string | null>(null)
@@ -124,7 +125,7 @@ export function DateRangePicker({
   function toggle() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      setPos({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) })
+      setPos({ top: r.bottom + 6, left: endAlignedLeft(r, 268) })
       setAnchor(null)
     }
     setOpen((v) => !v)
@@ -172,7 +173,7 @@ export function DateRangePicker({
             ref={popRef}
             role="dialog"
             aria-label="Tarih aralığı seç"
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 300, width: 268 }}
+            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 300, width: 268 }}
             className="border-faint bg-card rounded-xl border p-3 shadow-lg"
           >
             <div className="mb-3 flex gap-1.5">

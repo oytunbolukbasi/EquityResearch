@@ -15,6 +15,9 @@ import {
 import { useSession } from '@/lib/session'
 import { useTheme } from '@/lib/theme'
 import { useDensity } from '@/lib/density'
+import { endAlignedLeft } from '@/lib/anchor'
+
+const MENU_W = 248
 
 /**
  * Account menu — and, since GÖREV 46, every panel-level setting.
@@ -52,7 +55,7 @@ export function ProfileMenu({
   const { density, toggle: toggleDensity } = useDensity()
 
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const [pos, setPos] = useState({ top: 0, left: 0 })
 
   const btnRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
@@ -92,7 +95,7 @@ export function ProfileMenu({
   function toggle() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      setPos({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) })
+      setPos({ top: r.bottom + 6, left: endAlignedLeft(r, MENU_W) })
     }
     setOpen((v) => !v)
   }
@@ -121,8 +124,8 @@ export function ProfileMenu({
             ref={popRef}
             role="menu"
             aria-label="Ayarlar"
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 300 }}
-            className="border-faint bg-card min-w-[248px] rounded-xl border p-1.5 shadow-lg"
+            style={{ position: 'fixed', top: pos.top, left: pos.left, width: MENU_W, zIndex: 300 }}
+            className="border-faint bg-card rounded-xl border p-1.5 shadow-lg"
           >
             <div className="text-mid truncate px-2.5 pt-1.5 pb-2 text-[12px]">{username}</div>
 

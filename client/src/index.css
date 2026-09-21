@@ -514,6 +514,12 @@ body.eqr-dragging * {
    accent'ten (--info) türetilir, temayla birlikte döner — panelde "başka bir
    renk" yok. Açılışta bir kez yanıp söner, hover'da yanık kalır. */
 .eqr-glow {
+  /* The inner cover must match the element it sits in — its corner and its
+     fill. Written for the 9px header button on the page background; the
+     phone row is a 14px card, and the 9px --bg cover showed through past its
+     rounded corners as a grey halo once the edge faded out. */
+  --glow-r: 9px;
+  --glow-fill: var(--bg);
   position: relative;
   isolation: isolate;
 }
@@ -522,7 +528,7 @@ body.eqr-dragging * {
   position: absolute;
   inset: -1.5px;
   z-index: -2;
-  border-radius: 10.5px;
+  border-radius: calc(var(--glow-r) + 1.5px);
   background: linear-gradient(
     45deg,
     var(--info),
@@ -543,12 +549,22 @@ body.eqr-dragging * {
   position: absolute;
   inset: 0;
   z-index: -1;
-  border-radius: 9px;
-  background: var(--bg);
+  border-radius: var(--glow-r);
+  background: var(--glow-fill);
 }
-.eqr-glow:hover::before,
+/* Only where hover is real: on a touch screen :hover sticks after a tap, and
+   the edge stayed lit as if the animation had never ended. */
+@media (hover: hover) {
+  .eqr-glow:hover::before {
+    opacity: 1;
+  }
+}
 .eqr-glow:focus-visible::before {
   opacity: 1;
+}
+.eqr-glow-card {
+  --glow-r: 13px; /* 14px corner less the 1px border it sits inside */
+  --glow-fill: var(--card);
 }
 @keyframes eqr-glow-slide {
   0% { background-position: 0 0; }

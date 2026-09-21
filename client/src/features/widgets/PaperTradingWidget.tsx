@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, Loader2, MoreHorizontal } from 'lucide-react'
 
 import { useApi } from '@/lib/use-api'
+import { endAlignedLeft } from '@/lib/anchor'
 import { scrollTabIntoView } from '@/lib/scroll-tab-into-view'
 import { Skeleton, SkeletonCards, SkeletonRows } from '@/components/ui/skeleton'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -178,14 +179,18 @@ function RowActions({ actions }: { actions: RowActionDef[] }) {
   const [visible, setVisible]     = useState(false)
   const [confirming, setConfirming] = useState<RowActionDef | null>(null)
   const [executing, setExecuting] = useState(false)
-  const [pos, setPos]             = useState<{ top: number; right: number } | null>(null)
+  const [pos, setPos]             = useState<{ top: number; left: number } | null>(null)
+  const anchorRef   = useRef<DOMRect | null>(null)
   const triggerRef  = useRef<HTMLButtonElement>(null)
   const popoverRef  = useRef<HTMLDivElement>(null)
 
   function openPopover() {
     if (!triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
-    setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+    anchorRef.current = rect
+    // Placed off-screen first: the width is only known once it renders (the
+    // menu and the confirm card differ), so the layout effect below aligns it.
+    setPos({ top: rect.bottom + 4, left: -9999 })
     setConfirming(null)
     setOpen(true)
     requestAnimationFrame(() => setVisible(true))
@@ -208,6 +213,16 @@ function RowActions({ actions }: { actions: RowActionDef[] }) {
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [open])
+
+  // Right edge on the trigger's, re-measured when the card swaps to the
+  // confirm step. Before paint, so it never shows at the old position.
+  useLayoutEffect(() => {
+    const a = anchorRef.current
+    const el = popoverRef.current
+    if (!open || !a || !el) return
+    const left = endAlignedLeft(a, el.offsetWidth)
+    setPos((p) => (p && p.left !== left ? { ...p, left } : p))
+  }, [open, confirming])
 
   async function execute(action: RowActionDef) {
     setExecuting(true)
@@ -235,7 +250,7 @@ function RowActions({ actions }: { actions: RowActionDef[] }) {
       {open && pos && createPortal(
         <div
           ref={popoverRef}
-          style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 200, ...transitionStyle }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 200, ...transitionStyle }}
         >
           {confirming ? (
             <div className="w-52 rounded-xl border border-faint2 bg-card p-3 shadow-lg">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { endAlignedLeft } from '@/lib/anchor'
 import { IoInformationCircleOutline } from 'react-icons/io5'
 
 import type { Idea, TradePlan } from '@/lib/api-types'
@@ -92,7 +93,7 @@ function StatusBadge({ status }: { status: string }) {
  */
 function RiskRewardTooltip() {
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const [pos, setPos] = useState({ top: 0, left: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
   const tipRef = useRef<HTMLDivElement>(null)
 
@@ -115,7 +116,7 @@ function RiskRewardTooltip() {
           e.stopPropagation()
           if (!open && btnRef.current) {
             const r = btnRef.current.getBoundingClientRect()
-            setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+            setPos({ top: r.bottom + 4, left: endAlignedLeft(r, 280) })
           }
           setOpen((v) => !v)
         }}
@@ -129,7 +130,7 @@ function RiskRewardTooltip() {
         createPortal(
           <div
             ref={tipRef}
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999, width: 280 }}
+            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: 280 }}
             className="border-faint bg-card rounded-lg border p-3 shadow-lg"
           >
             <p className="text-ink mb-1 text-xs font-semibold">Risk / getiri</p>

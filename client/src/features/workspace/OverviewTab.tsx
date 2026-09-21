@@ -582,7 +582,7 @@ function AnalysisRow({ date, onOpen }: { date: string; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="eqr-glow border-faint bg-card text-ink mb-5 flex w-full cursor-pointer items-center gap-2.5 rounded-[14px] border px-[14px] py-3 text-left text-[13px]"
+      className="eqr-glow eqr-glow-card border-faint bg-card text-ink mb-5 flex w-full cursor-pointer items-center gap-2.5 rounded-[14px] border px-[14px] py-3 text-left text-[13px]"
     >
       <MessageSquareQuote size={16} className="text-info shrink-0" />
       <span className="flex-1">Günlük portföy analizi</span>

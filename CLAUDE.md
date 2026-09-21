@@ -1959,3 +1959,34 @@ tabloyu kaydırmaya düşürmeden durulabilecek bir ara nokta. Ölçüldü: %37�
 zaten orada), tarih adımlayıcısı ortalandı, oklar 44px dokunma hedefi, "N / M"
 tarihin altında.
 
+
+GÖREV 61 — Açılır pencereler Safari'de kayıyordu; telefonda parıltının haresi
+
+**A — Profil menüsü ekranın sağına yapışıyordu (Safari).** Menü butonun ~77px
+sağında açılıyor, yarısı ekran dışında kalıyordu. Konum
+`right: window.innerWidth - rect.right` ile veriliyordu: iki ayrı koordinat
+sisteminden bir sayı. Rect layout viewport'un CSS pikselinde; `innerWidth` her
+zaman öyle değil — kullanıcının ekran görüntüsündeki oranlar Safari sayfa
+yakınlaştırmasını gösteriyordu (Safari'de test edilemedi, bu bir çıkarım).
+Chrome'da iki sayı aynı olduğu için hata burada hiç görünmedi.
+- `lib/anchor.ts` → `endAlignedLeft(rect, width)`: `left = rect.right − width`.
+  Hizalama yalnız tetikleyicinin kendi rect'inden; viewport genişliği
+  (`clientWidth`) yalnız kartı kenarda ekranın içinde tutmak için.
+- Aynı hesabı taşıyan beş yer geçirildi: profil menüsü, tarih aralığı seçici,
+  Risk/Getiri bilgisi, `HintTooltip`, Paper satır menüsü. Paper'ınki içeriğe
+  göre genişliyor (menü / onay kartı), o yüzden `useLayoutEffect` ile çizimden
+  sonra ölçülüp boyamadan önce hizalanıyor.
+- Ölçüldü: dördünde sağ kenar tetikleyiciyle birebir (1336/1336, 649/649…);
+  Paper'da ofsetWidth + left = buton sağı.
+- **Kural:** fixed bir popover'ı `innerWidth`'ten türetme; tetikleyicinin rect'i
+  ile popover'ın genişliğinden hesapla.
+
+**B — Telefonda "Günlük portföy analizi" satırının etrafında hare kalıyordu.**
+`.eqr-glow`'un iç örtüsü (`::after`) masaüstü butonu için yazılmıştı: 9px köşe,
+sayfa zemini (`--bg`). Telefondaki satır 14px köşeli beyaz bir kart; 9px'lik gri
+örtü kartın yuvarlak köşelerinin dışına taşıyordu. Köşe ve dolgu artık değişken
+(`--glow-r`, `--glow-fill`); kart için `.eqr-glow-card` 13px (14 − 1px kenarlık)
+ve `--card`.
+- Hover yanması `@media (hover: hover)` içine alındı: dokunmatik ekranda `:hover`
+  dokunuştan sonra takılı kalır ve kenar animasyon hiç bitmemiş gibi yanık durur.
+  Klavye odağı (`:focus-visible`) her yerde yanmaya devam ediyor.

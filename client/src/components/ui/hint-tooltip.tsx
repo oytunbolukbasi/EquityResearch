@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { endAlignedLeft, fitWidth } from '@/lib/anchor'
 
 /**
  * A small icon that opens an explanation on click (and tap — there is no hover
@@ -68,9 +69,10 @@ export function HintTooltip({
           e.stopPropagation()
           if (!open && btnRef.current) {
             const r = btnRef.current.getBoundingClientRect()
-            const w = Math.min(width, window.innerWidth - 24)
-            const want = align === 'start' ? r.left : r.right - w
-            const left = Math.min(Math.max(12, want), window.innerWidth - w - 12)
+            const w = fitWidth(width)
+            const vw = document.documentElement.clientWidth
+            const left =
+              align === 'start' ? Math.max(12, Math.min(r.left, vw - w - 12)) : endAlignedLeft(r, w, 12)
             setPos({ top: r.bottom + 6, left })
           }
           setOpen((v) => !v)
@@ -84,7 +86,7 @@ export function HintTooltip({
           <div
             ref={tipRef}
             role="tooltip"
-            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: Math.min(width, window.innerWidth - 24) }}
+            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: fitWidth(width) }}
             className="border-faint bg-card rounded-lg border p-3 text-[12px] leading-relaxed shadow-lg"
           >
             {children}
