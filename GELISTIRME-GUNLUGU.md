@@ -5,85 +5,38 @@ burası her kararın gerekçesi, ölçümü ve elenen seçenekleri için. Erken 
 bir kısmı sonrakilerle değişti — çelişki görürsen **en yüksek numaralı GÖREV**
 geçerlidir. (GÖREV 62'ye kadar CLAUDE.md'nin içindeydi; 21 Eylül 2026'da ayrıldı.)
 
-> Aşağıdaki **"Proje İlk Session'ı"** ve **GÖREV 1-25** bölümleri tarihsel geliştirme
-> kaydıdır; projenin GÜNCEL durumu için CLAUDE.md geçerlidir. Erken kararların
-> bir kısmı sonraki görevlerle değiştirilmiştir — ör. **Open Sans/JetBrains Mono → Inter**
-> (GÖREV 14), **BIST/ABD Heatmap widget'ları kaldırıldı** (GÖREV 17), **seviye tablosu tek
-> pill satırına birleşti** (GÖREV 24), **portfolio_snapshots bağımlılığı kaldırıldı** (kaynak
-> tablo silindi). Çelişki görürsen **en yüksek numaralı GÖREV** geçerlidir. GÖREV 27 pek çok erken
-> kararı geçersiz kıldı: react-grid-layout, widget ekle/kaldır menüsü ve Framer Motion
-> artık yok. GÖREV 29 Analiz'deki yarım daire donut'ı kaldırdı ve panele 12px punto
-> tabanı koydu. GÖREV 30 Sanal Portföy'e telefon için ayrı bir render dalı ekledi;
-> GÖREV 31 fiyat okumasını yazma yolundan çıkardı; GÖREV 32 Analiz'deki
-> "hisse hareketi / kur etkisi" ayrıştırmasını ekrandan kaldırdı ve isabet
-> oranını bölüm başlığına rozet olarak taşıdı; GÖREV 33 Piyasa Nabzı'nın
-> içindekiler panelini başlık gibi okuttu; GÖREV 34 Dağılım'a kendi renk
-> skalasını verdi; GÖREV 35 kullanıcı menüsünü header'a taşıdı; GÖREV 36 native
-> `<select>`'i kaldırdı.
+BAŞLANGIÇ — İskelet (20 Haziran 2026)
 
-**Proje İlk Session'ı** 
-Bu klasördeki dashboard-proje-brief.md dosyasını oku ve projeyi bu brief'e göre scaffold et.
+Proje `dashboard-proje-brief.md` adlı bir brief'le başladı; o brief zamanla bu
+panelin `CLAUDE.md`'sine dönüştü ve dosya ayrıca silindi (`96b9b63`). İskelet
+altı adımda, her adım onaylanarak kuruldu (`1b9e819` → `d056d7e`):
 
-Adım adım ilerle, her adımın sonunda kısa özet ver ve onay almadan sonraki adıma geçme:
-
-1. Proje iskeleti: React 19 + Vite + TypeScript, Tailwind v4 + shadcn/ui. Tasarım token'larını
-   brief'teki CSS değişkenlerine göre kur (Open Sans + JetBrains Mono, renk paleti).
-2. Canvas: react-grid-layout ile sürükle/bırak + yeniden boyutlandırılabilir widget sistemi.
-   Layout v1 için localStorage'da saklansın.
-3. Backend: Node + Express (veya Hono), Drizzle ORM, Neon Postgres (DATABASE_URL env
-   değişkeninden, pooled connection string). Brief'teki 4 tablo şemasını migration olarak oluştur.
-4. 5 widget'ı brief'teki spesifikasyona göre inşa et: Morning Note, Teknik Alım-Satım Tablosu,
-   Trade Plan Viewer (trade plan view.html'deki SVG yaklaşımını React component'e taşı),
-   BIST Heatmap, ABD Heatmap.
-5. Basit "İçerik Ekle" admin sayfası: tek textarea, JSON paste, hedef tabloyu seçip POST eden.
-   x-admin-key header ile korunsun (ADMIN_KEY env değişkeni).
-6. Railway deploy için gerekli config (start script / nixpacks) hazırla; GitHub'a bağlama ve
-   env değişkenlerini Railway'e girme adımlarını ayrı bir DEPLOY.md olarak yaz — bunu senin
-   adına otomatik yapamayacağını biliyorum, sadece net adımlar istiyorum.
-7. Brief'in sonundaki "Açık Noktalar" bölümündeki varsayılanlarla ilerle (tek textarea,
-   localStorage layout, statik trade plan verisi). Farklı bir öneri varsa önce söyle, onaylarsam
-   devam et.
-
-GitHub reposu hazır, değişiklikleri orada commit'lerle ilerlet, push etmeden önce bana sor.
-
-**New Development Tasks**
-
-Model: Sonnet 4.6, effort: medium. Bu iki görev mekanik ve iyi tanımlı, yüksek effort
-veya Opus gerektirmiyor.
+1. React 19 + Vite + TypeScript, Tailwind v4 + shadcn/ui; brief'teki renk
+   token'ları. Font Open Sans + JetBrains Mono (→ Inter, GÖREV 14).
+2. react-grid-layout ile sürükle/bırak, yeniden boyutlanan widget canvas'ı,
+   yerleşim localStorage'da (→ sekmeli çalışma alanı, GÖREV 27).
+3. Express + Drizzle + Neon Postgres (pooled), dört içerik tablosu.
+4. Beş widget: Morning Note, alım-satım tablosu, trade plan görüntüleyici,
+   BIST ve ABD heatmap (heatmap'ler → GÖREV 17'de kaldırıldı).
+5. `/admin`: tek textarea'ya JSON yapıştırılıp tabloya POST edilen içerik
+   sayfası, `x-admin-key` korumalı.
+6. Railway deploy yapılandırması + `DEPLOY.md` (o da `96b9b63`'te silindi;
+   deploy notları CLAUDE.md'de).
 
 GÖREV 1 — Widget başlık fontu
-Her widget'ın üst çubuğundaki başlık metni (örn. "MORNİK NOTE · 19 Haz 2026 kapanışı",
-"ALIM-SATIM ÖNERİLERİ · ...", "TRADE PLANI · ...", "BIST HEATMAP · ...") şu an
-JetBrains Mono ile render ediliyor. Bunu değiştir:
-- font-family: Open Sans
-- font-weight: 600 veya 700 (bold, göze çarpsın)
-- Renk şu an --mid (soluk gri); --ink'e çek ki daha belirgin olsun
-- Harf aralığı (letter-spacing) ve büyük harf stilini istersen koru, istersen kaldır —
-  Open Sans bold zaten yeterince belirgin olacaktır, ikisini de dene ve hangisi daha iyi
-  duruyorsa onu kullan
-ÖNEMLİ: Bu değişiklik SADECE widget başlık çubuklarına uygulansın. Fiyat/seviye
-tablolarındaki sayısal değerler (Giriş Bandı, TP1, fiyatlar, DURUM rozetleri vb.) hâlâ
-JetBrains Mono kullanmaya devam etsin — onlara dokunma.
+Widget başlık çubukları JetBrains Mono'dan Open Sans 600'e ve `--mid`'den
+`--ink`'e alındı; sayısal değerler mono'da bırakıldı. *(Font → Inter, GÖREV 14;
+başlıkların tamamı widget çerçevesiyle birlikte kalktı, GÖREV 27/48.)*
 
-GÖREV 2 — Header'a tarihsel görüntüleme için datepicker
-Sağ üstteki "21 Haziran 2026" tarih metninin yanına/üzerine bir datepicker komponenti ekle:
-- Bir tarih seçildiğinde: tüm widget'lar o tarihe ait veriyi göstersin (mevcut /history
-  endpoint'lerini date parametresiyle çağırarak). O tarihte veri yoksa, daha önce eklenen
-  null-guard / empty-state ("Bu tarihte veri yok") devreye girsin, sayfa çökmesin.
-- "Tümünü Gör" seçeneği: tarih filtresini temizleyip her widget'ı eski varsayılan
-  davranışına döndürsün (her tablo için en son kaydı gösteren mevcut mantık).
-- Datepicker seçilebilir herhangi bir tarihi kabul etsin, hangi tarihlerde veri olduğunu
-  ayrıca işaretlemene gerek yok — bu fazlası, basit tutalım.
-- Tasarım dilimize uy: Open Sans, mevcut renk paleti (--ink, --mid, --blue), shadcn/ui'da
-  zaten bir date picker komponenti varsa onu kullan, yoksa basit bir native <input
-  type="date"> + "Tümünü Gör" butonu de yeterli, aşırı mühendislik yapma.
+GÖREV 2 — Header'a tarih seçici
+Seçilen tarih tüm widget'lara `/history` uçları üzerinden uygulandı; o güne
+kayıt yoksa boş durum, "Tümünü Gör" filtreyi kaldırıp her tablonun en son
+kaydına döndü. *(Dropdown'a çevrildi GÖREV 8, Nabız kendi adımlayıcısına geçti
+GÖREV 12, genel tarih filtresi GÖREV 27'de kaldırıldı.)*
 
-İki görevi tamamladıktan sonra ekran görüntüsü göster, onay almadan commit/push etme.
-
-GÖREV 3 — Morning Note label değişikliği
-"MORNING NOTE" başlığını "PİYASA NABZI" olarak değiştir. Sadece görünür etiket — komponent/
-dosya/route/DB tablo adı (morning_notes, /api/morning-notes) aynı kalsın. "Widget Ekle"
-menüsü ve /admin içerik tipi seçici de tutarlı olsun.
+GÖREV 3 — "Morning Note" → "Piyasa Nabzı"
+Yalnız görünen etiket değişti; bileşen, route ve tablo adları (`morning_notes`,
+`/api/morning-notes`) aynı kaldı.
 
 GÖREV 4 — trade_plans toplu import + bugfix
 FIG/DRAM/ENKAI/THYAO/MA/ISRG için currentPrice + priceHistory upsert edildi (entry/tp/sl/
