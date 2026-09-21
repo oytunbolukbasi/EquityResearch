@@ -9,7 +9,7 @@ import { useLivePrices, fmtClock } from '@/lib/live-prices'
 import { HintTooltip } from '@/components/ui/hint-tooltip'
 import { Clock3 } from 'lucide-react'
 import { useMediaQuery } from '@/lib/use-media-query'
-import { RiskRewardBar } from '@/components/ui/risk-reward-bar'
+import { RiskRewardBar, RiskRewardStrip } from '@/components/ui/risk-reward-bar'
 import { Chip, Panel, PanelEmpty, TabHeading } from './Panel'
 import { SplitPane, PHONE_QUERY } from './split'
 import { Notice, UnderlineTabs } from './shared'
@@ -426,6 +426,24 @@ export function IdeasTab() {
               }
               onClose={() => setSheetOpen(false)}
             >
+              {plan.hardSl != null &&
+                plan.entryLow != null &&
+                plan.entryHigh != null &&
+                plan.tp1 != null && (
+                  <RiskRewardStrip
+                    className="mb-3"
+                    stopLoss={plan.hardSl}
+                    entryLow={plan.entryLow}
+                    entryHigh={plan.entryHigh}
+                    target1={plan.tp1}
+                    direction={plan.tp1 < plan.hardSl ? 'short' : 'long'}
+                    // Same rule as the table: a closed idea's price against its
+                    // old levels answers nothing.
+                    currentPrice={
+                      HISTORY_STATUSES.has(effStatus(plan)) ? null : liveOf(plan.ticker)
+                    }
+                  />
+                )}
               <PlanLadder
                 plan={plan}
                 status={effStatus(plan)}

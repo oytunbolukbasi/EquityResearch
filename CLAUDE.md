@@ -1990,3 +1990,15 @@ ve `--card`.
 - Hover yanması `@media (hover: hover)` içine alındı: dokunmatik ekranda `:hover`
   dokunuştan sonra takılı kalır ve kenar animasyon hiç bitmemiş gibi yanık durur.
   Klavye odağı (`:focus-visible`) her yerde yanmaya devam ediyor.
+
+GÖREV 62 — Telefondaki plan sayfasına Risk/Getiri çubuğu
+
+Tablodaki çubuk (GÖREV 60) telefondaki plan sayfasının en üstüne, tam genişlikte
+geldi: önce tek bakışlık cevap (oran + fiyatın nerede olduğu), altında merdiven
+ayrıntıyı veriyor.
+- Çizim tek yerde: `risk-reward-bar.tsx` → `measure()` + `Track`; tablo
+  `RiskRewardBar` (80px), sayfa `RiskRewardStrip` (tam genişlik, 2px kalın).
+- Uçlarda yalnız "Stop" ve "TP1" yazıyor, fiyat yok — hepsi hemen altındaki
+  merdivende, iki kez söylenirdi.
+- Kapanmış fikirde halka çizilmez (tablodaki kural).
+- Yön planda yok; TP1 stopun altındaysa short sayılıyor.
