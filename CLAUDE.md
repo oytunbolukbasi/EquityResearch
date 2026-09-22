@@ -353,6 +353,12 @@ yanlış yapıldı; gerekçesi parantezdeki GÖREV'de, `GELISTIRME-GUNLUGU.md`'d
   rect'i + popover genişliği (`lib/anchor.ts`). Safari'de menü ekrandan taştı. (61)
 - Hover'la yanan bir şey `@media (hover: hover)` içinde; dokunmatikte `:hover`
   dokunuştan sonra takılı kalır. (61)
+- **Alt sayfanın (400) içinden açılan bir popover onun üstünde olmalı** ve kendi
+  görünmez arka katmanını taşımalı; yoksa liste karartmanın altında kalır ve onu
+  kapatmak için atılan dokunuş alt sayfayı kapatır. (63)
+- Portal'lı bir liste `resize`/`scroll` olayında **kapatılmaz, yeniden
+  konumlandırılır**: telefonda klavyenin kapanması bir `resize`'dır ve liste
+  açıldığı anda kendini kapatıyordu. (63)
 - `scrollIntoView` kullanılmaz (tüm kaydırılabilir ataları kaydırır); konum
   hesabında `offsetLeft` değil `getBoundingClientRect` farkı. (58)
 - Sürüklemede pointer capture şart — yoksa tarayıcı metin seçimi `pointermove`'u

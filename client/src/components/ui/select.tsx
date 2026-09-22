@@ -2,6 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 
+/** `z-index` of the bottom sheet (`bottom-sheet.tsx`); the list must clear it. */
+const SHEET_Z = 400
+
 export interface SelectOption<T extends string> {
   value: T
   label: string
@@ -88,15 +91,17 @@ export function Select<T extends string>({
       const t = e.target as Node
       if (!listRef.current?.contains(t) && !btnRef.current?.contains(t)) setOpen(false)
     }
-    // The panel behind can scroll; the list is positioned against the trigger.
-    const reposition = () => setOpen(false)
+    // Follow the trigger rather than closing. An earlier version closed on both
+    // events and the list was unusable on a phone: tapping the trigger while
+    // the symbol field had focus hides the keyboard, that fires `resize`, and
+    // the list shut itself the moment it opened.
     document.addEventListener('mousedown', onDown)
-    window.addEventListener('scroll', reposition, true)
-    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
     return () => {
       document.removeEventListener('mousedown', onDown)
-      window.removeEventListener('scroll', reposition, true)
-      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', place, true)
+      window.removeEventListener('resize', place)
     }
   }, [open])
 
@@ -152,38 +157,59 @@ export function Select<T extends string>({
 
       {open &&
         createPortal(
-          <ul
-            ref={listRef}
-            role="listbox"
-            aria-label={ariaLabel}
-            tabIndex={-1}
-            onKeyDown={onListKey}
-            style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 320 }}
-            className="border-faint bg-card m-0 list-none rounded-lg border p-1 shadow-lg outline-none"
-          >
-            {options.map((o, i) => {
-              const isSelected = o.value === value
-              return (
-                <li
-                  key={o.value}
-                  role="option"
-                  aria-selected={isSelected}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => pick(o.value)}
-                  className="cursor-pointer truncate rounded-md px-2 py-1.5 text-[16px] sm:text-[13px]"
-                  style={{
-                    // Hover and keyboard share one highlight — two different
-                    // "current" rows in one list is confusing.
-                    background: i === active ? 'var(--faint2)' : 'transparent',
-                    color: isSelected ? 'var(--info)' : 'var(--ink)',
-                    fontWeight: isSelected ? 500 : 400,
-                  }}
-                >
-                  {o.label}
-                </li>
-              )
-            })}
-          </ul>,
+          <>
+            {/* The list can open inside a bottom sheet, which owns the screen
+                with its own scrim. Without a backdrop of our own the tap that
+                dismisses the list reaches that scrim and closes the whole
+                sheet — the half-filled form with it. This one swallows the tap
+                and closes only the list. */}
+            <div
+              className="fixed inset-0"
+              style={{ zIndex: SHEET_Z + 19 }}
+              onPointerDown={() => close(false)}
+              aria-hidden="true"
+            />
+            <ul
+              ref={listRef}
+              role="listbox"
+              aria-label={ariaLabel}
+              tabIndex={-1}
+              onKeyDown={onListKey}
+              // Above the bottom sheet (400): a list drawn under the sheet's
+              // scrim looks greyed out and cannot be tapped.
+              style={{
+                position: 'fixed',
+                top: pos.top,
+                left: pos.left,
+                width: pos.width,
+                zIndex: SHEET_Z + 20,
+              }}
+              className="border-faint bg-card m-0 list-none rounded-lg border p-1 shadow-lg outline-none"
+            >
+              {options.map((o, i) => {
+                const isSelected = o.value === value
+                return (
+                  <li
+                    key={o.value}
+                    role="option"
+                    aria-selected={isSelected}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => pick(o.value)}
+                    className="cursor-pointer truncate rounded-md px-2 py-1.5 text-[16px] sm:text-[13px]"
+                    style={{
+                      // Hover and keyboard share one highlight — two different
+                      // "current" rows in one list is confusing.
+                      background: i === active ? 'var(--faint2)' : 'transparent',
+                      color: isSelected ? 'var(--info)' : 'var(--ink)',
+                      fontWeight: isSelected ? 500 : 400,
+                    }}
+                  >
+                    {o.label}
+                  </li>
+                )
+              })}
+            </ul>
+          </>,
           document.body,
         )}
     </>

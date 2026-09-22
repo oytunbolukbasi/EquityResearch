@@ -1616,3 +1616,36 @@ ayrıntıyı veriyor.
   merdivende, iki kez söylenirdi.
 - Kapanmış fikirde halka çizilmez (tablodaki kural).
 - Yön planda yok; TP1 stopun altındaysa short sayılıyor.
+
+GÖREV 63 — Telefonda tür seçici: alt sayfanın altında kalıyordu
+
+Telefonda "Yeni pozisyon" alt sayfasında tür seçici üç ayrı şekilde bozuktu ve
+üçü de tek bir sebebe bağlıydı: liste alt sayfadan **daha düşük bir katmanda**
+çiziliyordu (`z-index` 320, alt sayfa 400).
+
+- **Görünmüyordu:** liste açılıyordu ama sayfanın yarı saydam karartmasının
+  arkasında. Kullanıcının ekran görüntüsündeki soluk gri görünüm buydu —
+  "açılmıyor" diye okunması doğal.
+- **Seçim sayfayı kapatıyordu:** dokunuş listeye değil arkadaki karartmaya
+  gidiyor, o da "dışarı tıklandı" sayıp alt sayfayı kapatıyordu. Yarım
+  doldurulmuş form da onunla birlikte gidiyordu.
+- **Liste artık 420'de**, ve kendi **görünmez arka katmanı** (419) var: dışarı
+  dokunuş ona takılır, yalnız listeyi kapatır, sayfa açık kalır. Alt sayfanın
+  katmanı `SHEET_Z` olarak seçici dosyasında yazılı — ikisi birbirini bilmek
+  zorunda.
+
+**Üçüncü hata ayrıydı ve daha sinsiydi:** liste `resize` ve `scroll`
+olaylarında **kapanıyordu**. Telefonda sembol alanından çıkıp seçiciye
+dokunmak klavyeyi kapatır, klavyenin kapanması bir `resize`'dır — yani liste
+açıldığı karede kendini kapatıyordu. Artık kapanmıyor, `place()` ile
+tetikleyiciyi takip ediyor. Kaydırmada da aynısı: konumu güncellemek, kapatmaktan
+her zaman daha doğru.
+
+**Ölçüldü (375×812):** liste 420 / sayfa 400; listenin orta noktasındaki en
+üstteki öğe listenin kendisi. "Almanya hissesi" dokunuşu türü değiştirdi, liste
+kapandı, sayfa açık kaldı. Listenin dışına dokunmak yalnız listeyi kapattı.
+Klavye kapanmasını taklit eden `resize`'da liste açık kaldı. Masaüstünde
+değişiklik yok: liste tetikleyicinin 6px altında, dışarı tıklamada kapanıyor.
+
+*Yan not:* `npx prettier` ilgisiz bir satırı yeniden biçimlendirdi (GÖREV 29'un
+dersi), elle geri alındı.
