@@ -1649,3 +1649,53 @@ değişiklik yok: liste tetikleyicinin 6px altında, dışarı tıklamada kapan�
 
 *Yan not:* `npx prettier` ilgisiz bir satırı yeniden biçimlendirdi (GÖREV 29'un
 dersi), elle geri alındı.
+
+GÖREV 64 — İçerik turundan Matriks çıktı; BİST barları ve piyasa genişliği yeniden kuruldu
+
+Kod değil, içerik hattının veri kaynağı. Kullanıcı "sabah BİST barlarını elle
+düzeltiyorum" notunu sordu; cevabı ararken asıl sorun çıktı.
+
+**Talimatname kendi içinde çelişiyordu.** Bir satır "Matriks AI KULLANILMIYOR"
+diyordu, birkaç satır yukarıdaki fallback listesi aynı bağlayıcıyı "BIST-native
+sağlayıcı `historicalData` (ac443cbd MCP)" diye öneriyordu. Araç adları Matriks
+demediği için fallback'e uyuldu: 22 ve 23 Eylül turlarında BİST barları, seans
+istatistikleri, piyasa genişliği ve haberler oradan alındı; öncesinde de BİST
+kapanışları oradan geliyordu. Bağlayıcının adı ancak `session_connectors_status`
+ile görüldü: "Matriks AI". Kullanıcı kararı: hiçbir şekilde kullanılmayacak.
+
+**Veri doğruydu, kaynak yanlıştı.** Matriks'in günlük BİST barı üç turdur yarım
+geliyordu (gün ortasında yazılıp bırakılmış: TCELL 98,25 / gerçek 99,90; BIST 100
+13.011 / gerçek 13.337,7) ve her sabah seans istatistiği + saatlik barlarla elle
+düzeltiliyordu. Akşam yfinance'ten çekilen aynı barlar panele yazılanlarla
+**kuruşu kuruşuna** tuttu (TCELL ve BIMAS, 21-22 Eylül). Düzeltilecek veri yok.
+
+**yfinance'in BİST sorunu kalite değil zamanlama:** tur 05:00'te yapılıyor, o
+saatte Yahoo'da dünkü BİST barı henüz boş; yfinance MCP boş barlı cevabın
+tamamını şema hatasıyla reddediyor. Akşam aynı istek tam dönüyor.
+
+Talimatnameye (ADIM 1, "BİST barları — iki kilit"):
+1. **Sabah bar yoksa bar yazılmaz.** Statü kapanışla verilir; kapanış
+   `scripts/de-price.mjs TICKER.IS` + panelin fiyat e-tablosu. İkisi seviyenin iki
+   yanına düşerse karar bir tur ertelenir.
+2. **Her tur dünkü barlar yfinance'le çapraz kontrol edilir.** Eksik ya da farklı
+   bar yeniden gönderilir — `mergePriceHistory` aynı tarihli barın üstüne yazıyor,
+   düzeltme yeniden göndermekten ibaret. Sonuç her gün ADIM 7'ye yazılır.
+
+Kullanıcının istediği ilk kontrol ("bar hacmi seans toplamını tutuyor mu")
+**yazılmadı**: iki tarafı da Matriks'ten geliyordu.
+
+**`scripts/bist-breadth.mjs` — piyasa genişliği.** İzleme listesinin BİST koşulu
+("yükselenlerin oranı 0,40'ı geçsin") Matriks'in `marketOverview`'undan
+geliyordu. Yerine:
+- Evren: Twelve Data'nın açık `/stocks?exchange=BIST` listesi (anahtarsız, 620 adi
+  hisse). Eşik BIST Tüm (629) ölçeğinde konduğu için BIST 100 değil tüm pazar.
+  Liste alınamazsa `scripts/data/bist-universe.json`'dan okunur.
+  *(Portföy DB'sindeki `bist_symbols` tablosu denendi — boş.)*
+- Fiyat: Yahoo chart ucu, hisse başına bir istek, 8 eş zamanlı.
+- Sabah dünkü bar boşsa kapanış `meta.regularMarketPrice`; önceki seansın barı da
+  yoksa hisse sayılmaz, "veri yok" raporlanır.
+- **Doğrulandı:** 21 Eylül betik 0,170 · Matriks 0,175; 22 Eylül 0,533 · 0,542.
+  Fark en fazla 0,009, iki gün de eşiğin aynı tarafında. 23 Eylül: 0,363.
+
+*Açık:* `de-price.mjs`'nin 05:00'te BİST için ne döndürdüğü ölçülmedi; talimatname
+bunu ilk turda doğrulanacak diye işaretliyor.

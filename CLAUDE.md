@@ -396,6 +396,9 @@ yanlış yapıldı; gerekçesi parantezdeki GÖREV'de, `GELISTIRME-GUNLUGU.md`'d
 **Araç ve süreç**
 - Prettier ayarı doğrulanmadan çalıştırılmaz (60 satırlık diff 800 oldu). (29)
 - Skill'ler `eqr-` ön ekiyle çağrılır; çıplak ad eklentinin skill'ini yükler. (40)
+- **Matriks AI bağlayıcısı (`ac443cbd`) içerik turunda hiçbir amaçla çağrılmaz.** Araç
+  adları (`historicalData`, `marketOverview`…) Matriks demiyor; bir bağlayıcının kim
+  olduğundan emin değilsen `session_connectors_status` ile adına bak. (64)
 - İçerik yüklemek deploy gerektirmez; deploy yalnız kod değişince. (40)
 - Ölçüm tuzakları: `requestAnimationFrame` gizli sekmede çalışmaz (56);
   `innerText` CSS `uppercase`'i uygular (50); tarayıcı aracının

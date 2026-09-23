@@ -19,6 +19,15 @@ Bu bir finansal veri güncelleme görevidir: gerçek veri çek → istenen JSON'
 **BIST hisse fiyatları (birincil):** `yfinance` MCP — sembol formatı `TICKER.IS`
 (örn. `THYAO.IS`). Güncel fiyat + OHLC + historical hepsi buradan.
 
+> **Sabah turunda dünkü BİST barı çoğu zaman henüz YOK (2026-09-23'te ölçüldü).**
+> Tur 05:00 civarında yapılıyor; o saatte Yahoo'nun BİST tarafında bir önceki
+> günün günlük barı boş duruyor, yfinance MCP de boş barlı cevabın tamamını şema
+> hatasıyla reddediyor. Veri yanlış değil, geç: aynı barlar akşam tam geliyor ve
+> Matriks'ten kurulanlarla kuruşu kuruşuna aynı çıktı (TCELL ve BIMAS, 21-22 Eylül).
+> Bu yüzden BİST için iki kural var, ikisi de ADIM 1'de: **kapanış varsa statü
+> kararı verilir, bar yoksa bar yazılmaz; eksik bar bir sonraki turda tamamlanır
+> ve dünkü barlar çapraz kontrol edilir.**
+
 **ABD hisseleri (birincil):** `yfinance` MCP — sembol olduğu gibi (örn. `MA`, `ABT`).
 
 **Almanya hisseleri (birincil):** `node scripts/de-price.mjs MBG VOW3 SAP …` —
@@ -49,15 +58,33 @@ anahtarsız, XETRA fiyatı, tek çağrıda hepsi. Fiyatlar **EUR**. Panele giden
    - **Almanya fiyatı** → birincil kaynak zaten `scripts/de-price.mjs`. Düşerse
      Twelve Data `get_quote` (`symbol=VOW3, exchange=XETR`) yalnız VOW3 için
      çalışır; diğer semboller ücretli planda. Sonra web_search.
-   - **BIST fiyat/OHLC** → BIST-native sağlayıcı `historicalData` (ac443cbd MCP; sembol `.IS`'siz,
-     `rawBars=true` ile günlük OHLC döner). ÇALIŞIR. *(Twelve Data'nın ücretsiz planında BIST kapalı.)*
+   - **BIST kapanışı** → `node scripts/de-price.mjs TCELL.IS BIMAS.IS …` (uzantıyı
+     açıkça yaz; betik uzantısız sembole `.DE` ekler). Anahtarsız, yfinance'in de
+     kaynağı olan Yahoo chart ucunun `meta.regularMarketPrice`'ı. İkinci kaynak:
+     panelin kendi fiyat e-tablosu (açık fikirlerin hepsi orada kayıtlı; pozisyon
+     tablosundaki `current_price` ya da `/api/trade-plans/live-prices`). İkisi
+     çelişirse sayı seçilmez, ADIM 7'de loglanır.
+     *Sabah 05:00'te betiğin BİST için ne döndürdüğü henüz ölçülmedi — ilk turda
+     doğrulanıp bu satır güncellenecek.*
+     *(Twelve Data'nın ücretsiz planında BIST kapalı.)*
+   - **BIST günlük barı** → yalnız yfinance'ten. Sabah yoksa **yazılmaz**; bir
+     sonraki turda tamamlanır (ADIM 1, "BİST barları").
    - **Analist hedefi/rating** → TEK web_search (Twelve Data `price_target` ve FMP `quote`
      ücretli planlarda; ücretsiz planda kapalı).
 3. TEK BİR web_search (örn. `"THYAO hisse fiyatı bugün"`) — net sayı yoksa DUR
 4. Veri noktasını atla, ADIM 7'de `⚠️ [TICKER] atlandı` logla
 
 Bir ticker için toplam bütçe: 2 yfinance + 2 alternatif kaynak + 1 web_search. Fazlası yasak.
-Matriks AI KULLANILMIYOR — araç listende görünse bile çağırma.
+**Matriks AI KULLANILMIYOR — hiçbir şekilde.** Bağlayıcının kimliği
+`ac443cbd-…`; araç adları `historicalData`, `marketOverview`, `newsAndEvents`,
+`foreignMarkets` vb. Fiyat, bar, seans istatistiği, piyasa genişliği, haber,
+KAP — hiçbiri için çağrılmaz, araç listesinde görünse bile.
+*(Bu dosya 23 Eylül 2026'ya kadar kendi içinde çelişiyordu: bu satır Matriks'i
+yasaklarken fallback listesi aynı bağlayıcıyı "BIST-native sağlayıcı" diye
+öneriyordu. 22 ve 23 Eylül turlarında BİST barları, seans istatistikleri, piyasa
+genişliği ve haberler oradan alındı; daha önceki turlarda da BİST kapanışları
+oradan geliyordu. Fallback satırı kaldırıldı; bağlayıcıyı
+kimliğiyle andık ki başka bir adla yeniden girmesin.)*
 
 > **yfinance hafta sonu tuzağı:** Hafta sonu/tatilde yfinance çoklu-gün ABD isteklerinde son bara
 > `null` OHLC ekleyip **tüm cevabı** şema hatasıyla reddedebilir (`data/result/N must be number`).
@@ -167,6 +194,53 @@ edilmez — onlar için yalnızca trade_plans currentPrice güncellemesi yapıl�
 
 Terminal statüye geçen her pozisyonu hem ideas'a (yeni status + bugünün
 tarihi ile) hem ADIM 7 loguna yaz.
+
+### BİST barları — iki kilit
+
+Sabah turunda yfinance'in BİST tarafında dünkü bar çoğu zaman henüz yok (bkz.
+"VERİ KAYNAKLARI"). Yarım ya da tahmini bar yazmak yerine:
+
+**1. Sabah: bar yoksa bar yazılmaz.**
+- yfinance `period: 5d` şema hatası verirse `period: 1d` dene. Dönen bar **dünün
+  tarihini** taşımıyorsa (bugünün boş barı ya da evvelsi günün barı) o bar
+  kullanılmaz.
+- Statü kararı için gereken tek şey **kapanış**: `scripts/de-price.mjs TICKER.IS`
+  ve panelin fiyat e-tablosu. İkisi aynı tarafta (ör. ikisi de stopun üstünde)
+  ise karar verilir; seviyenin iki yanına düşüyorlarsa karar bir tur ertelenir
+  ve loglanır — gün içi seviye ihlaliyle aynı mantık, kesin olmayan kapanış
+  terminal statü üretmez.
+- trade_plans'a o ticker için yalnız `currentPrice` gider, `appendPriceHistory`
+  gitmez. ADIM 7'de: `⚠️ [TICKER] 22 Eylül barı sabah yoktu, yarın tamamlanacak`.
+
+**2. Her tur: dünkü BİST barları yfinance'le çapraz kontrol edilir.**
+- Açık (ve bu turda terminale geçen) her BİST fikri için yfinance `period: 5d`
+  çekilir — bir gün önce eksik olan barlar artık tam gelir.
+- Panele yazılı son 3 barla karşılaştırılır (`trade_plans.price_history`).
+  **Eksik** bar ve **farklı** bar (kapanışta 0,01'den büyük fark ya da
+  uçlardan biri tutmuyor) aynı turda `appendPriceHistory` ile yeniden gönderilir.
+  Birleştirme tarih bazlı ve aynı tarihli bar eskisinin **üstüne yazılır**
+  (`mergePriceHistory`), yani düzeltme yeniden göndermekten ibaret.
+- Sonuç ADIM 7'ye yazılır — hiç fark yoksa da: `✅ BİST barları çapraz kontrol:
+  6/6 tutuyor`. Kontrolün yapıldığının tek kanıtı bu satır.
+
+> **Neden bu sırayla:** sabah kesin kapanış var ama kesin bar yok. Statü kapanışla
+> belirlendiği için sabah karar verilebilir; grafik ise bir gün beklemeye
+> dayanır. Tersini yapmak — sabah bir yerden bar kurup yazmak — grafiğe
+> doğrulanmamış bir sayı koyar ve tarih bazlı birleştirme yüzünden o sayı
+> düzeltilene kadar orada kalır.
+
+**Piyasa genişliği (yükselen/düşen hisse oranı):** `node scripts/bist-breadth.mjs`
+(geçmiş bir gün için `--date 2026-09-22`). İzleme listesindeki Borsa İstanbul
+koşulu ("yükselenlerin oranı 0,40'ı geçsin") bu sayıyla test edilir.
+- Evren Twelve Data'nın açık BİST listesi (~620 adi hisse), fiyat Yahoo chart
+  ucu; ikisi de anahtarsız. Eskiden Matriks'ten geliyordu.
+- **Doğrulandı (23 Eylül 2026):** 21 Eylül betik 0,170 · Matriks 0,175; 22 Eylül
+  betik 0,533 · Matriks 0,542. Fark en fazla 0,009 ve iki gün de eşiğin aynı
+  tarafında. Sayılan evren ~595 (Yahoo'da verisi olmayan ~25 hisse dışarıda),
+  eskisi 629.
+- Sabah dünkü bar boşsa kapanış son işlem fiyatından alınır; betik kaç hissede
+  bunu yaptığını yazar. "Veri yok" sayısı 50'yi geçerse oran güvenilir değildir,
+  koşul o gün test edilmez ve ADIM 7'de yazılır.
 
 ---
 
