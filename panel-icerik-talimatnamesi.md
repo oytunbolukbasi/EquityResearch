@@ -27,6 +27,13 @@ Bu bir finansal veri güncelleme görevidir: gerçek veri çek → istenen JSON'
 > Bu yüzden BİST için iki kural var, ikisi de ADIM 1'de: **kapanış varsa statü
 > kararı verilir, bar yoksa bar yazılmaz; eksik bar bir sonraki turda tamamlanır
 > ve dünkü barlar çapraz kontrol edilir.**
+>
+> **Eksik olan çok günlük seri, tek gün değil (2026-09-24, 08:23'te ölçüldü).**
+> `period: 5d` yine şema hatası verdi, ama `period: 1d` dünün **tam** barını
+> döndürdü — TCELL 100,50 / 101,90 / 100,00 / 100,80, akşam 5d'nin verdiği
+> değerlerle ve hacimle birebir aynı. Yani sabah BİST barı çoğu zaman
+> yazılabiliyor; kural değişmedi, yalnız ilk dal ("bar yoksa") nadir kalıyor.
+> 05:00'teki davranış ayrıca ölçülmedi.
 
 **ABD hisseleri (birincil):** `yfinance` MCP — sembol olduğu gibi (örn. `MA`, `ABT`).
 
@@ -64,8 +71,11 @@ anahtarsız, XETRA fiyatı, tek çağrıda hepsi. Fiyatlar **EUR**. Panele giden
      panelin kendi fiyat e-tablosu (açık fikirlerin hepsi orada kayıtlı; pozisyon
      tablosundaki `current_price` ya da `/api/trade-plans/live-prices`). İkisi
      çelişirse sayı seçilmez, ADIM 7'de loglanır.
-     *Sabah 05:00'te betiğin BİST için ne döndürdüğü henüz ölçülmedi — ilk turda
-     doğrulanıp bu satır güncellenecek.*
+     *Sabah ölçüldü (2026-09-24, 08:23): betik dünkü kapanışı veriyor — TCELL
+     100,80, BIMAS 433,75, XU100 13.251,85; işlem zamanı bir önceki günün 18:09'u.
+     `bist-breadth.mjs` de aynı saatte 592 hissenin 589'unda günlük barı boş
+     buldu, kapanışı son işlem fiyatından aldı ve oranı akşamki tam barlı
+     ölçümle birebir aynı verdi (0,363).*
      *(Twelve Data'nın ücretsiz planında BIST kapalı.)*
    - **BIST günlük barı** → yalnız yfinance'ten. Sabah yoksa **yazılmaz**; bir
      sonraki turda tamamlanır (ADIM 1, "BİST barları").
