@@ -46,9 +46,18 @@ async function universe() {
     const body = await res.json()
     const symbols = (body.data ?? []).map((s) => s.symbol).filter(Boolean)
     if (symbols.length < 400) throw new Error(`liste kısa geldi (${symbols.length})`)
-    fs.mkdirSync(path.dirname(CACHE), { recursive: true })
-    fs.writeFileSync(CACHE, JSON.stringify({ at: new Date().toISOString(), symbols }, null, 1))
-    return { symbols, source: 'twelvedata' }
+    // Written only when the list itself changes. Rewriting on every run changed
+    // nothing but the timestamp and left the file permanently modified in git.
+    let cached = null
+    try {
+      cached = JSON.parse(fs.readFileSync(CACHE, 'utf8')).symbols
+    } catch {}
+    const same = cached && cached.length === symbols.length && cached.every((s, i) => s === symbols[i])
+    if (!same) {
+      fs.mkdirSync(path.dirname(CACHE), { recursive: true })
+      fs.writeFileSync(CACHE, JSON.stringify({ at: new Date().toISOString(), symbols }, null, 1))
+    }
+    return { symbols, source: same ? 'twelvedata' : 'twelvedata (liste değişti, önbellek yenilendi)' }
   } catch (e) {
     const cached = JSON.parse(fs.readFileSync(CACHE, 'utf8'))
     return { symbols: cached.symbols, source: `önbellek (${cached.at.slice(0, 10)}) — ${e.message}` }
