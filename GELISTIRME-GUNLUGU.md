@@ -1726,3 +1726,31 @@ kapsamadığı kalemler).
 
 *Ölçülen tuzak:* `newsFlashOnly: true` kayıt olduğu halde boş liste döndürüyor
 (sayfalama 15 kayıt diyor, liste boş) — talimatnamede yasak.
+
+GÖREV 66 — Portföy veritabanı silindi ve geri yüklendi
+
+1 Ekim 2026 sabahı kullanıcı, emekliye ayrılan PortfoyTakip uygulamasının artığı
+sandığı "PortfoyTakip" adlı Neon projesini sildi. O proje panelin **canlı portföy
+veritabanıydı** (`PORTFOLIO_DATABASE_URL`): GÖREV 28'de iki uygulama aynı
+veritabanını paylaştığı için "taşınacak veri yok" denmiş, kod taşınmış ama veritabanı
+eski uygulamanın adını taşıyan projede kalmıştı. Ad yanıltıcıydı; silinmesi doğal
+bir sonuçtu.
+
+- **Etki:** bağlantı "password authentication failed" verdi. Sanal Portföy, Genel
+  bakış KPI'ları, Analiz ve fiyat yazımı durdu. Ana veritabanı (bülten, fikirler,
+  notlar) etkilenmedi; giriş çalıştı (parola env'de).
+- **Geri yükleme:** Neon 7 günlük kurtarma süresi içinde, kullanıcının kendi
+  oturumuyla: `npx neonctl projects list --recoverable-only` →
+  `npx neonctl projects recover fancy-bar-84862044`. Bağlantı adresi aynı kaldı;
+  `.env` ve Railway'de değişiklik gerekmedi.
+- **Doğrulandı:** 6 tablo, 23 açık / 28 kapanmış pozisyon, 1 kullanıcı; son fiyat
+  yazımı silinmeden 6 dakika önce — veri kaybı yok.
+- **Kalıcı düzeltme:** Neon projesinin adı **EQRPortfolio** yapıldı ve CLAUDE.md'de
+  Veri Modeli bölümüne proje adı, kimliği ve "silinmez" notu yazıldı.
+
+*Ayrı veritabanı kararı korundu.* Birleştirme önerilmedi: kod iki bağlantıya göre
+yazılmış (salt okuma istemcisi + ayrı yazma modülü), hiçbir sorgu ikisini
+birleştirmiyor ve ayrılık bugün işe yaradı — ana veritabanı hiç etkilenmedi.
+
+*Ders:* bir kaynağın adı, onu kullanan şeyin adıyla uyuşmuyorsa o ad bir gün
+yanlış bir silmeye gerekçe olur. Taşımada kod kadar altyapının adı da taşınmalı.

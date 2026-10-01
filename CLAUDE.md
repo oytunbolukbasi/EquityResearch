@@ -168,7 +168,11 @@ kurulduğundan toggle'da doğru renklerle rebuild olur.
   blok türü kazandığında güncellenmek zorunda kalırdı ve hiçbir sorgu notun içine
   bakmıyor. `note_pages.section_id` **cascade** siler. (GÖREV 50)
 - Portföy pozisyonları AYRI bir DB'de (`PORTFOLIO_DATABASE_URL`): `positions`,
-  `closed_positions`, `users`, `bist_symbols`.
+  `closed_positions`, `users`, `bist_symbols`. **Neon projesi: `EQRPortfolio`**
+  (kimlik `fancy-bar-84862044`; eski adı PortfoyTakip). Panelin canlı portföy
+  verisi budur — **silinmez.** 1 Ekim 2026'da emekli uygulamanın artığı sanılıp
+  silindi ve geri yüklendi (GÖREV 66). Ayrı durması bilinçli: içerik tablolarıyla
+  karışmaz, biri bozulursa öbürü etkilenmez, hiçbir sorgu ikisini birleştirmez.
   **Bu DB artık salt-okunur DEĞİL** — GÖREV 28 ile yazma yolu açıldı:
   - Okuma → `server/db/portfolio-client.ts` (yalnız SELECT, yazma metodu **eklenmez**)
   - Yazma → `server/db/portfolio-write.ts` (ayrı modül, her ifade elle yazılmış ve
