@@ -266,6 +266,43 @@ ECB faiz/enflasyon · Almanya sanayi verileri (IFO, ZEW, PMI, fabrika siparişle
 DAX ve Frankfurt'ta öne çıkan hisseler · EUR/USD ve EUR/TRY'yi hareket ettiren gelişmeler ·
 portföydeki Alman pozisyonlarını (bkz. ADIM 1) etkileyen şirket haberleri.
 
+**(c) Türkiye gündemi — HER TUR, ayrı aramalarla** → Borsa İstanbul maddesi (`macroBullets`)
+ve portföyün BİST satırları.
+
+Türkiye haberi artık yalnız bilerek yapılan web aramasıyla geliyor: Matriks'in haber
+akışı (AA, KAP, Matriks) kullanılmıyor ve aranmayan haber görünmüyor. Borsa
+İstanbul'u bir günde %2-3 hareket ettiren şey çoğu zaman piyasa haberi değil —
+bir yargı kararı, bir düzenleme, bir siyasi gelişme. Aşağıdaki kalemlerin
+**her biri için en az bir arama** yapılır; sonuç yoksa ADIM 7'de "kayda değer bir
+şey yok" yazılır, o da bir sonuçtur:
+
+1. **Ekonomi yönetimi ve Merkez Bankası** — Hazine ve Maliye Bakanı ile TCMB
+   açıklamaları, faiz ve kur politikası, vergi/harç düzenlemeleri, Resmî Gazete.
+2. **Düzenleyiciler** — SPK, BDDK, Rekabet Kurumu, EPDK: fon, kredi, piyasa ve
+   sektör kuralları.
+3. **Yargı ve soruşturmalar** — savcılık soruşturmaları, gözaltılar, mal varlığı
+   tedbirleri, kayyum atamaları; listelenmiş şirketlerin adı geçiyor mu.
+4. **İç siyaset** — hükümet, muhalefet, erken seçim tartışmaları, siyasi davalar;
+   lira ve risk primi (CDS) üzerinden borsaya geçer.
+5. **Dış politika ve jeopolitik** — komşu çatışma alanları, ABD/AB/Rusya ilişkileri,
+   yaptırımlar, savunma ve enerji anlaşmaları.
+6. **Şirket ve sektör** — KAP'taki büyük duyurular (portföydeki ve paneldeki BİST
+   hisseleri öncelikli), bilanço takvimi, sermaye artırımı, temettü.
+7. **Piyasanın kendi anlatımı** — günün kapanış haberi: "borsa neden düştü/yükseldi",
+   en çok etkilenen sektörler. Yukarıdakilerden biri kaçtıysa genelde burada görünür.
+
+Bulunan bir gelişme portföydeki bir pozisyona dokunuyorsa ADIM 5'te o satırın
+gerekçesinde adıyla anılır. Aynı soruşturma, karar ya da açıklama birkaç gün sürüyorsa
+"son durum" aranır — dünün haberiyle bugünün notu yazılmaz.
+
+> *Neden (2026-09-29):* 27 Eylül pazar turu Türkiye için "SPK fon tasfiye hafta sonu
+> karar" diye aradı ve temiz döndü. Aynı hafta sonu İstanbul Cumhuriyet Başsavcılığı
+> fon soruşturmasında 42 kişi, 46 şirket ve 18 fonun mal varlığına tedbir koymuştu;
+> pazartesi 80 hisse taban oldu. Düzenleyicinin kararı ile yargının kararı ayrı
+> kaynaklardan gelir — biri aranınca öbürü bulunmaz. Kullanıcı kararı: tarama
+> savcılıkla sınırlı kalmasın, Türkiye'nin eko-politik ve jeopolitik akışının tamamını
+> her gün kapsasın.
+
 > **Neden ayrı bölüm:** portföyde artık EUR bazlı pozisyonlar var ve bunların
 > değeri iki şeye bağlı — hissenin kendi hikâyesi ve EUR/TRY. İkisini genel makro
 > maddelerinin arasına serpiştirmek, Almanya tarafına bakmak isteyen okuyucuyu
@@ -293,9 +330,11 @@ için kullanılacak.
 > Hafta sonu en çok bunlar birikir ve piyasa haberi aramaları onları getirmez.
 > Kapalı günlerde aşağıdaki başlıkların HER BİRİ için en az bir arama yapılır;
 > "kayda değer bir şey yok" da bir sonuçtur ve özette yazılır:
-> 1. **Türkiye iç siyaseti ve düzenleyiciler:** hükümet/Cumhurbaşkanlığı
->    kararları, SPK/BDDK/TCMB hafta sonu duyuruları, Resmî Gazete.
->    *(Eylül 2026'da açık olan: TEFAS'ta işleme kapatılan fonların tasfiyesi.)*
+> 1. **Türkiye:** yukarıdaki (c) bölümünün yedi kaleminin tamamı — ama son
+>    seanstan bu yana geçen günlerin hepsini kapsayacak şekilde. Hafta sonu en
+>    çok yargı kararları ve hükümet duyuruları birikir.
+>    *(Eylül 2026'da açık olan: TEFAS'ta işleme kapatılan fonların tasfiyesi ve
+>    İstanbul Cumhuriyet Başsavcılığı'nın fon soruşturması.)*
 > 2. **Bölgesel jeopolitik:** Türkiye'nin komşu olduğu çatışma alanları, Orta
 >    Doğu, Rusya-Ukrayna — petrol ve lira riskini doğrudan taşırlar.
 > 3. **ABD siyaseti ve ticaret:** gümrük tarifeleri, yaptırımlar, Fed
