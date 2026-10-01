@@ -1699,3 +1699,30 @@ geliyordu. Yerine:
 
 *Açık:* `de-price.mjs`'nin 05:00'te BİST için ne döndürdüğü ölçülmedi; talimatname
 bunu ilk turda doğrulanacak diye işaretliyor.
+
+GÖREV 65 — Matriks geri döndü, yalnız haber için
+
+GÖREV 64'te içerik turundan tamamen çıkarılan Matriks bağlayıcısı, kullanıcı
+tarafından "Matriks MCP" adıyla yeniden eklendi (kimlik aynı: `ac443cbd`). Kullanım
+haber ve KAP'la sınırlandı.
+
+**Neden geri döndü:** Matriks'siz geçen hafta, web aramasının yapısal bir sınırını
+gösterdi — yalnız aranması akla gelen bulunuyor. 27 Eylül pazar turu savcılığın fon
+soruşturmasındaki mal varlığı tedbirlerini kaçırdı (pazartesi 80 hisse taban oldu).
+1 Ekim turu, yeni yedi kalemli Türkiye taramasına rağmen, Cumhurbaşkanı'nın 30 Eylül'de
+açıkladığı fon koordinasyon kurulunu bulamadı; erişim testindeki ilk akış sorgusu onu
+ve Tera fonlarındaki tahvil satış hazırlığını hemen getirdi. Akış, aranmayanı önüne
+düşürür.
+
+**Neden yalnız haber:** fiyat tarafının yerine konan kaynaklar ölçülerek doğrulandı —
+yfinance `1d` barları altı tur birebir, `bist-breadth.mjs` Matriks'le en fazla 0,009
+fark. Matriks'in günlük BİST barı ise üç tur üst üste yarım gelmişti. İyi çalışanı
+kötü çalışanla değiştirmenin sebebi yok.
+
+Talimatname ADIM 2 (c) artık iki katmanlı: önce akış (genel kategoriler, süren
+hikâyeler için başlık araması, portföydeki ve paneldeki her BİST hissesi için KAP,
+ekonomi takvimi ve Resmî Gazete), sonra web araması (ayrıntı, doğrulama, akışın
+kapsamadığı kalemler).
+
+*Ölçülen tuzak:* `newsFlashOnly: true` kayıt olduğu halde boş liste döndürüyor
+(sayfalama 15 kayıt diyor, liste boş) — talimatnamede yasak.

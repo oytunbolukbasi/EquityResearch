@@ -85,16 +85,24 @@ anahtarsız, XETRA fiyatı, tek çağrıda hepsi. Fiyatlar **EUR**. Panele giden
 4. Veri noktasını atla, ADIM 7'de `⚠️ [TICKER] atlandı` logla
 
 Bir ticker için toplam bütçe: 2 yfinance + 2 alternatif kaynak + 1 web_search. Fazlası yasak.
-**Matriks AI KULLANILMIYOR — hiçbir şekilde.** Bağlayıcının kimliği
-`ac443cbd-…`; araç adları `historicalData`, `marketOverview`, `newsAndEvents`,
-`foreignMarkets` vb. Fiyat, bar, seans istatistiği, piyasa genişliği, haber,
-KAP — hiçbiri için çağrılmaz, araç listesinde görünse bile.
-*(Bu dosya 23 Eylül 2026'ya kadar kendi içinde çelişiyordu: bu satır Matriks'i
-yasaklarken fallback listesi aynı bağlayıcıyı "BIST-native sağlayıcı" diye
-öneriyordu. 22 ve 23 Eylül turlarında BİST barları, seans istatistikleri, piyasa
-genişliği ve haberler oradan alındı; daha önceki turlarda da BİST kapanışları
-oradan geliyordu. Fallback satırı kaldırıldı; bağlayıcıyı
-kimliğiyle andık ki başka bir adla yeniden girmesin.)*
+**Matriks MCP — YALNIZ haber ve KAP için.** Bağlayıcının kimliği `ac443cbd-…`
+(oturumda "Matriks MCP" adıyla görünür; araç adları Matriks demez).
+- **Kullanılan tek araç `newsAndEvents`:** haber akışı (AA, KAP, Matriks, İHA,
+  Reuters…), sembol bazında KAP duyuruları, Türkiye ekonomi takvimi, sermaye
+  artırımı/temettü ve pay geri alım kayıtları. Kullanımı ADIM 2 (c)'de.
+- **Fiyat, bar, seans istatistiği, piyasa genişliği için ÇAĞRILMAZ** —
+  `historicalData`, `marketOverview`, `marketSnapshot`, `foreignMarkets` ve
+  diğerleri dahil. O işlerin kaynakları doğrulanmış durumda: barlar yfinance
+  (`period: 1d`, akşam 5d ile birebir), kapanış `de-price.mjs` + e-tablo,
+  genişlik `bist-breadth.mjs`. Matriks'in günlük BİST barı üç tur üst üste gün
+  ortasında yazılıp yarım kalmıştı.
+*(Tarihçe: Bu dosya 23 Eylül 2026'ya kadar kendi içinde çelişiyordu — bir satır
+"Matriks AI kullanılmıyor" derken fallback listesi aynı bağlayıcıyı "BIST-native
+sağlayıcı" diye öneriyordu; 22-23 Eylül turlarında her şey oradan alındı. 23 Eylül'de
+kullanıcı kararıyla tamamen çıkarıldı. 1 Ekim'de kullanıcı bağlayıcıyı yeniden
+ekledi ve kullanım haberle sınırlandı: Matriks'siz geçen bir hafta, web aramasının
+"aranmayanı bulamadığını" gösterdi — 27 Eylül'deki savcılık tedbirleri ve 30 Eylül'deki
+fon koordinasyon kurulu ancak akışla görüldü.)*
 
 > **yfinance hafta sonu tuzağı:** Hafta sonu/tatilde yfinance çoklu-gün ABD isteklerinde son bara
 > `null` OHLC ekleyip **tüm cevabı** şema hatasıyla reddedebilir (`data/result/N must be number`).
@@ -243,7 +251,8 @@ Sabah turunda yfinance'in BİST tarafında dünkü bar çoğu zaman henüz yok (
 (geçmiş bir gün için `--date 2026-09-22`). İzleme listesindeki Borsa İstanbul
 koşulu ("yükselenlerin oranı 0,40'ı geçsin") bu sayıyla test edilir.
 - Evren Twelve Data'nın açık BİST listesi (~620 adi hisse), fiyat Yahoo chart
-  ucu; ikisi de anahtarsız. Eskiden Matriks'ten geliyordu.
+  ucu; ikisi de anahtarsız. Eskiden Matriks'ten geliyordu; Matriks yeniden
+  eklendiğinde de (1 Ekim) genişlik için kullanılmıyor.
 - **Doğrulandı (23 Eylül 2026):** 21 Eylül betik 0,170 · Matriks 0,175; 22 Eylül
   betik 0,533 · Matriks 0,542. Fark en fazla 0,009 ve iki gün de eşiğin aynı
   tarafında. Sayılan evren ~595 (Yahoo'da verisi olmayan ~25 hisse dışarıda),
@@ -269,12 +278,26 @@ portföydeki Alman pozisyonlarını (bkz. ADIM 1) etkileyen şirket haberleri.
 **(c) Türkiye gündemi — HER TUR, ayrı aramalarla** → Borsa İstanbul maddesi (`macroBullets`)
 ve portföyün BİST satırları.
 
-Türkiye haberi artık yalnız bilerek yapılan web aramasıyla geliyor: Matriks'in haber
-akışı (AA, KAP, Matriks) kullanılmıyor ve aranmayan haber görünmüyor. Borsa
-İstanbul'u bir günde %2-3 hareket ettiren şey çoğu zaman piyasa haberi değil —
-bir yargı kararı, bir düzenleme, bir siyasi gelişme. Aşağıdaki kalemlerin
-**her biri için en az bir arama** yapılır; sonuç yoksa ADIM 7'de "kayda değer bir
-şey yok" yazılır, o da bir sonuçtur:
+Borsa İstanbul'u bir günde %2-3 hareket ettiren şey çoğu zaman piyasa haberi değil —
+bir yargı kararı, bir düzenleme, bir siyasi gelişme. İki katmanlı yapılır:
+
+**Önce akış — Matriks `newsAndEvents`** (son seanstan bu yana; hafta sonu turunda
+cuma kapanışından itibaren):
+1. **Genel akış:** `newsCategory: ["SIYASI","EKONOMI","GENEL"]`, `newsCount` 50-100.
+   Başlıklar okunur; aranmayı akla getirmeyen haber buradan gelir.
+2. **Süren hikâyeler:** `newsHeadlineSearch` ile açık konuların son durumu
+   (ör. "soruşturma", "SPK", "BDDK", "TMSF", "TCMB").
+3. **KAP:** portföydeki ve paneldeki her BİST hissesi için
+   `symbol` + `newsSource: ["KAP"]`. Şirkete özel her duyuru buradan.
+4. **Takvim:** "Türkiye ekonomi gündemi" ve "Resmi Gazete başlıkları" başlıkları
+   (`compactMode: false, newsWithContent: true` ile içerik).
+- *Bilinen tuzak:* `newsFlashOnly: true` kayıt olduğu halde boş liste döndürüyor
+  (1 Ekim 2026'da ölçüldü) — kullanılmaz.
+
+**Sonra web araması** — akışın kapsamadığı kalemler ve akışta görülen bir başlığın
+ayrıntısı/doğrulaması için. Aşağıdaki yedi kalemin **her biri** ya akışta ya web
+aramasında karşılanır; sonuç yoksa ADIM 7'de "kayda değer bir şey yok" yazılır, o da
+bir sonuçtur:
 
 1. **Ekonomi yönetimi ve Merkez Bankası** — Hazine ve Maliye Bakanı ile TCMB
    açıklamaları, faiz ve kur politikası, vergi/harç düzenlemeleri, Resmî Gazete.
